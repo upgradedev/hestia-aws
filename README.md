@@ -63,13 +63,14 @@ Name                                 Stmts   Miss Branch BrPart  Cover   Missing
 --------------------------------------------------------------------------------
 src\hestia\__init__.py                   1      0      0      0   100%
 src\hestia\agents\sentinel.py           48      0     20      0   100%
+src\hestia\agents\tools.py              58      0     34      0   100%
 src\hestia\domain\__init__.py            0      0      0      0   100%
 src\hestia\domain\completeness.py       43      0     10      0   100%
 src\hestia\domain\subscriptions.py      47      0     10      0   100%
 src\hestia\domain\warranties.py         48      0      8      0   100%
 --------------------------------------------------------------------------------
-TOTAL                                  187      0     48      0   100%
-19 passed in 0.40s
+TOTAL                                  245      0     82      0   100%
+28 passed in 0.25s
 ```
 
 ### Running Linting
