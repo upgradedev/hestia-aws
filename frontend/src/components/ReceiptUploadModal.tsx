@@ -101,6 +101,7 @@ export const ReceiptUploadModal: React.FC<ReceiptUploadModalProps> = ({
           {step === 'select' && (
             <div className="space-y-4">
               <label
+                onClick={() => handleSimulateUpload()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -163,7 +164,7 @@ export const ReceiptUploadModal: React.FC<ReceiptUploadModalProps> = ({
                 <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
                   <div><strong>Merchant:</strong> IKEA Deutschland GmbH</div>
                   <div><strong>Invoice Date:</strong> 2026-09-09</div>
-                  <div><strong>Item:</strong> BILLY Bookcase / Desk Unit</div>
+                  <div><strong>Item:</strong> BILLY Bookcase Unit (BILLY-2026-MOD)</div>
                   <div><strong>Total Matched:</strong> €85.00 EUR (incl. MwSt)</div>
                 </div>
                 <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px]">
