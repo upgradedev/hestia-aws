@@ -35,7 +35,7 @@ Hestia is an everyday autonomous sentinel built with the AWS Strands Agents SDK 
 - **Amazon Bedrock AgentCore**: Powers the Claim Drafter and reasoning agents using Claude 3.5 Haiku, backed by Pre-LLM PII Sanitizers to mask IBANs and payment card numbers before inference.
 - **Architecture-First Deterministic Engines**: Pure integer-precision arithmetic (cents) guarantees zero mathematical hallucinations in financial and fee calculations.
 - **EU Consumer Law Integration**: Directly embeds Directive 2019/771/EU statutory conformity rules and 14-day refund timelines into automated claim drafting.
-- **Unified Mission-Control Web UI**: A zero-dependency 3-column operations cockpit served by AWS Lambda HTTP handlers, providing instant desktop and mobile visibility.
+- **Unified Mission-Control Web UI**: A production-ready React 18 + Tailwind operations cockpit deployed to AWS CloudFront, backed by an AWS Lambda HTTP API with live Bedrock inference and Amazon S3 state persistence.
 
 ---
 
@@ -46,7 +46,7 @@ Hestia is an everyday autonomous sentinel built with the AWS Strands Agents SDK 
 ---
 
 ### Accomplishments We Are Proud Of
-- **100% Statement and Branch Test Coverage**: 35 unit and integration tests passing in under 0.4 seconds, with zero linter errors.
+- **100% Statement and Branch Test Coverage**: 71 unit and integration tests passing in under 9 seconds, with 100% statement (569/569) and 100% branch (170/170) coverage and zero linter errors.
 - **Real Legal Depth**: Transformed vague consumer protection rights into automated, enforceable recovery actions for real households.
 - **100% Serverless & Zero Idle Cost**: Runs on AWS Lambda and Amazon Bedrock on-demand with $0.00 idle container burn.
 
