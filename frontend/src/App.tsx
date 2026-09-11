@@ -148,7 +148,7 @@ export const App: React.FC = () => {
 
   const handleCancelTrial = async (subId: string): Promise<boolean> => {
     const sub = subscriptions.find((s) => s.id === subId);
-    const serviceName = sub ? sub.service_name : 'Fitness Stream Pro';
+    const serviceName = sub ? sub.name : 'Fitness Stream Pro';
 
     try {
       const res = await fetch('/api/action/cancel', {
