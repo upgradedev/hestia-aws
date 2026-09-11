@@ -19,8 +19,9 @@ import {
 
 export const App: React.FC = () => {
   const [summary, setSummary] = useState<HouseholdSummary>(INITIAL_SUMMARY);
-  const [appliances, setAppliances] = useState<ApplianceWarranty[]>(INITIAL_APPLIANCES);
+  const [appliances] = useState<ApplianceWarranty[]>(INITIAL_APPLIANCES);
   const [outflows] = useState(INITIAL_OUTFLOWS);
+
   const [subscriptions, setSubscriptions] = useState(INITIAL_SUBSCRIPTIONS);
   const [alerts, setAlerts] = useState<SentinelAlert[]>(INITIAL_ALERTS);
 
