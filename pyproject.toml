@@ -25,9 +25,10 @@ dev = [
 where = ["src"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "infra"]
 addopts = "-q"
-pythonpath = ["src"]
+pythonpath = ["src", "."]
+
 
 [tool.coverage.run]
 source = ["src/hestia"]

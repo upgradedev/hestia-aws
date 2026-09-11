@@ -3,13 +3,23 @@ from __future__ import annotations
 
 import unittest
 
-from infra.frontend_stack import (
-    DISABLED,
-    EXCEPT_HOST,
-    OPTIMIZED,
-)
-from infra.frontend_stack import template as frontend_tmpl
-from infra.hestia_api_stack import template as api_tmpl
+try:
+    from infra.frontend_stack import (
+        DISABLED,
+        EXCEPT_HOST,
+        OPTIMIZED,
+    )
+    from infra.frontend_stack import template as frontend_tmpl
+    from infra.hestia_api_stack import template as api_tmpl
+except ImportError:
+    from frontend_stack import (
+        DISABLED,
+        EXCEPT_HOST,
+        OPTIMIZED,
+    )
+    from frontend_stack import template as frontend_tmpl
+    from hestia_api_stack import template as api_tmpl
+
 
 
 class FrontendHostingTests(unittest.TestCase):
