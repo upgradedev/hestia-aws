@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { CORE_USER_JOURNEYS } from '../data/seedData';
-import { UserJourney } from '../types';
 
 interface UserJourneysViewProps {
   onSelectJourneyToSimulate: (journeyId: string) => void;
