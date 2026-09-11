@@ -88,7 +88,7 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
                     <div className="text-sm font-bold text-white font-mono">
                       €{sub.current_monthly_eur.toFixed(2)}/mo
                     </div>
-                    {sub.initial_monthly_eur && (
+                    {Boolean(sub.initial_monthly_eur && sub.initial_monthly_eur > 0) && (
                       <div className="text-[10px] text-slate-500 font-mono">
                         was €{sub.initial_monthly_eur.toFixed(2)}
                       </div>

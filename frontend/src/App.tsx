@@ -162,9 +162,7 @@ export const App: React.FC = () => {
     }));
   };
 
-  const pendingCount = alerts.filter(
-    (a) => a.category === 'warranty_claim' || a.action_type === 'cancel_trial' || a.category === 'receipt_gap'
-  ).length;
+  const pendingCount = alerts.length;
 
   return (
     <div className="min-h-screen bg-[#07090e] flex flex-col text-slate-100">
