@@ -197,6 +197,8 @@ export const ArchitectureView: React.FC = () => {
             <li>&bull; Human Consent Gate (EU AI Act Art 14)</li>
             <li>&bull; SHA-256 Dispute Seals on S3</li>
             <li>&bull; KMS Envelope Encryption (AES-256)</li>
+          </ul>
+        </div>
       </div>
 
       {/* JENSEN HUANG & MARTIN FOWLER ARCHITECTURAL ADDITIONS */}
