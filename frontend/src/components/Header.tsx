@@ -5,142 +5,144 @@ interface HeaderProps {
   summary: HouseholdSummary;
   liveApiOnline: boolean;
   activeTab: ActiveTab;
+  pendingActionsCount: number;
   onSelectTab: (tab: ActiveTab) => void;
-  onStartTour: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   summary,
   liveApiOnline,
   activeTab,
+  pendingActionsCount,
   onSelectTab,
-  onStartTour,
 }) => {
   return (
-    <header className="border-b border-white/10 bg-[#0c1017]/90 backdrop-blur-xl sticky top-0 z-40">
-      <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Brand & Identity */}
-        <div className="flex items-center gap-3.5">
-          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 p-[1px] shadow-lg shadow-amber-500/20">
+    <header className="border-b border-white/10 bg-[#0a0d14]/95 backdrop-blur-xl sticky top-0 z-40">
+      <div className="max-w-[1500px] mx-auto px-4 lg:px-8 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Brand & Persona Identity */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 p-[1px] shadow-lg shadow-amber-500/20 shrink-0">
             <div className="w-full h-full rounded-[11px] bg-[#0c1017] flex items-center justify-center">
-              <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
             </div>
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-            </span>
           </div>
 
           <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
-                HESTIA <span className="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">AWS SENTINEL</span>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-black tracking-tight text-white">
+                HESTIA
               </h1>
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                HOUSEHOLD SHIELD
+              </span>
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                 liveApiOnline 
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${liveApiOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
-                {liveApiOnline ? 'AWS Lambda Live' : 'Autonomous Offline'}
+                {liveApiOnline ? 'AWS Live' : 'Offline Mode'}
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Elena Weber &bull; Munich Household &bull; Directive 2019/771/EU Statutory Sentinel
+              Elena Weber &bull; Munich, Germany
             </p>
           </div>
         </div>
 
-        {/* Top-Level Navigation Tabs */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-white/10 text-xs font-medium">
+        {/* Intuitive SaaS Top Tabs */}
+        <nav className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/90 border border-white/10 text-xs font-semibold overflow-x-auto">
           <button
-            onClick={() => onSelectTab('cockpit')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'cockpit'
-                ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow'
-                : 'text-slate-400 hover:text-slate-200'
+            onClick={() => onSelectTab('overview')}
+            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+              activeTab === 'overview'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7" height="7" />
               <rect x="14" y="3" width="7" height="7" />
               <rect x="14" y="14" width="7" height="7" />
               <rect x="3" y="14" width="7" height="7" />
             </svg>
-            <span>Operations Cockpit</span>
+            <span>Action Center</span>
+            {pendingActionsCount > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                activeTab === 'overview' ? 'bg-slate-950 text-amber-400' : 'bg-rose-500 text-white'
+              }`}>
+                {pendingActionsCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => onSelectTab('vault')}
+            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'vault'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>Asset Vault</span>
+            <span className="text-[11px] font-mono opacity-80">({summary.active_warranties_count})</span>
+          </button>
+
+          <button
+            onClick={() => onSelectTab('subscriptions')}
+            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'subscriptions'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>Subscriptions</span>
           </button>
 
           <button
             onClick={() => onSelectTab('journeys')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
               activeTab === 'journeys'
-                ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-            </svg>
-            <span>User Journeys (4)</span>
+            <span>User Journeys</span>
           </button>
 
           <button
             onClick={() => onSelectTab('gtm')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
               activeTab === 'gtm'
-                ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="20" x2="12" y2="10" />
-              <line x1="18" y1="20" x2="18" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="16" />
-            </svg>
-            <span>GTM & Economics</span>
+            <span>Pitch & GTM</span>
           </button>
 
           <button
             onClick={() => onSelectTab('architecture')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
               activeTab === 'architecture'
-                ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polygon points="12 2 2 7 12 12 22 7 12 2" />
-              <polyline points="2 17 12 22 22 17" />
-              <polyline points="2 12 12 17 22 12" />
-            </svg>
-            <span>Bedrock Architecture</span>
+            <span>AWS Console</span>
           </button>
-        </div>
+        </nav>
 
-        {/* Global Impact Metrics & Tour Launcher */}
-        <div className="flex items-center flex-wrap gap-2.5">
-          <button
-            onClick={onStartTour}
-            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer transition-all"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-            <span>Guided Tour</span>
-          </button>
-
-          <div className="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center gap-2">
-            <span className="text-[11px] uppercase tracking-wider text-rose-300 font-semibold">Unclaimed Recovery</span>
-            <span className="text-sm font-bold text-rose-400 font-mono">€{summary.potential_recovery_eur.toFixed(2)}</span>
-          </div>
-
-          <div className="px-3 py-1.5 rounded-lg bg-slate-900/80 border border-white/5 flex items-center gap-2">
-            <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Protected Assets</span>
-            <span className="text-sm font-bold text-slate-200 font-mono">€{summary.protected_value_eur.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+        {/* Global Impact Summary Pill */}
+        <div className="hidden lg:flex items-center gap-3">
+          <div className="text-right">
+            <div className="text-[10px] text-slate-400 uppercase font-mono">Protected Capital</div>
+            <div className="text-sm font-bold text-white font-mono">
+              €{summary.protected_value_eur.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </div>
           </div>
         </div>
       </div>
