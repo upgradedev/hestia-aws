@@ -33,7 +33,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     }
   };
 
-  const warrantyAlert = alerts.find((a) => a.category === 'warranty_claim');
+  const hasWarrantyAlert = alerts.some((a) => a.category === 'warranty_claim');
   const trialAlert = alerts.find((a) => a.action_type === 'cancel_trial');
   const priceCreepAlert = alerts.find((a) => a.category === 'price_creep' && a.action_type !== 'cancel_trial');
   const receiptAlert = alerts.find((a) => a.category === 'receipt_gap');
