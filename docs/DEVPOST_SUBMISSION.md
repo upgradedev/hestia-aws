@@ -21,10 +21,12 @@ Traditional budgeting apps demand relentless manual input: scanning receipts, ta
 
 ### What It Does
 Hestia is an everyday autonomous sentinel built with the AWS Strands Agents SDK and Amazon Bedrock AgentCore:
+- **Live Interactive Demo (No Login Required)**: https://drusjukc9d4oc.cloudfront.net/
 - **Warranty Sentinel**: Automatically monitors appliance purchase dates, tracks commercial vs. statutory warranty windows under EU Directive 2019/771/EU, and evaluates repair outlays. When an appliance breaks within the 2-year window, it drafts a legally airtight statutory demand letter citing the exact legal directives and serial numbers.
 - **Subscription Auditor**: Ingests recurring transaction feeds to catch unannounced price hikes, identifies overlapping duplicate services (e.g. concurrent individual and family music plans), and alerts users 3 days before free trial expiration.
 - **Household Completeness Engine**: Executes deterministic anti-joins between bank outflows and receipt archives (flagging transactions >€50 lacking tax/insurance documentation) and detects anomalous utility surges (>30% spike over baseline).
 - **Bedrock Return-of-Control (ROC)**: Instead of pestering users with endless push notifications, Hestia holds critical actions at a human approval gate. The user receives a single actionable cockpit view to approve the drafted warranty claim letter or authorize a trial cancellation in one click.
+
 
 ---
 

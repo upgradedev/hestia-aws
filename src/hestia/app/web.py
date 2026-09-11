@@ -162,7 +162,8 @@ def render_html(scenario_key: str = "family_flat", approved_action: str | None =
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hestia AWS — Autonomous Household Financial Sentinel</title>
+<title>Hestia AWS: Autonomous Household Financial Sentinel</title>
+
 <style>
 :root {{
   --bg: #0d1117;

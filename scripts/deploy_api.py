@@ -1,0 +1,110 @@
+"""Package and deploy Hestia API backend to AWS eu-west-1."""
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+import sys
+sys.path.insert(0, str(ROOT))
+
+from infra.hestia_api_stack import template as api_tmpl
+
+BUILD_DIR = ROOT / "build"
+PKG_DIR = BUILD_DIR / "pkg"
+ZIP_PATH = BUILD_DIR / "hestia-api.zip"
+REGION = "eu-west-1"
+ACCOUNT = "308857099262"
+DEPLOY_BUCKET = f"hestia-afh-deploy-{ACCOUNT}-{REGION}"
+STACK_NAME = "hestia-afh-api"
+
+
+def get_git_sha() -> str:
+    res = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True)
+    return res.stdout.strip()
+
+
+def package():
+    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+    if PKG_DIR.exists():
+        shutil.rmtree(PKG_DIR)
+    PKG_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Copy src/hestia into PKG_DIR/hestia
+    src_hestia = ROOT / "src" / "hestia"
+    dest_hestia = PKG_DIR / "hestia"
+    shutil.copytree(src_hestia, dest_hestia, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
+    # Create zip
+    if ZIP_PATH.exists():
+        ZIP_PATH.unlink()
+    with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file in PKG_DIR.rglob("*"):
+            if file.is_file():
+                arcname = file.relative_to(PKG_DIR).as_posix()
+                zf.write(file, arcname)
+    print(f"Created deployment package {ZIP_PATH} ({ZIP_PATH.stat().st_size} bytes)")
+
+
+def deploy():
+    sha = get_git_sha()
+    print(f"Current commit SHA: {sha}")
+    key = f"releases/{sha}/hestia-api.zip"
+
+    # 1. Package
+    package()
+
+    # 2. Upload zip
+    print(f"Uploading {ZIP_PATH} to s3://{DEPLOY_BUCKET}/{key}...")
+    subprocess.run([
+        "aws", "s3api", "put-object",
+        "--bucket", DEPLOY_BUCKET,
+        "--key", key,
+        "--body", str(ZIP_PATH),
+        "--region", REGION,
+        "--no-cli-pager"
+    ], check=True)
+
+    # 3. Write template
+    tmpl_path = BUILD_DIR / "hestia-api-stack.json"
+    tmpl_path.write_text(json.dumps(api_tmpl(), indent=2))
+    print(f"Rendered template {tmpl_path}")
+
+    # 4. Deploy stack
+    print(f"Deploying CloudFormation stack {STACK_NAME} in {REGION}...")
+    subprocess.run([
+        "aws", "cloudformation", "deploy",
+        "--template-file", str(tmpl_path),
+        "--stack-name", STACK_NAME,
+        "--region", REGION,
+        "--capabilities", "CAPABILITY_NAMED_IAM",
+        "--parameter-overrides",
+        f"CodeBucket={DEPLOY_BUCKET}",
+        f"CodeKey={key}",
+        f"CommitSha={sha}",
+        "--no-fail-on-empty-changeset",
+        "--no-cli-pager"
+    ], check=True)
+
+    # 5. Query outputs
+    desc = subprocess.run([
+        "aws", "cloudformation", "describe-stacks",
+        "--stack-name", STACK_NAME,
+        "--region", REGION,
+        "--query", "Stacks[0].Outputs",
+        "--output", "json",
+        "--no-cli-pager"
+    ], check=True, capture_output=True, text=True)
+    outputs = {item["OutputKey"]: item["OutputValue"] for item in json.loads(desc.stdout)}
+    print("Stack outputs:")
+    for k, v in outputs.items():
+        print(f"  {k}: {v}")
+
+    return outputs
+
+
+if __name__ == "__main__":
+    deploy()

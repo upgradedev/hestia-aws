@@ -1,6 +1,8 @@
 # How We Built an Autonomous Household Financial Sentinel with AWS Strands Agents SDK and Amazon Bedrock
 
 *Published for the AWS Agents for Humans Hackathon (Everyday Agents Track)*
+*Live Interactive Demo: [https://drusjukc9d4oc.cloudfront.net/](https://drusjukc9d4oc.cloudfront.net/)*
+
 
 Every day, households lose money to routine oversights: forgotten warranties, sneaky subscription price increases, and misplaced receipts. While enterprise software has sophisticated FinOps platforms, everyday families are left with tedious manual spreadsheets.
 
