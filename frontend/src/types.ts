@@ -5,12 +5,14 @@ export interface ApplianceWarranty {
   name: string;
   brand: string;
   model: string;
+  serial_number?: string;
   purchase_date: string;
   price_eur: number;
   seller_name: string;
   seller_email: string;
   receipt_id: string;
   legal_statutory_months: number; // 24 months under Directive (EU) 2019/771
+  statutory_warranty_months?: number;
   commercial_warranty_months: number;
   status: 'active' | 'defect_reported' | 'expired';
   defect_reported_at?: string;
@@ -76,4 +78,28 @@ export interface HouseholdSummary {
   leakage_detected_monthly_eur: number;
   potential_recovery_eur: number;
   active_sentinels: number;
+}
+
+export type ActiveTab = 'cockpit' | 'journeys' | 'gtm' | 'architecture';
+
+export interface JourneyStep {
+  id: string;
+  title: string;
+  description: string;
+  technicalMechanism: string;
+  legalBasis?: string;
+  economicDeltaEur?: number;
+  completed: boolean;
+}
+
+export interface UserJourney {
+  id: string;
+  title: string;
+  badge: string;
+  persona: string;
+  problemStatement: string;
+  resolution: string;
+  financialImpactEur: number;
+  legalCitation: string;
+  steps: JourneyStep[];
 }

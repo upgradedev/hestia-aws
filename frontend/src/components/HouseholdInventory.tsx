@@ -6,6 +6,7 @@ interface HouseholdInventoryProps {
   outflows: PaymentOutflow[];
   subscriptions: SubscriptionTracker[];
   onSelectItemForClaim: (item: ApplianceWarranty) => void;
+  onRequestUploadReceipt?: (outflow: PaymentOutflow) => void;
 }
 
 export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
@@ -13,6 +14,7 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
   outflows,
   subscriptions,
   onSelectItemForClaim,
+  onRequestUploadReceipt,
 }) => {
   const [activeTab, setActiveTab] = useState<'appliances' | 'outflows' | 'subscriptions'>('appliances');
 
@@ -34,7 +36,7 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
         <div className="flex p-0.5 rounded-lg bg-slate-900/90 border border-white/5 text-xs">
           <button
             onClick={() => setActiveTab('appliances')}
-            className={`px-3 py-1 rounded-md transition-all font-medium ${
+            className={`px-3 py-1 rounded-md transition-all font-medium cursor-pointer ${
               activeTab === 'appliances'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow'
                 : 'text-slate-400 hover:text-slate-200'
@@ -44,7 +46,7 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('outflows')}
-            className={`px-3 py-1 rounded-md transition-all font-medium ${
+            className={`px-3 py-1 rounded-md transition-all font-medium cursor-pointer ${
               activeTab === 'outflows'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow'
                 : 'text-slate-400 hover:text-slate-200'
@@ -54,7 +56,7 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('subscriptions')}
-            className={`px-3 py-1 rounded-md transition-all font-medium ${
+            className={`px-3 py-1 rounded-md transition-all font-medium cursor-pointer ${
               activeTab === 'subscriptions'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow'
                 : 'text-slate-400 hover:text-slate-200'
@@ -71,8 +73,8 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
         {activeTab === 'appliances' && (
           <>
             <div className="text-[11px] text-slate-400 px-1 pb-1 flex items-center justify-between">
-              <span>Directive (EU) 2019/771 Statutory 2-Year Conformity Horizon</span>
-              <span className="text-emerald-400 font-mono">24 Months Mandated</span>
+              <span>Directive (EU) 2019/771 Statutory 2-Year Horizon</span>
+              <span className="text-emerald-400 font-mono">24M Mandated</span>
             </div>
             {appliances.map((app) => {
               const isDefective = app.status === 'defect_reported';
@@ -99,47 +101,39 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
                             DEFECT IN 24M WINDOW
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Covered
-                          </span>
+                          <span className="text-[10px] text-emerald-400 font-mono">Statutory Active</span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Statutory Horizon Bar */}
-                  <div className="space-y-1.5 my-3 pt-1">
-                    <div className="flex justify-between text-[11px] font-mono text-slate-400">
-                      <span>Purchased: {app.purchase_date}</span>
-                      <span className="text-slate-300">Seller: {app.seller_name}</span>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-300 bg-slate-900/60 rounded-lg p-2.5 border border-white/5 mb-3">
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">PURCHASED:</span>
+                      <span>{app.purchase_date}</span>
                     </div>
-                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
-                      <div className="h-full bg-emerald-500 w-3/4 rounded-l-full"></div>
-                      <div className="h-full bg-amber-500 w-1/4 rounded-r-full"></div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">RETAILER:</span>
+                      <span className="truncate block">{app.seller_name}</span>
                     </div>
-                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                      <span>Commercial (12m)</span>
-                      <span className="text-amber-400/90 font-medium">Statutory EU Right (24m)</span>
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">STORE WARRANTY:</span>
+                      <span className="text-rose-400">{app.commercial_warranty_months} Months (Expired)</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">EU STATUTORY:</span>
+                      <span className="text-emerald-400 font-semibold">{app.legal_statutory_months || 24} Months (Active)</span>
                     </div>
                   </div>
 
-                  {/* Defect Alert & ROC Trigger */}
                   {isDefective && (
-                    <div className="mt-3 p-2.5 rounded-lg bg-rose-900/30 border border-rose-500/30 text-xs">
-                      <p className="text-rose-200 text-[11px] leading-relaxed mb-2">
-                        <strong className="text-rose-100 font-semibold">Reported Issue:</strong> {app.defect_description}
-                      </p>
+                    <div className="mt-2 pt-2 border-t border-rose-500/20 flex items-center justify-between">
+                      <span className="text-xs text-rose-300 font-mono">€185.00 repair paid out of pocket</span>
                       <button
                         onClick={() => onSelectItemForClaim(app)}
-                        className="w-full py-1.5 px-3 rounded bg-gradient-to-r from-rose-600 to-orange-600 hover:from-rose-500 hover:to-orange-500 text-white font-medium text-xs shadow-md shadow-rose-900/40 flex items-center justify-center gap-1.5 transition-all"
+                        className="py-1 px-3 rounded-lg bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs cursor-pointer shadow transition-all"
                       >
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="16" y1="13" x2="8" y2="13" />
-                          <line x1="16" y1="17" x2="8" y2="17" />
-                        </svg>
-                        Review Pre-Drafted Claim Letter
+                        Enforce Statutory Remedy &rarr;
                       </button>
                     </div>
                   )}
@@ -203,8 +197,11 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
                 {!tx.has_receipt && tx.requires_receipt && (
                   <div className="mt-2 text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded p-2 flex items-center justify-between">
                     <span>{tx.flagged_reason}</span>
-                    <button className="underline text-amber-400 hover:text-amber-300 font-medium ml-2 shrink-0">
-                      Upload
+                    <button
+                      onClick={() => onRequestUploadReceipt && onRequestUploadReceipt(tx)}
+                      className="underline text-amber-400 hover:text-amber-300 font-bold ml-2 shrink-0 cursor-pointer"
+                    >
+                      Upload & Link &rarr;
                     </button>
                   </div>
                 )}
@@ -240,35 +237,25 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
                           TRIAL
                         </span>
                       )}
+                      {sub.price_creep_pct > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          +{sub.price_creep_pct}% HIKE
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-slate-400 font-mono mt-0.5">
-                      {sub.is_trial ? (
-                        <span className="text-purple-300 font-semibold">Expires {sub.trial_expires_at} (48h left)</span>
-                      ) : (
-                        <span>Next cycle: {sub.next_billing_date}</span>
-                      )}
+                      Category: {sub.category} &bull; Next: {sub.next_billing_date}
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-bold text-slate-200 font-mono">
-                      {sub.is_trial ? `€${sub.renewal_cost_eur.toFixed(2)}/mo` : `€${sub.current_monthly_eur.toFixed(2)}/mo`}
-                    </span>
-                    {sub.price_creep_pct > 0 && (
-                      <div className="text-[11px] text-amber-400 font-mono font-medium">
-                        +{sub.price_creep_pct.toFixed(0)}% creep
+                    <span className="text-sm font-bold text-slate-200 font-mono">€{sub.current_monthly_eur.toFixed(2)}/mo</span>
+                    {sub.initial_monthly_eur && (
+                      <div className="text-[10px] text-slate-500 font-mono">
+                        was €{sub.initial_monthly_eur.toFixed(2)}
                       </div>
                     )}
                   </div>
                 </div>
-
-                {sub.is_trial && (
-                  <div className="mt-3 p-2 rounded bg-purple-900/30 border border-purple-500/30 flex items-center justify-between text-xs">
-                    <span className="text-purple-200 text-[11px]">Auto-charges €{sub.renewal_cost_eur.toFixed(2)} in 48 hours</span>
-                    <button className="px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-medium text-[11px] transition-all">
-                      Cancel Trial
-                    </button>
-                  </div>
-                )}
               </div>
             ))}
           </>

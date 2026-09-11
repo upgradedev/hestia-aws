@@ -7,6 +7,7 @@ interface ReturnOfControlProps {
   dispatchHistory: DispatchRecord[];
   onDispatchClaim: (itemId: string) => Promise<DispatchRecord | null>;
   onCancelTrial: (subId: string) => Promise<boolean>;
+  onInspectDocument?: () => void;
 }
 
 export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
@@ -15,6 +16,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
   dispatchHistory,
   onDispatchClaim,
   onCancelTrial,
+  onInspectDocument,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -97,34 +99,47 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
               </p>
 
               {/* Pre-Drafted Formal Legal Letter Box */}
-              <div className="rounded-lg bg-[#080b11] border border-white/10 p-3.5 font-mono text-[11px] text-slate-300 leading-relaxed max-h-52 overflow-y-auto shadow-inner">
+              <div className="rounded-lg bg-[#080b11] border border-white/10 p-3.5 font-mono text-[11px] text-slate-300 leading-relaxed max-h-48 overflow-y-auto shadow-inner">
                 <div className="text-slate-400 border-b border-white/10 pb-2 mb-2">
                   <div><strong>TO:</strong> {activeItem.seller_name} &lt;{activeItem.seller_email}&gt;</div>
                   <div><strong>SUBJECT:</strong> Formal Notice of Lack of Conformity: {activeItem.model} (Invoice #{activeItem.receipt_id})</div>
-
                   <div><strong>LEGAL BASIS:</strong> Directive (EU) 2019/771, Article 10(1) & Article 13</div>
                 </div>
                 <p className="mb-2">Dear Customer Relations,</p>
                 <p className="mb-2">
-                  I hereby notify you of a lack of conformity regarding {activeItem.brand} {activeItem.name} (Model: {activeItem.model}), purchased from your store on {activeItem.purchase_date} under Invoice #{activeItem.receipt_id}.
+                  I hereby notify you of a lack of conformity regarding {activeItem.brand} {activeItem.name} (Model: {activeItem.model}), purchased on {activeItem.purchase_date} under Invoice #{activeItem.receipt_id}.
                 </p>
                 <p className="mb-2">
                   The goods exhibit the following defect: "{activeItem.defect_description || 'Functional failure'}".
                 </p>
                 <p className="mb-2">
-                  Pursuant to Article 10(1) and Article 13 of Directive (EU) 2019/771, the consumer is entitled to have the goods brought into conformity free of charge, through repair or replacement within a reasonable time and without significant inconvenience.
-                </p>
-                <p>
-                  Please confirm receipt of this notice within 5 working days and provide repair authorization logistics.
+                  Pursuant to Article 10(1) and Article 13 of Directive (EU) 2019/771, the consumer is entitled to have the goods brought into conformity free of charge.
                 </p>
               </div>
 
+              {/* Modal trigger link */}
+              {onInspectDocument && (
+                <div className="mt-2 text-right">
+                  <button
+                    onClick={onInspectDocument}
+                    className="text-xs text-amber-400 hover:text-amber-300 font-medium underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View Official Legal Letter & German BGB Details</span>
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
               {/* 1-Click Approve Dispatch Button */}
-              <div className="mt-4 pt-2 border-t border-white/10">
+              <div className="mt-3 pt-2 border-t border-white/10">
                 <button
                   onClick={handleApproveAction}
                   disabled={isSubmitting}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
@@ -161,7 +176,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
             <button
               onClick={handleApproveAction}
               disabled={isSubmitting}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-950/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-950/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <span>Cancelling Trial...</span>

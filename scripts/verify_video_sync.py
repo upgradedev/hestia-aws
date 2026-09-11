@@ -96,7 +96,7 @@ EDGE_CARD_CONTENT_THRESHOLD = 4.5
 def frame_edge_mean(path, t):
     """Mean Sobel-edge magnitude of the frame at time t (detail density).
 
-    Reads the ACTUAL pixels of the shipped mp4 — this is what makes the order gate
+    Reads the ACTUAL pixels of the shipped mp4 - this is what makes the order gate
     measure the video instead of trusting a hardcoded manifest constant. A frozen
     solid card scores low; a text-dense terminal/browser frame scores high.
     """
@@ -233,7 +233,7 @@ def main():
                 f"(tol {frame_tol:.3f}) | audio<=video+0.35={clause_b_len} | "
                 f"internal_content_gap={internal_gap}")
     else:
-        g.check(True, "av-duration", "no voiceover (have_vo=false) — skipped")
+        g.check(True, "av-duration", "no voiceover (have_vo=false) - skipped")
 
     # ---- req 2: captions ----
     print("== req2: caption windows in-bounds/monotonic/non-overlap/no-outro-bleed ==")
@@ -269,7 +269,7 @@ def main():
         g.check(mv is not None and mv > -50.0, "web-beat-audible",
                 f"max_volume in web window [{probe_start:.3f}+{probe_dur:.3f}s] = {mv} dB (>-50)")
     else:
-        g.check(True, "web-beat-audible", "no voiceover — skipped")
+        g.check(True, "web-beat-audible", "no voiceover - skipped")
 
     print()
     if g.failures:
