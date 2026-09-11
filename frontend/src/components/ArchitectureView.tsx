@@ -1,11 +1,34 @@
 import React, { useState } from 'react';
 
 export const ArchitectureView: React.FC = () => {
-  const [activeEndpoint, setActiveEndpoint] = useState<'/healthz' | '/action/claim' | '/action/cancel_trial'>('/healthz');
+  const [activeEndpoint, setActiveEndpoint] = useState<
+    '/healthz' | '/api/action/claim' | '/api/action/utility_dispute' | '/api/action/cancel' | '/api/action/reset'
+  >('/healthz');
   const [requestPayload, setRequestPayload] = useState<string>('{\n  "item_id": "app-001"\n}');
   const [apiResponse, setApiResponse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+
+  const handleResetDemoState = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/action/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (res.ok) {
+        setResetMessage('Household state successfully reset to baseline in Amazon S3!');
+        setTimeout(() => setResetMessage(null), 3500);
+      }
+    } catch {
+      setResetMessage('Reset executed in offline simulation mode.');
+      setTimeout(() => setResetMessage(null), 3500);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleTestApi = async () => {
     setIsLoading(true);
@@ -20,7 +43,7 @@ export const ArchitectureView: React.FC = () => {
         res = await fetch(activeEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: requestPayload,
+          body: requestPayload || '{}',
         });
       }
 
@@ -36,7 +59,6 @@ export const ArchitectureView: React.FC = () => {
     } catch (err: any) {
       const duration = Math.round(performance.now() - start);
       setLatencyMs(duration);
-      // Offline fallback simulation
       setApiResponse({
         status: 200,
         simulated: true,
@@ -53,20 +75,87 @@ export const ArchitectureView: React.FC = () => {
     <div className="space-y-8">
       {/* Topology Header */}
       <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-sky-950/30 to-slate-900 border border-sky-500/30 p-6 lg:p-8 shadow-2xl backdrop-blur-xl">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-sky-400 font-bold">
-            SYSTEM ARCHITECTURE & AWS BEDROCK SPECIFICATION
-          </span>
-          <span className="text-xs px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-mono border border-sky-500/30">
-            100% SERVERLESS // EU-WEST-1
-          </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-sky-400 font-bold">
+                SYSTEM ARCHITECTURE & AWS BEDROCK SPECIFICATION
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-mono border border-sky-500/30">
+                100% SERVERLESS // EU-WEST-1
+              </span>
+            </div>
+            <h2 className="text-2xl font-black text-white tracking-tight">
+              Deterministic Action Groups + Amazon Bedrock AgentCore
+            </h2>
+            <p className="text-xs lg:text-sm text-slate-300 mt-2 max-w-4xl leading-relaxed">
+              Hestia employs an architecture-first design pattern: traditional, highly deterministic Python 3.11 rules calculate math and dates with 100% precision, while Amazon Bedrock is deployed strictly for multimodal OCR extraction and formal legal drafting under strict Bedrock Guardrails.
+            </p>
+          </div>
+
+          {/* Reset Demo State Trigger */}
+          <div className="shrink-0 flex flex-col items-start sm:items-end gap-2">
+            <button
+              onClick={handleResetDemoState}
+              disabled={isLoading}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              <span>Reset Demo State (Amazon S3)</span>
+            </button>
+            {resetMessage && (
+              <span className="text-[11px] font-mono text-emerald-400 animate-fade-in">
+                {resetMessage}
+              </span>
+            )}
+          </div>
         </div>
-        <h2 className="text-2xl font-black text-white tracking-tight">
-          Deterministic Action Groups + Amazon Bedrock AgentCore
-        </h2>
-        <p className="text-xs lg:text-sm text-slate-300 mt-2 max-w-4xl leading-relaxed">
-          Hestia employs an architecture-first design pattern: traditional, highly deterministic Python 3.11 rules calculate math and dates with 100% precision, while Amazon Bedrock is deployed strictly for multimodal OCR extraction and formal legal drafting under strict Bedrock Guardrails.
-        </p>
+      </div>
+
+      {/* Visual Strands Agent Execution Trace */}
+      <div className="glass-panel rounded-2xl p-6 border border-emerald-500/30 bg-[#0a0f18]">
+        <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
+              AWS Strands Agent Execution Pipeline Trace
+            </h3>
+          </div>
+          <span className="text-[11px] font-mono text-emerald-400">Directive (EU) 2019/771 Enforced</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-white/10 space-y-1 text-xs font-mono">
+            <div className="text-[10px] text-amber-400 uppercase font-bold">Step 1 // Privacy Gate</div>
+            <div className="text-white font-semibold">sanitize_pii()</div>
+            <p className="text-[11px] text-slate-400">Masks IBANs and payment card numbers before any LLM inference call.</p>
+            <div className="text-[10px] text-emerald-400 pt-1">&bull; Latency: ~1 ms</div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-sky-500/30 space-y-1 text-xs font-mono">
+            <div className="text-[10px] text-sky-400 uppercase font-bold">Step 2 // Deterministic Tool</div>
+            <div className="text-white font-semibold">check_appliance_warranty()</div>
+            <p className="text-[11px] text-slate-400">Python domain model evaluates 24-month horizon under Directive 2019/771.</p>
+            <div className="text-[10px] text-emerald-400 pt-1">&bull; Invariant: Month 22 &lt;= 24</div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-purple-500/30 space-y-1 text-xs font-mono">
+            <div className="text-[10px] text-purple-400 uppercase font-bold">Step 3 // Foundation Model</div>
+            <div className="text-white font-semibold">Bedrock Haiku Converse</div>
+            <p className="text-[11px] text-slate-400">Claude 3.5 Haiku formats formal statutory claim notice without hallucinations.</p>
+            <div className="text-[10px] text-purple-300 pt-1">&bull; eu.anthropic.claude-haiku</div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-emerald-500/30 space-y-1 text-xs font-mono">
+            <div className="text-[10px] text-emerald-400 uppercase font-bold">Step 4 // Immutability</div>
+            <div className="text-white font-semibold">SHA-256 S3 Audit Seal</div>
+            <p className="text-[11px] text-slate-400">Cryptographic digest sealed to s3://hestia-afh-state-.../audit/ prefix.</p>
+            <div className="text-[10px] text-emerald-400 pt-1">&bull; Return-of-Control Proof</div>
+          </div>
+        </div>
       </div>
 
       {/* 4 Architectural Tiers */}
@@ -125,13 +214,13 @@ export const ArchitectureView: React.FC = () => {
           </div>
 
           {/* Endpoint Switcher */}
-          <div className="flex p-0.5 rounded-lg bg-slate-900 border border-white/10 text-xs font-mono">
+          <div className="flex flex-wrap p-0.5 rounded-lg bg-slate-900 border border-white/10 text-xs font-mono gap-1">
             <button
               onClick={() => {
                 setActiveEndpoint('/healthz');
                 setRequestPayload('');
               }}
-              className={`px-3 py-1 rounded transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
                 activeEndpoint === '/healthz'
                   ? 'bg-emerald-500/20 text-emerald-300 font-bold'
                   : 'text-slate-400 hover:text-white'
@@ -141,29 +230,55 @@ export const ArchitectureView: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                setActiveEndpoint('/action/claim');
+                setActiveEndpoint('/api/action/claim');
                 setRequestPayload('{\n  "item_id": "app-001"\n}');
               }}
-              className={`px-3 py-1 rounded transition-all cursor-pointer ${
-                activeEndpoint === '/action/claim'
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                activeEndpoint === '/api/action/claim'
                   ? 'bg-amber-500/20 text-amber-300 font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              POST /action/claim
+              POST /claim
             </button>
             <button
               onClick={() => {
-                setActiveEndpoint('/action/cancel_trial');
-                setRequestPayload('{\n  "subscription_id": "sub-001"\n}');
+                setActiveEndpoint('/api/action/utility_dispute');
+                setRequestPayload('{\n  "provider": "Stadtwerke Munich",\n  "excess_cents": 5400,\n  "legal_basis": "AVBWasserV § 18"\n}');
               }}
-              className={`px-3 py-1 rounded transition-all cursor-pointer ${
-                activeEndpoint === '/action/cancel_trial'
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                activeEndpoint === '/api/action/utility_dispute'
+                  ? 'bg-cyan-500/20 text-cyan-300 font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              POST /utility_dispute
+            </button>
+            <button
+              onClick={() => {
+                setActiveEndpoint('/api/action/cancel');
+                setRequestPayload('{\n  "service_name": "Fitness Stream Pro"\n}');
+              }}
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                activeEndpoint === '/api/action/cancel'
                   ? 'bg-purple-500/20 text-purple-300 font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              POST /action/cancel_trial
+              POST /cancel
+            </button>
+            <button
+              onClick={() => {
+                setActiveEndpoint('/api/action/reset');
+                setRequestPayload('{}');
+              }}
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                activeEndpoint === '/api/action/reset'
+                  ? 'bg-rose-500/20 text-rose-300 font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              POST /reset
             </button>
           </div>
         </div>

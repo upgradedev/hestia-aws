@@ -100,10 +100,20 @@ export const ReceiptUploadModal: React.FC<ReceiptUploadModalProps> = ({
 
           {step === 'select' && (
             <div className="space-y-4">
-              <div
-                onClick={handleSimulateUpload}
-                className="border-2 border-dashed border-white/20 hover:border-amber-400/60 rounded-xl p-6 text-center cursor-pointer transition-all bg-slate-900/40 hover:bg-slate-900/80"
+              <label
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleSimulateUpload();
+                }}
+                className="border-2 border-dashed border-white/20 hover:border-amber-400/60 rounded-xl p-6 text-center cursor-pointer transition-all bg-slate-900/40 hover:bg-slate-900/80 block"
               >
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="hidden"
+                  onChange={() => handleSimulateUpload()}
+                />
                 <div className="w-12 h-12 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-slate-300 mx-auto mb-2">
                   <svg className="w-6 h-6 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -112,12 +122,15 @@ export const ReceiptUploadModal: React.FC<ReceiptUploadModalProps> = ({
                   </svg>
                 </div>
                 <div className="text-sm font-semibold text-slate-200">
-                  Click to simulate uploading IKEA Receipt Photo
+                  Drop Receipt Photo / PDF or Click to Browse
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
-                  Sample: "IKEA Deutschland - Kassenbon #88412 (€85.00)"
+                  Sample or your own receipt: "IKEA Deutschland - Kassenbon #88412 (€85.00)"
                 </div>
-              </div>
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                  <span>Supports JPEG, PNG, PDF &bull; Amazon Bedrock Multimodal OCR</span>
+                </div>
+              </label>
 
               <div className="p-3 rounded-xl bg-slate-900/70 border border-white/5 text-xs text-slate-300 space-y-1">
                 <div className="font-semibold text-slate-200">Why proof matters:</div>

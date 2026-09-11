@@ -218,6 +218,18 @@ export const INITIAL_ALERTS: SentinelAlert[] = [
     action_type: 'request_receipt',
     action_label: 'Upload Receipt Photo',
   },
+  {
+    id: 'alt-005',
+    timestamp: '2026-09-08 14:10',
+    severity: 'warning',
+    category: 'utility_surge',
+    title: 'Water Utility Surge (+61.4%) Exceeds Seasonal Baseline',
+    description: 'Stadtwerke München Q3 water invoice jumped to €142.00 vs €88.00 baseline. Domestic leak check passed; meter calibration inspection recommended.',
+    statutory_basis: 'AVBWasserV § 18 (Verordnung über die Versorgung mit Wasser)',
+    potential_savings_eur: 54.00,
+    action_type: 'dispute_bill',
+    action_label: 'Review Meter Recalibration Demand',
+  },
 ];
 
 export const CORE_USER_JOURNEYS: UserJourney[] = [

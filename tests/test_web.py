@@ -246,3 +246,58 @@ def test_lambda_handler_api_action_receipt_no_body():
     assert res["status"] == "success"
 
 
+def test_lambda_handler_api_action_reset():
+    event = {
+        "rawPath": "/api/action/reset",
+        "requestContext": {"http": {"method": "POST"}},
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+    assert "state" in res
+    assert res["state"]["household_name"] == "Athens Apartment 4B (Urban Household)"
+
+
+def test_lambda_handler_api_action_utility_dispute():
+    body = json.dumps({
+        "provider": "Stadtwerke Munich",
+        "excess_cents": 5400,
+        "legal_basis": "AVBWasserV § 18",
+    })
+    event = {
+        "rawPath": "/api/action/utility_dispute",
+        "requestContext": {"http": {"method": "POST"}},
+        "body": body,
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+    assert res["result"]["status"] == "disputed"
+
+
+def test_lambda_handler_api_action_utility_dispute_invalid_json():
+    event = {
+        "rawPath": "/action/utility_dispute",
+        "requestContext": {"http": {"method": "POST"}},
+        "body": "{bad-json}",
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+
+
+def test_lambda_handler_api_action_utility_dispute_no_body():
+    event = {
+        "rawPath": "/api/action/utility_dispute",
+        "requestContext": {"http": {"method": "POST"}},
+        "body": None,
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+
+

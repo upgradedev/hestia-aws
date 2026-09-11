@@ -200,3 +200,35 @@ def test_record_claim_dispatch_with_remaining_open_claims():
     assert updated_state["summary"]["unclaimed_recovery_cents"] == 8000
 
 
+def test_reset_state():
+    store = S3HouseholdStore(bucket_name="")
+    # First modify state
+    state = store.load_state()
+    state["household_name"] = "Modified Name"
+    state["summary"]["unclaimed_recovery_cents"] = 0
+    store.save_state(state)
+    assert store.load_state()["household_name"] == "Modified Name"
+
+    # Reset
+    fresh = store.reset_state()
+    assert fresh["household_name"] == "Athens Apartment 4B (Urban Household)"
+    assert fresh["summary"]["unclaimed_recovery_cents"] == 18500
+    assert len(fresh["reset_seal"]) == 64
+
+
+def test_record_utility_dispute():
+    store = S3HouseholdStore(bucket_name="")
+    res = store.record_utility_dispute(
+        provider="Stadtwerke Munich",
+        excess_cents=5400,
+        legal_basis="AVBWasserV § 18",
+    )
+    assert res["status"] == "disputed"
+    assert res["record"]["provider"] == "Stadtwerke Munich"
+    assert res["record"]["excess_eur"] == 54.00
+    assert len(res["cryptographic_seal"]) == 64
+
+    state = store.load_state()
+    assert len(state["utility_dispatches"]) >= 1
+
+

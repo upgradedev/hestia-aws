@@ -176,15 +176,95 @@ export const GtmInvestorView: React.FC = () => {
         </div>
       </div>
 
-      {/* European Regulatory Moat */}
-      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-indigo-500/20 p-6">
-        <h3 className="text-sm font-bold text-white uppercase font-mono tracking-wider text-indigo-400 mb-2">
-          The Statutory Moat: Why US Big Tech Cannot Replicate This Overnight
-        </h3>
-        <p className="text-xs text-slate-300 leading-relaxed max-w-4xl">
-          US competitors (Mint, Rocket Money, Copilot) are built purely around US card aggregators and voluntary merchant refund APIs. They have no concept of European statutory 24-month liability, reverse burden of proof periods, German Civil Code (BGB) § 437/439 rules, or European Order for Payment (EOP) procedures. Hestia is natively codified for European civil law.
-        </p>
+      {/* European Regulatory & Data Moat */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-indigo-500/20 p-6 space-y-3">
+          <h3 className="text-sm font-bold text-white uppercase font-mono tracking-wider text-indigo-400">
+            The Statutory Moat: Why US Big Tech Cannot Replicate
+          </h3>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            US competitors (Mint, Rocket Money, Copilot) are built purely around US card aggregators and voluntary merchant refund APIs. They have no concept of European statutory 24-month liability, reverse burden of proof periods, German Civil Code (BGB) § 437/439 rules, or European Order for Payment (EOP) procedures. Hestia is natively codified for European civil law.
+          </p>
+          <div className="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/20 text-[11px] font-mono text-indigo-300">
+            &bull; Directive (EU) 2019/771 &bull; Right to Repair (EU) 2024/1799 &bull; BGB § 437
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/30 border border-emerald-500/20 p-6 space-y-3">
+          <h3 className="text-sm font-bold text-white uppercase font-mono tracking-wider text-emerald-400">
+            Proprietary Merchant Intelligence Moat
+          </h3>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Every sealed claim generates an empirical datapoint on merchant compliance cycles. At 100,000 households, Hestia becomes the proprietary intelligence benchmark for European retailer warranty adherence.
+          </p>
+          <div className="grid grid-cols-3 gap-2 text-[11px] font-mono text-center">
+            <div className="p-2 rounded bg-slate-900 border border-white/5">
+              <div className="text-slate-400 text-[10px]">MediaMarkt</div>
+              <div className="text-emerald-400 font-bold">92% Settle</div>
+              <div className="text-slate-500 text-[10px]">8 days avg</div>
+            </div>
+            <div className="p-2 rounded bg-slate-900 border border-white/5">
+              <div className="text-slate-400 text-[10px]">Amazon EU</div>
+              <div className="text-emerald-400 font-bold">98% Settle</div>
+              <div className="text-slate-500 text-[10px]">48h avg</div>
+            </div>
+            <div className="p-2 rounded bg-slate-900 border border-white/5">
+              <div className="text-slate-400 text-[10px]">IKEA DE</div>
+              <div className="text-emerald-400 font-bold">95% Settle</div>
+              <div className="text-slate-500 text-[10px]">5 days avg</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* B2B2C Embedded Neobank API Sandbox */}
+      <div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/10">
+          <div>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-indigo-400 font-bold">
+              B2B2C EMBEDDED INTEGRATION
+            </span>
+            <h3 className="text-base font-bold text-white">
+              Partner API Playground: Ingest PSD2 Card Feeds (Revolut / N26)
+            </h3>
+          </div>
+          <span className="text-xs font-mono px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            POST /api/v1/partner/ingest_stream
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs font-mono">
+          <div className="p-3.5 rounded-xl bg-[#080b10] border border-white/10 space-y-2">
+            <span className="text-slate-400 uppercase text-[10px]">Inbound Neobank Telemetry (JSON)</span>
+            <pre className="text-indigo-300 overflow-x-auto leading-relaxed">
+{`{
+  "partner_id": "revolut-eu-prod",
+  "user_token": "usr_9941a82f",
+  "outflow": {
+    "merchant": "MediaMarkt Munich",
+    "amount_cents": 18500,
+    "mcc": "5732",
+    "currency": "EUR"
+  }
+}`}
+            </pre>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#080b10] border border-emerald-500/30 space-y-2">
+            <span className="text-emerald-400 uppercase text-[10px]">Hestia Return-of-Control Dispatch (Response)</span>
+            <pre className="text-emerald-300 overflow-x-auto leading-relaxed">
+{`{
+  "status": "statutory_warranty_gap_detected",
+  "eligible_directive": "2019/771/EU Article 10",
+  "potential_recovery_eur": 185.00,
+  "action_required": "human_roc_signature_gate",
+  "in_app_card_prompt": "Claim €185 repair refund"
+}`}
+            </pre>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
+

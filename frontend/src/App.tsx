@@ -8,6 +8,7 @@ import { GtmInvestorView } from './components/GtmInvestorView';
 import { ArchitectureView } from './components/ArchitectureView';
 import { FormalNoticeModal } from './components/FormalNoticeModal';
 import { ReceiptUploadModal } from './components/ReceiptUploadModal';
+import { UtilityDisputeModal } from './components/UtilityDisputeModal';
 
 import {
   INITIAL_SUMMARY,
@@ -23,6 +24,7 @@ import {
   HouseholdSummary,
   PaymentOutflow,
   ActiveTab,
+  Locale,
 } from './types';
 
 export const App: React.FC = () => {
@@ -35,10 +37,12 @@ export const App: React.FC = () => {
 
   const [selectedAppliance, setSelectedAppliance] = useState<ApplianceWarranty | null>(INITIAL_APPLIANCES[0]);
   const [liveApiOnline, setLiveApiOnline] = useState(false);
+  const [locale, setLocale] = useState<Locale>('en');
 
   // Modals
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isUtilityModalOpen, setIsUtilityModalOpen] = useState(false);
 
   const [dispatchHistory, setDispatchHistory] = useState<DispatchRecord[]>([
     {
@@ -220,6 +224,65 @@ export const App: React.FC = () => {
     }));
   };
 
+  const handleUtilityDispute = async (provider: string, excessCents: number) => {
+    try {
+      const res = await fetch('/api/action/utility_dispute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, excess_cents: excessCents }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state && data.state.summary) {
+          setSummary((prev) => ({
+            ...prev,
+            active_sentinels: Math.max(0, prev.active_sentinels - 1),
+          }));
+        }
+      }
+    } catch {
+      // offline simulation
+    }
+
+    setAlerts((prev) => prev.filter((a) => a.category !== 'utility_surge'));
+  };
+
+  const handleResetDemo = async () => {
+    try {
+      const res = await fetch('/api/action/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state && data.state.summary) {
+          setSummary({
+            active_warranties_count: 4,
+            protected_value_eur: data.state.summary.protected_assets_cents / 100,
+            unclaimed_repairs_count: 1,
+            leakage_detected_monthly_eur: data.state.summary.monthly_sub_leakage_cents / 100,
+            potential_recovery_eur: data.state.summary.unclaimed_recovery_cents / 100,
+            active_sentinels: 4,
+          });
+          setAppliances(INITIAL_APPLIANCES);
+          setSubscriptions(INITIAL_SUBSCRIPTIONS);
+          setOutflows(INITIAL_OUTFLOWS);
+          setAlerts(INITIAL_ALERTS);
+          if (data.state.dispatch_records) {
+            setDispatchHistory(data.state.dispatch_records);
+          }
+        }
+      }
+    } catch {
+      setSummary(INITIAL_SUMMARY);
+      setAppliances(INITIAL_APPLIANCES);
+      setSubscriptions(INITIAL_SUBSCRIPTIONS);
+      setOutflows(INITIAL_OUTFLOWS);
+      setAlerts(INITIAL_ALERTS);
+    }
+  };
+
   const pendingCount = alerts.length;
 
   return (
@@ -230,6 +293,9 @@ export const App: React.FC = () => {
         liveApiOnline={liveApiOnline}
         activeTab={activeTab}
         pendingActionsCount={pendingCount}
+        locale={locale}
+        onToggleLocale={() => setLocale((prev) => (prev === 'en' ? 'de' : 'en'))}
+        onResetDemo={handleResetDemo}
         onSelectTab={setActiveTab}
       />
 
@@ -247,6 +313,7 @@ export const App: React.FC = () => {
             }}
             onCancelTrial={handleCancelTrial}
             onOpenReceiptModal={() => setIsReceiptModalOpen(true)}
+            onOpenUtilityDisputeModal={() => setIsUtilityModalOpen(true)}
             onViewAllAssets={() => setActiveTab('vault')}
             onViewAllSubscriptions={() => setActiveTab('subscriptions')}
           />
@@ -283,6 +350,8 @@ export const App: React.FC = () => {
                 setIsNoticeModalOpen(true);
               } else if (journeyId === 'journey-receipt-antijoin') {
                 setIsReceiptModalOpen(true);
+              } else if (journeyId === 'journey-utility-surge') {
+                setIsUtilityModalOpen(true);
               }
             }}
           />
@@ -308,6 +377,13 @@ export const App: React.FC = () => {
         isOpen={isReceiptModalOpen}
         onClose={() => setIsReceiptModalOpen(false)}
         onReceiptMatched={handleReceiptMatched}
+      />
+
+      {/* Utility Dispute Modal */}
+      <UtilityDisputeModal
+        isOpen={isUtilityModalOpen}
+        onClose={() => setIsUtilityModalOpen(false)}
+        onDispute={handleUtilityDispute}
       />
 
       {/* Simple, Clean Footer */}

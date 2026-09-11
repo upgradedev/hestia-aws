@@ -430,3 +430,63 @@ class S3HouseholdStore:
             "new_missing_receipt_cents": missing_sum,
             "cryptographic_seal": seal,
         }
+
+    def reset_state(self) -> dict[str, Any]:
+        """Reset household state in memory and S3 back to pristine baseline."""
+        fresh = json.loads(json.dumps(DEFAULT_HOUSEHOLD_STATE))
+        fresh["last_updated"] = datetime.now(UTC).isoformat()
+        self._memory_state = fresh
+
+        seal = self.append_audit_event(
+            action="state_reset",
+            payload={
+                "reason": "demo_baseline_reseeded",
+                "timestamp": fresh["last_updated"],
+            },
+        )
+        fresh["reset_seal"] = seal
+        self.save_state(fresh)
+        return fresh
+
+    def record_utility_dispute(
+        self,
+        provider: str = "Stadtwerke Munich",
+        excess_cents: int = 5400,
+        legal_basis: str = "AVBWasserV § 18",
+    ) -> dict[str, Any]:
+        """Record utility meter dispute, reduce anomaly count, and seal audit event."""
+        state = self.load_state()
+        for u in state.get("utility_bills", []):
+            u["status"] = "disputed"
+            u["legal_basis"] = legal_basis
+
+        seal = self.append_audit_event(
+            action="utility_meter_dispute",
+            payload={
+                "provider": provider,
+                "excess_cents": excess_cents,
+                "legal_basis": legal_basis,
+            },
+        )
+
+        now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M")
+        record = {
+            "id": f"util-disp-{int(datetime.now(UTC).timestamp())}",
+            "provider": provider,
+            "status": "dispatched",
+            "timestamp": now_str,
+            "excess_eur": excess_cents / 100,
+            "legal_basis": legal_basis,
+            "cryptographic_seal": seal,
+        }
+
+        state.setdefault("utility_dispatches", []).append(record)
+        state["summary"]["active_anomalies_count"] = max(
+            0, state["summary"]["active_anomalies_count"] - 1
+        )
+        self.save_state(state)
+        return {
+            "status": "disputed",
+            "record": record,
+            "cryptographic_seal": seal,
+        }

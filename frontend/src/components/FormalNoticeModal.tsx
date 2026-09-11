@@ -33,6 +33,54 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
     }
   };
 
+  const [copied, setCopied] = React.useState(false);
+
+  const getFullNoticeText = () => {
+    return `FORMAL STATUTORY NOTICE OF LACK OF CONFORMITY
+Pursuant to Directive (EU) 2019/771 & German Civil Code (BGB) § 437
+
+CLAIMANT (CONSUMER):
+Elena Weber, Sendlinger Str. 42, 80331 München
+
+SELLER (COMMERCIAL RESPONDENT):
+${appliance.seller_name} (${appliance.seller_email})
+
+SUBJECT: Statutory Warranty Reimbursement Claim: ${appliance.brand} ${appliance.name} (Invoice #${appliance.receipt_id})
+LEGAL GROUNDS: Directive (EU) 2019/771, Article 10(1) & Article 13; German Civil Code BGB § 437 Nr. 1, § 439
+CLAIM SUM: €185.00 EUR (Statutory Repair Cost Recovery)
+
+Dear Customer Relations Team,
+
+I am writing regarding the ${appliance.brand} ${appliance.name} (Model: ${appliance.model}, Serial: ${appliance.serial_number || 'N/A'}), purchased from your store on ${appliance.purchase_date} under Invoice #${appliance.receipt_id} for €${appliance.price_eur.toFixed(2)}.
+
+The appliance suffered a mechanical failure: "${appliance.defect_description || 'Bearing failure under ordinary domestic operation'}". When reported, store staff stated that the 1-year commercial guarantee had lapsed.
+
+STATUTORY NOTICE: Commercial seller guarantees cannot restrict or waive statutory conformity rights. Under Directive (EU) 2019/771 Article 10(1) and BGB § 438 Abs. 1 Nr. 3, the seller is strictly liable for lack of conformity for a period of 24 months from delivery. The defect occurred within month 22.
+
+Pursuant to Article 13 of Directive 2019/771/EU and BGB § 439 Abs. 2, all costs incurred in bringing the goods into conformity, including diagnostic charges and labor, must be borne free of charge by the seller.
+
+Enclosed is the repair receipt of €185.00 paid under protest to restore basic domestic function. I formally request reimbursement of €185.00 EUR to my IBAN within 14 calendar days.
+
+Sincerely,
+Elena Weber`;
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(getFullNoticeText());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownload = () => {
+    const element = document.createElement('a');
+    const file = new Blob([getFullNoticeText()], { type: 'text/plain;charset=utf-8' });
+    element.href = URL.createObjectURL(file);
+    element.download = `Hestia-Statutory-Notice-${appliance.brand}-${appliance.receipt_id}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
       <div className="max-w-2xl w-full bg-[#0d121c] border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -57,12 +105,48 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 cursor-pointer text-lg leading-none"
-          >
-            &times;
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopy}
+              className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg hover:bg-white/5 cursor-pointer text-xs flex items-center gap-1 border border-white/10"
+              title="Copy to clipboard"
+            >
+              {copied ? (
+                <>
+                  <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span className="text-emerald-400 font-sans text-[11px]">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  <span className="font-sans text-[11px]">Copy Text</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleDownload}
+              className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg hover:bg-white/5 cursor-pointer text-xs flex items-center gap-1 border border-white/10"
+              title="Download notice as text"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span className="font-sans text-[11px]">Export .txt</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 cursor-pointer text-lg leading-none ml-2"
+            >
+              &times;
+            </button>
+          </div>
         </div>
 
         {/* Realistic Legal Letter Document Body */}
@@ -104,6 +188,11 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
             <p>
               Enclosed is the repair receipt of €185.00 paid under protest to restore basic domestic function. I formally request reimbursement of <strong>€185.00 EUR</strong> to my IBAN within 14 calendar days.
             </p>
+          </div>
+
+          {/* Statutory Self-Help Disclaimer */}
+          <div className="p-2.5 rounded-lg bg-slate-950 border border-white/5 text-[10px] text-slate-400">
+            <strong>EU Self-Help Standardization Disclaimer:</strong> Notice generated as standardized legal formatting pursuant to Directive 2019/771/EU Article 10. Claimant maintains sole discretion, approval, and agency over dispatch.
           </div>
 
           <div className="pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-500">
@@ -153,3 +242,4 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
     </div>
   );
 };
+

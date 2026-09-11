@@ -8,6 +8,7 @@ interface ConsumerDashboardProps {
   onOpenNoticeModal: () => void;
   onCancelTrial: (subId: string) => Promise<boolean>;
   onOpenReceiptModal: () => void;
+  onOpenUtilityDisputeModal?: () => void;
   onViewAllAssets: () => void;
   onViewAllSubscriptions: () => void;
 }
@@ -19,6 +20,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   onOpenNoticeModal,
   onCancelTrial,
   onOpenReceiptModal,
+  onOpenUtilityDisputeModal,
   onViewAllAssets,
   onViewAllSubscriptions,
 }) => {
@@ -37,6 +39,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const trialAlert = alerts.find((a) => a.action_type === 'cancel_trial');
   const priceCreepAlert = alerts.find((a) => a.category === 'price_creep' && a.action_type !== 'cancel_trial');
   const receiptAlert = alerts.find((a) => a.category === 'receipt_gap');
+  const utilityAlert = alerts.find((a) => a.category === 'utility_surge');
 
   const pendingCount = alerts.length;
 
@@ -324,6 +327,50 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   <span>Upload & Scan Receipt (Amazon Bedrock OCR)</span>
                 </button>
                 <span className="text-[11px] text-slate-500 font-mono">Secures 2-year warranty</span>
+              </div>
+            </div>
+          )}
+
+          {/* Action Card 4: Utility Anomaly & Meter Dispute */}
+          {utilityAlert && (
+            <div className="rounded-2xl bg-[#0e1420] border border-cyan-500/40 p-6 shadow-xl space-y-4 hover:border-cyan-400 transition-all">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-mono text-cyan-400 font-bold uppercase">
+                      DOMESTIC OVERHEAD // WATER METER SURGE (+61.4%)
+                    </span>
+                    <h3 className="text-base font-bold text-white">
+                      Dispute €54.00 Excess Water Bill from Stadtwerke München
+                    </h3>
+                  </div>
+                </div>
+                <span className="text-lg font-black font-mono text-cyan-300 self-start sm:self-auto">
+                  +€54.00
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Stadtwerke München Q3 water invoice reached <strong>€142.00</strong> versus your seasonal baseline of <strong>€88.00</strong> (+61.4%). Domestic leakage diagnostic confirmed zero interior leaks during the billing period.
+              </p>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+                <button
+                  onClick={onOpenUtilityDisputeModal}
+                  className="w-full sm:w-auto flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                  </svg>
+                  <span>Review Meter Calibration Demand & Checklist</span>
+                </button>
+                <span className="text-[11px] text-slate-500 font-mono">AVBWasserV § 18 Demand</span>
               </div>
             </div>
           )}

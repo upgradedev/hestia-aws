@@ -103,3 +103,14 @@ export interface UserJourney {
   legalCitation: string;
   steps: JourneyStep[];
 }
+
+export type Locale = 'en' | 'de';
+
+export interface AgentExecutionStep {
+  step: number;
+  name: string;
+  mechanism: string;
+  status: 'completed' | 'in_progress' | 'pending';
+  duration_ms?: number;
+  seal?: string;
+}
