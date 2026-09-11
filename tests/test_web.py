@@ -62,3 +62,187 @@ def test_render_html_no_repairs(monkeypatch):
     monkeypatch.setitem(web.SCENARIOS, 'empty_repairs', custom)
     html = web.render_html('empty_repairs')
     assert 'HESTIA AWS' in html
+
+
+def test_lambda_handler_options():
+    event = {"rawPath": "/api/state", "requestContext": {"http": {"method": "OPTIONS"}}}
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    assert resp["headers"]["Access-Control-Allow-Origin"] == "*"
+
+
+def test_lambda_handler_api_state():
+    event = {"rawPath": "/api/state", "requestContext": {"http": {"method": "GET"}}}
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    data = json.loads(resp["body"])
+    assert "appliances" in data
+    assert len(data["appliances"]) >= 2
+
+
+def test_lambda_handler_api_action_claim_json(monkeypatch):
+    import hestia.app.web as web
+    monkeypatch.setattr(
+        web,
+        "draft_bedrock_claim_notice",
+        lambda **k: {
+            "notice": "Mocked claim notice",
+            "model_id": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+            "statutory_basis": "Directive (EU) 2019/771, Article 10(1)",
+            "seller": k.get("seller_name", "Kotsovolos"),
+            "seller_email": k.get("seller_email", "support@kotsovolos.example.gr"),
+        },
+    )
+    body = json.dumps({"item_id": "app-001"})
+    event = {
+        "rawPath": "/api/action/claim",
+        "requestContext": {"http": {"method": "POST"}},
+        "headers": {"content-type": "application/json"},
+        "body": body,
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+    assert "dispatch_record" in res
+    assert res["dispatch_record"]["item_id"] == "app-001"
+
+
+def test_lambda_handler_api_action_claim_fallback_item(monkeypatch):
+    import hestia.app.web as web
+    monkeypatch.setattr(
+        web,
+        "draft_bedrock_claim_notice",
+        lambda **k: {
+            "notice": "Mocked claim notice",
+            "model_id": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+            "statutory_basis": "Directive (EU) 2019/771, Article 10(1)",
+            "seller": "Kotsovolos",
+            "seller_email": "support@kotsovolos.example.gr",
+        },
+    )
+    body = json.dumps({"item_id": "app-non-existent"})
+    event = {
+        "rawPath": "/api/action/claim",
+        "requestContext": {"http": {"method": "POST"}},
+        "headers": {"content-type": "application/json"},
+        "body": body,
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+
+
+def test_lambda_handler_api_action_claim_no_appliances(monkeypatch):
+    from unittest.mock import MagicMock
+
+    import hestia.app.web as web
+    mock_store = MagicMock()
+    mock_store.load_state.return_value = {"appliances": []}
+    monkeypatch.setattr(web, "S3HouseholdStore", lambda: mock_store)
+
+    event = {
+        "rawPath": "/api/action/claim",
+        "requestContext": {"http": {"method": "POST"}},
+        "headers": {"content-type": "application/json"},
+        "body": json.dumps({"item_id": "app-001"}),
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 404
+
+
+def test_lambda_handler_api_action_claim_invalid_json(monkeypatch):
+    import hestia.app.web as web
+    monkeypatch.setattr(
+        web,
+        "draft_bedrock_claim_notice",
+        lambda **k: {
+            "notice": "Mocked claim notice",
+            "model_id": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+            "statutory_basis": "Directive (EU) 2019/771, Article 10(1)",
+            "seller": "Kotsovolos",
+            "seller_email": "support@kotsovolos.example.gr",
+        },
+    )
+    event = {
+        "rawPath": "/action/claim",
+        "requestContext": {"http": {"method": "POST"}},
+        "headers": {"content-type": "application/json"},
+        "body": "{invalid-json}",
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+
+
+def test_lambda_handler_api_action_cancel_json():
+    body = json.dumps({"service_name": "Fitness Stream Pro"})
+    event = {
+        "rawPath": "/api/action/cancel",
+        "requestContext": {"http": {"method": "POST"}},
+        "headers": {"content-type": "application/json"},
+        "body": body,
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+
+
+def test_lambda_handler_api_action_cancel_invalid_json():
+    event = {
+        "rawPath": "/action/cancel_trial",
+        "requestContext": {"http": {"method": "POST"}},
+        "headers": {"content-type": "application/json"},
+        "body": "{bad-json}",
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+
+
+def test_lambda_handler_api_action_receipt():
+    body = json.dumps({
+        "merchant": "Leroy Merlin DIY",
+        "amount_cents": 8550,
+        "receipt_id": "REC-2026-TEST-99",
+    })
+    event = {
+        "rawPath": "/api/action/receipt",
+        "requestContext": {"http": {"method": "POST"}},
+        "body": body,
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+    assert res["result"]["matched"] is True
+
+
+def test_lambda_handler_api_action_receipt_invalid_json():
+    event = {
+        "rawPath": "/api/action/receipt",
+        "requestContext": {"http": {"method": "POST"}},
+        "body": "{corrupt-body}",
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+
+
+def test_lambda_handler_api_action_receipt_no_body():
+    event = {
+        "rawPath": "/api/action/receipt",
+        "requestContext": {"http": {"method": "POST"}},
+        "body": None,
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+
+

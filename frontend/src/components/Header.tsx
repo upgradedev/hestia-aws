@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${liveApiOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
-                {liveApiOnline ? 'AWS Live' : 'Offline Mode'}
+                {liveApiOnline ? 'AWS Strands + Bedrock Live' : 'Offline Simulation'}
               </span>
             </div>
             <p className="text-xs text-slate-400">

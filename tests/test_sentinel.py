@@ -157,3 +157,164 @@ def test_run_household_audit_empty() -> None:
     assert len(digest.subscription_anomalies) == 0
     assert len(digest.missing_receipt_gaps) == 0
     assert len(digest.utility_spikes) == 0
+
+
+def test_sanitize_pii() -> None:
+    from hestia.agents.sentinel import sanitize_pii
+
+    # Test IBAN masking
+    text1 = "Payment from account GR1234567890123456789012345 for service."
+    sanitized1 = sanitize_pii(text1)
+    assert "[REDACTED_IBAN]" in sanitized1
+    assert "GR1234567890123456789012345" not in sanitized1
+
+    # Test Card masking
+    text2 = "Card number 4111 2222 3333 4444 charged €185.00."
+    sanitized2 = sanitize_pii(text2)
+    assert "[REDACTED_CARD]" in sanitized2
+    assert "4111 2222 3333 4444" not in sanitized2
+
+    # Clean text unchanged
+    text3 = "Bosch Washing Machine bearing failure."
+    assert sanitize_pii(text3) == text3
+
+
+def test_create_strands_sentinel_agent(monkeypatch) -> None:
+    from unittest.mock import MagicMock
+
+    import strands.models
+
+    from hestia.agents.sentinel import create_strands_sentinel_agent
+
+    # Test instantiation
+    agent = create_strands_sentinel_agent()
+    assert agent is not None
+
+    # Test exception fallback
+    mock_bm = MagicMock(side_effect=Exception("Failed to load"))
+    monkeypatch.setattr(strands.models, "BedrockModel", mock_bm)
+    agent_fail = create_strands_sentinel_agent()
+    assert agent_fail is None
+
+
+def test_draft_bedrock_claim_notice_with_agent_mock() -> None:
+    from unittest.mock import MagicMock
+
+    from hestia.agents.sentinel import draft_bedrock_claim_notice
+
+    warranty = ApplianceWarranty(
+        item_name="Bosch Series 6 Washing Machine",
+        serial_number="WAU28T64GB/01",
+        purchase_date=date(2024, 10, 15),
+        statutory_months=24,
+    )
+
+    mock_agent = MagicMock(return_value="AI Generated Demand Letter Under EU Directive 2019/771")
+    res = draft_bedrock_claim_notice(
+        warranty=warranty,
+        repair_date=date(2026, 9, 2),
+        repair_amount_cents=18500,
+        issue_description="Drum bearing failure with card 4111-2222-3333-4444",
+        homeowner_name="Elena Georgiou",
+        agent_override=mock_agent,
+    )
+
+    assert "AI Generated Demand Letter" in res["notice"]
+    assert res["model_id"] == "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+    assert res["framework"] == "AWS Strands Agents SDK"
+    assert mock_agent.called
+    # Ensure PII was masked before sending to agent
+    called_prompt = mock_agent.call_args[0][0]
+    assert "[REDACTED_CARD]" in called_prompt
+
+
+def test_draft_bedrock_claim_notice_fallback_on_exception() -> None:
+    from unittest.mock import MagicMock
+
+    from hestia.agents.sentinel import draft_bedrock_claim_notice
+
+    warranty = ApplianceWarranty(
+        item_name="Bosch Series 6 Washing Machine",
+        serial_number="WAU28T64GB/01",
+        purchase_date=date(2024, 10, 15),
+        statutory_months=24,
+    )
+
+    mock_agent = MagicMock(side_effect=Exception("Bedrock quota exceeded"))
+    res = draft_bedrock_claim_notice(
+        warranty=warranty,
+        repair_date=date(2026, 9, 2),
+        repair_amount_cents=18500,
+        issue_description="Drum bearing failure",
+        homeowner_name="Elena Georgiou",
+        agent_override=mock_agent,
+    )
+
+    assert "Formal Reimbursement Request: Statutory Guarantee" in res["notice"]
+    assert "deterministic fallback" in res["model_id"]
+
+
+def test_draft_bedrock_claim_notice_no_agent_direct_bedrock(monkeypatch) -> None:
+    from unittest.mock import MagicMock
+
+    import boto3
+
+    from hestia.agents import sentinel
+    from hestia.agents.sentinel import draft_bedrock_claim_notice
+
+    warranty = ApplianceWarranty(
+        item_name="Bosch Series 6 Washing Machine",
+        serial_number="WAU28T64GB/01",
+        purchase_date=date(2024, 10, 15),
+        statutory_months=24,
+    )
+
+    monkeypatch.setattr(sentinel, "create_strands_sentinel_agent", lambda **k: None)
+    mock_bedrock = MagicMock()
+    mock_bedrock.converse.return_value = {
+        "output": {"message": {"content": [{"text": "Boto3 Direct Bedrock Claim Notice"}]}}
+    }
+    monkeypatch.setattr(boto3, "client", lambda service, **k: mock_bedrock)
+
+    res = draft_bedrock_claim_notice(
+        warranty=warranty,
+        repair_date=date(2026, 9, 2),
+        repair_amount_cents=18500,
+        issue_description="Drum bearing failure",
+        homeowner_name="Elena Georgiou",
+    )
+    assert res["framework"] == "Amazon Bedrock AgentCore"
+    assert "Boto3 Direct Bedrock Claim Notice" in res["notice"]
+
+
+def test_draft_bedrock_claim_notice_no_agent_exception(monkeypatch) -> None:
+    from unittest.mock import MagicMock
+
+    import boto3
+
+    from hestia.agents import sentinel
+    from hestia.agents.sentinel import draft_bedrock_claim_notice
+
+    warranty = ApplianceWarranty(
+        item_name="Bosch Series 6 Washing Machine",
+        serial_number="WAU28T64GB/01",
+        purchase_date=date(2024, 10, 15),
+        statutory_months=24,
+    )
+
+    monkeypatch.setattr(sentinel, "create_strands_sentinel_agent", lambda **k: None)
+    mock_bedrock = MagicMock()
+    mock_bedrock.converse.side_effect = Exception("Converse rate limit")
+    monkeypatch.setattr(boto3, "client", lambda service, **k: mock_bedrock)
+
+    res = draft_bedrock_claim_notice(
+        warranty=warranty,
+        repair_date=date(2026, 9, 2),
+        repair_amount_cents=18500,
+        issue_description="Drum bearing failure",
+        homeowner_name="Elena Georgiou",
+    )
+    assert "Formal Reimbursement Request: Statutory Guarantee" in res["notice"]
+    assert "deterministic fallback" in res["model_id"]
+
+

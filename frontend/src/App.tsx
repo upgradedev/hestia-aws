@@ -53,17 +53,36 @@ export const App: React.FC = () => {
     },
   ]);
 
-  // Check live API healthz on mount
+  // Check live API healthz and fetch persistent state from S3 on mount
   useEffect(() => {
     fetch('/healthz')
-      .then((res) => {
-        if (res.ok) {
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === 'ok') {
           setLiveApiOnline(true);
         }
       })
       .catch(() => {
         setLiveApiOnline(false);
       });
+
+    fetch('/api/state')
+      .then((res) => res.json())
+      .then((state) => {
+        if (state && state.summary) {
+          setLiveApiOnline(true);
+          setSummary((prev) => ({
+            ...prev,
+            potential_recovery_eur: state.summary.unclaimed_recovery_cents / 100,
+            protected_value_eur: state.summary.protected_assets_cents / 100,
+            leakage_detected_monthly_eur: state.summary.monthly_sub_leakage_cents / 100,
+          }));
+          if (state.dispatch_records && state.dispatch_records.length > 0) {
+            setDispatchHistory(state.dispatch_records);
+          }
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleDispatchClaim = async (itemId: string): Promise<DispatchRecord | null> => {
@@ -71,7 +90,7 @@ export const App: React.FC = () => {
     let record: DispatchRecord;
 
     try {
-      const response = await fetch('/action/claim', {
+      const response = await fetch('/api/action/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ item_id: itemId }),
@@ -79,16 +98,23 @@ export const App: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
+        const dr = data.dispatch_record || {};
         record = {
-          id: `disp-${Date.now()}`,
+          id: dr.id || `disp-${Date.now()}`,
           item_id: itemId,
           status: 'dispatched',
-          timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-          seller: item.seller_name,
-          seller_email: item.seller_email,
-          statutory_basis: data.dispatch_record?.statutory_basis || item.statutory_basis,
-          letter_preview: data.dispatch_record?.letter_preview || 'Statutory notice dispatched.',
+          timestamp: dr.timestamp || new Date().toISOString().replace('T', ' ').slice(0, 16),
+          seller: dr.seller || item.seller_name,
+          seller_email: dr.seller_email || item.seller_email,
+          statutory_basis: dr.statutory_basis || item.statutory_basis,
+          letter_preview: dr.letter_preview || 'Formal statutory notice drafted and dispatched.',
         };
+        if (data.state && data.state.summary) {
+          setSummary((prev) => ({
+            ...prev,
+            potential_recovery_eur: data.state.summary.unclaimed_recovery_cents / 100,
+          }));
+        }
       } else {
         throw new Error('API returned non-200');
       }
@@ -121,13 +147,24 @@ export const App: React.FC = () => {
   };
 
   const handleCancelTrial = async (subId: string): Promise<boolean> => {
+    const sub = subscriptions.find((s) => s.id === subId);
+    const serviceName = sub ? sub.service_name : 'Fitness Stream Pro';
+
     try {
-      const res = await fetch('/action/cancel_trial', {
+      const res = await fetch('/api/action/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription_id: subId }),
+        body: JSON.stringify({ service_name: serviceName }),
       });
-      if (!res.ok) throw new Error();
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state && data.state.summary) {
+          setSummary((prev) => ({
+            ...prev,
+            leakage_detected_monthly_eur: data.state.summary.monthly_sub_leakage_cents / 100,
+          }));
+        }
+      }
     } catch {
       // offline simulation
     }
@@ -136,13 +173,34 @@ export const App: React.FC = () => {
     setAlerts((prev) => prev.filter((a) => a.action_type !== 'cancel_trial'));
     setSummary((prev) => ({
       ...prev,
-      leakage_detected_monthly_eur: Math.max(0, prev.leakage_detected_monthly_eur - 29.99),
+      leakage_detected_monthly_eur: Math.max(0, prev.leakage_detected_monthly_eur - 19.99),
     }));
 
     return true;
   };
 
   const handleReceiptMatched = (outflowId: string, recoveredAsset: ApplianceWarranty) => {
+    // Call backend receipt matching API
+    fetch('/api/action/receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        merchant: recoveredAsset.seller_name || 'Leroy Merlin DIY',
+        amount_cents: Math.round(recoveredAsset.price_eur * 100) || 8550,
+        receipt_id: `REC-OCR-${Date.now()}`,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.state && data.state.summary) {
+          setSummary((prev) => ({
+            ...prev,
+            missing_receipts_eur: data.state.summary.missing_receipt_cents / 100,
+          }));
+        }
+      })
+      .catch(() => {});
+
     // Update outflows: mark as matched
     setOutflows((prev) =>
       prev.map((tx) => (tx.id === outflowId ? { ...tx, has_receipt: true } : tx))

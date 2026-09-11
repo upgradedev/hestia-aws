@@ -58,19 +58,29 @@ def template():
         "Version": "2012-10-17",
         "Statement": [
             {
-                "Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"],
-                "Resource": sub("${State.Arn}/audit/*"),
+                "Effect": "Allow",
+                "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+                "Resource": [attr("State", "Arn"), sub("${State.Arn}/*")],
             },
             {
-                "Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+                "Effect": "Allow",
+                "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
                 "Resource": sub(
                     "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:"
                     "log-group:/aws/lambda/hestia-afh-api:*"
                 ),
             },
             {
+                "Effect": "Allow",
+                "Action": [
+                    "bedrock:InvokeModel",
+                    "bedrock:InvokeModelWithResponseStream",
+                ],
+                "Resource": "*",
+            },
+            {
                 "Effect": "Deny",
-                "Action": ["ses:*", "bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+                "Action": ["ses:*"],
                 "Resource": "*",
             },
         ],

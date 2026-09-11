@@ -8,6 +8,7 @@ requiring human-in-the-loop Return-of-Control before dispatch.
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
 from hestia.domain.completeness import audit_missing_receipts, audit_utility_spike
 from hestia.domain.subscriptions import (
@@ -22,7 +23,16 @@ from hestia.domain.warranties import (
     evaluate_repair_claim,
 )
 
+try:
+    from strands import tool as strands_tool
+except ImportError:  # pragma: no cover
+    def strands_tool(func: Any = None, **kwargs: Any) -> Any:
+        if func is None:
+            return lambda f: f
+        return func
 
+
+@strands_tool
 def check_appliance_warranty_tool(
     warranty: ApplianceWarranty,
     current_date: date,
@@ -53,6 +63,7 @@ def check_appliance_warranty_tool(
     return msg
 
 
+@strands_tool
 def audit_subscriptions_tool(
     charges: list[SubscriptionCharge],
     current_date: date,
@@ -85,6 +96,7 @@ def audit_subscriptions_tool(
     return "\n".join(lines)
 
 
+@strands_tool
 def check_completeness_tool(
     bank_transactions: list[dict[str, object]],
     saved_receipt_merchants: set[str],

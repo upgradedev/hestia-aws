@@ -13,7 +13,12 @@ import json
 from datetime import date
 from typing import Any
 
-from hestia.agents.sentinel import HouseholdAuditDigest, run_household_audit
+from hestia.adapters.storage import S3HouseholdStore
+from hestia.agents.sentinel import (
+    HouseholdAuditDigest,
+    draft_bedrock_claim_notice,
+    run_household_audit,
+)
 from hestia.agents.tools import draft_statutory_claim_letter
 from hestia.domain.subscriptions import SubscriptionCharge
 from hestia.domain.warranties import ApplianceWarranty
@@ -652,20 +657,114 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     http_ctx = event.get("requestContext", {}).get("http", {})
     method = (http_ctx.get("method") or event.get("httpMethod") or "GET").upper()
 
+    cors_headers = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    }
+
+    if method == "OPTIONS":
+        return {"statusCode": 200, "headers": cors_headers, "body": "{}"}
+
     if path == "/healthz":
         return {
             "statusCode": 200,
-            "headers": {"Content-Type": "application/json"},
+            "headers": cors_headers,
             "body": json.dumps({
                 "status": "ok",
                 "service": "hestia-aws",
-                "version": "0.1.0",
+                "version": "0.2.0",
                 "track": "Everyday Agents Track",
                 "directive": "EU Directive 2019/771/EU",
+                "agent_framework": "AWS Strands Agents SDK",
+                "bedrock_model": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+                "storage_backend": "Amazon S3",
             }),
         }
 
-    if path == "/action/claim" and method == "POST":
+    if path == "/api/state":
+        store = S3HouseholdStore()
+        state = store.load_state()
+        return {
+            "statusCode": 200,
+            "headers": cors_headers,
+            "body": json.dumps(state),
+        }
+
+    if path in ("/action/claim", "/api/action/claim") and method == "POST":
+        content_type = (event.get("headers") or {}).get("content-type", "")
+        body_data: dict[str, Any] = {}
+        raw_body = event.get("body")
+        if raw_body:
+            try:
+                body_data = json.loads(raw_body)
+            except Exception:
+                body_data = {}
+
+        if "application/json" in content_type or path == "/api/action/claim" or bool(body_data):
+            store = S3HouseholdStore()
+            state = store.load_state()
+            item_id = body_data.get("item_id", "app-001")
+
+            # Find matching item
+            matched_item = None
+            for app in state.get("appliances", []):
+                if app.get("id") == item_id:
+                    matched_item = app
+                    break
+            if matched_item is None and state.get("appliances"):
+                matched_item = state["appliances"][0]
+
+            if matched_item is None:
+                return {
+                    "statusCode": 404,
+                    "headers": cors_headers,
+                    "body": json.dumps({"status": "error", "message": "No appliance found"}),
+                }
+
+            p_parts = [int(p) for p in matched_item["purchase_date"].split("-")]
+            warranty = ApplianceWarranty(
+                item_name=matched_item["item_name"],
+                serial_number=matched_item["serial_number"],
+                purchase_date=date(p_parts[0], p_parts[1], p_parts[2]),
+                statutory_months=matched_item.get("statutory_months", 24),
+                commercial_months=matched_item.get("commercial_months", 24),
+                receipt_reference=matched_item.get("receipt_reference"),
+            )
+            r_str = matched_item.get("repair_date") or "2026-09-02"
+            r_parts = [int(p) for p in r_str.split("-")]
+            repair_date = date(r_parts[0], r_parts[1], r_parts[2])
+
+            draft = draft_bedrock_claim_notice(
+                warranty=warranty,
+                repair_date=repair_date,
+                repair_amount_cents=matched_item.get("repair_amount_cents", 18500),
+                issue_description=matched_item.get("repair_issue") or "Drum bearing seizure",
+                homeowner_name=state.get("homeowner_name", "Elena Georgiou"),
+                seller_name=matched_item.get("seller_name", "Kotsovolos Megastore"),
+                seller_email=matched_item.get("seller_email", "support@kotsovolos.example.gr"),
+            )
+
+            record = store.record_claim_dispatch(
+                item_id=matched_item["id"],
+                seller=draft["seller"],
+                seller_email=draft["seller_email"],
+                letter=draft["notice"],
+                statutory_basis=draft["statutory_basis"],
+                model_id=draft["model_id"],
+            )
+
+            return {
+                "statusCode": 200,
+                "headers": cors_headers,
+                "body": json.dumps({
+                    "status": "success",
+                    "dispatch_record": record,
+                    "state": store.load_state(),
+                }),
+            }
+
         html = render_html(scenario_key="family_flat", approved_action="claim_letter")
         return {
             "statusCode": 200,
@@ -673,12 +772,59 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             "body": html,
         }
 
-    if path == "/action/cancel_trial" and method == "POST":
+    if path in ("/action/cancel_trial", "/api/action/cancel") and method == "POST":
+        content_type = (event.get("headers") or {}).get("content-type", "")
+        body_data = {}
+        raw_body = event.get("body")
+        if raw_body:
+            try:
+                body_data = json.loads(raw_body)
+            except Exception:
+                body_data = {}
+
+        if "application/json" in content_type or path == "/api/action/cancel" or bool(body_data):
+            store = S3HouseholdStore()
+            service_name = body_data.get("service_name", "Fitness Stream Pro")
+            res = store.record_subscription_cancellation(service_name)
+            return {
+                "statusCode": 200,
+                "headers": cors_headers,
+                "body": json.dumps({
+                    "status": "success",
+                    "result": res,
+                    "state": store.load_state(),
+                }),
+            }
+
         html = render_html(scenario_key="family_flat", approved_action="cancel_sub")
         return {
             "statusCode": 200,
             "headers": {"Content-Type": "text/html; charset=utf-8"},
             "body": html,
+        }
+
+    if path == "/api/action/receipt" and method == "POST":
+        body_data = {}
+        raw_body = event.get("body")
+        if raw_body:
+            try:
+                body_data = json.loads(raw_body)
+            except Exception:
+                body_data = {}
+
+        store = S3HouseholdStore()
+        merchant = body_data.get("merchant", "Leroy Merlin DIY")
+        amount_cents = body_data.get("amount_cents", 8550)
+        receipt_id = body_data.get("receipt_id", "REC-2026-LEROY-0911")
+        res = store.record_receipt_upload(merchant, amount_cents, receipt_id)
+        return {
+            "statusCode": 200,
+            "headers": cors_headers,
+            "body": json.dumps({
+                "status": "success",
+                "result": res,
+                "state": store.load_state(),
+            }),
         }
 
     # Default GET /
@@ -688,3 +834,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         "headers": {"Content-Type": "text/html; charset=utf-8"},
         "body": html,
     }
+
