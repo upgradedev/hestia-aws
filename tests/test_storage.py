@@ -234,3 +234,30 @@ def test_record_utility_dispute():
     assert len(state["utility_dispatches"]) >= 1
 
 
+def test_save_outbox_email():
+    mock_s3 = MagicMock()
+    store = S3HouseholdStore(bucket_name="test-bucket", s3_client=mock_s3)
+    res = store.save_outbox_email(
+        disp_id="disp-test-123",
+        to_addr="retailer@example.com",
+        subject="Statutory Notice",
+        letter="Full claim letter text",
+        statutory_basis="Directive 2019/771",
+        merkle_seal="abcdef123456",
+    )
+    assert res["status"] == "queued_in_outbox"
+    assert res["message_id"] == "<disp-test-123@hestia.household>"
+    assert res["outbox_key"] == "outbox/disp-test-123.eml"
+    assert mock_s3.put_object.called
+
+
+def test_record_ingest_batch():
+    store = S3HouseholdStore(bucket_name="")
+    res = store.record_ingest_batch(invoices_count=14)
+    assert res["status"] == "ingested"
+    assert res["invoices_matched"] == 14
+    assert res["unclaimed_recovery_eur"] == 185.00
+    assert len(res["cryptographic_seal"]) == 64
+
+
+

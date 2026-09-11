@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 
 export const ArchitectureView: React.FC = () => {
   const [activeEndpoint, setActiveEndpoint] = useState<
-    '/healthz' | '/api/action/claim' | '/api/action/utility_dispute' | '/api/action/cancel' | '/api/action/reset'
+    '/healthz' | '/api/action/claim' | '/api/action/utility_dispute' | '/api/action/cancel' | '/api/action/reset' | '/api/simulation/mcts' | '/api/receipt/scan' | '/api/ingest/sync'
   >('/healthz');
   const [requestPayload, setRequestPayload] = useState<string>('{\n  "item_id": "app-001"\n}');
   const [apiResponse, setApiResponse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [mctsData, setMctsData] = useState<any>(null);
+  const [mctsLoading, setMctsLoading] = useState(false);
 
   const handleResetDemoState = async () => {
     setIsLoading(true);
@@ -30,6 +32,21 @@ export const ArchitectureView: React.FC = () => {
     }
   };
 
+  const handleRunMcts = async () => {
+    setMctsLoading(true);
+    try {
+      const res = await fetch('/api/simulation/mcts');
+      if (res.ok) {
+        const data = await res.json();
+        setMctsData(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setMctsLoading(false);
+    }
+  };
+
   const handleTestApi = async () => {
     setIsLoading(true);
     setApiResponse(null);
@@ -37,8 +54,8 @@ export const ArchitectureView: React.FC = () => {
 
     try {
       let res;
-      if (activeEndpoint === '/healthz') {
-        res = await fetch('/healthz');
+      if (activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts') {
+        res = await fetch(activeEndpoint);
       } else {
         res = await fetch(activeEndpoint, {
           method: 'POST',
@@ -63,7 +80,7 @@ export const ArchitectureView: React.FC = () => {
         status: 200,
         simulated: true,
         note: 'Live AWS endpoint answered or simulated via client fallback',
-        payload_sent: activeEndpoint === '/healthz' ? undefined : JSON.parse(requestPayload || '{}'),
+        payload_sent: (activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts') ? undefined : JSON.parse(requestPayload || '{}'),
         timestamp: new Date().toISOString(),
       });
     } finally {
@@ -218,8 +235,32 @@ export const ArchitectureView: React.FC = () => {
           </div>
 
           <p className="text-xs text-slate-300 leading-relaxed">
-            Prior to notice generation, Amazon Bedrock AgentCore simulates 3 legal negotiation paths against historical German retailer settlement distributions to maximize expected financial utility:
+            Prior to notice generation, Amazon Bedrock AgentCore simulates legal negotiation paths using Monte Carlo Tree Search (UCB1) against German retailer settlement distributions to maximize expected financial utility:
           </p>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <button
+              onClick={handleRunMcts}
+              disabled={mctsLoading}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 text-emerald-300 font-mono text-xs flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+            >
+              {mctsLoading ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-emerald-300 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Running MCTS (500 rollouts)...</span>
+                </>
+              ) : (
+                <>
+                  <span>▶ Run Live MCTS Engine (500 rollouts)</span>
+                </>
+              )}
+            </button>
+            {mctsData && (
+              <span className="text-[11px] font-mono text-emerald-400">
+                Optimal Action: {mctsData.selected_action} (Exp: €{(mctsData.expected_utility_cents / 100).toFixed(2)})
+              </span>
+            )}
+          </div>
 
           <div className="space-y-2.5">
             <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/50 flex items-center justify-between text-xs font-mono">
@@ -366,6 +407,45 @@ export const ArchitectureView: React.FC = () => {
             </button>
             <button
               onClick={() => {
+                setActiveEndpoint('/api/simulation/mcts');
+                setRequestPayload('');
+              }}
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                activeEndpoint === '/api/simulation/mcts'
+                  ? 'bg-emerald-500/20 text-emerald-300 font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              GET /mcts
+            </button>
+            <button
+              onClick={() => {
+                setActiveEndpoint('/api/receipt/scan');
+                setRequestPayload('{\n  "filename": "ikea_receipt.jpg",\n  "file_base64": "JVBERi0xLjQK..."\n}');
+              }}
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                activeEndpoint === '/api/receipt/scan'
+                  ? 'bg-amber-500/20 text-amber-300 font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              POST /receipt/scan
+            </button>
+            <button
+              onClick={() => {
+                setActiveEndpoint('/api/ingest/sync');
+                setRequestPayload('{\n  "source": "manual_sync",\n  "count": 4\n}');
+              }}
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                activeEndpoint === '/api/ingest/sync'
+                  ? 'bg-sky-500/20 text-sky-300 font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              POST /ingest/sync
+            </button>
+            <button
+              onClick={() => {
                 setActiveEndpoint('/api/action/reset');
                 setRequestPayload('{}');
               }}
@@ -390,9 +470,9 @@ export const ArchitectureView: React.FC = () => {
             <textarea
               value={requestPayload}
               onChange={(e) => setRequestPayload(e.target.value)}
-              disabled={activeEndpoint === '/healthz'}
+              disabled={activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts'}
               className="w-full h-40 p-3 rounded-xl bg-[#080b10] border border-white/10 font-mono text-xs text-slate-200 focus:border-amber-400/60 focus:outline-none resize-none disabled:opacity-50"
-              placeholder={activeEndpoint === '/healthz' ? 'No request body for GET /healthz' : '{\n  "key": "value"\n}'}
+              placeholder={activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' ? 'No request body needed for this endpoint' : '{\n  "key": "value"\n}'}
             />
             <button
               onClick={handleTestApi}

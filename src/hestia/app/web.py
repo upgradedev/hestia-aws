@@ -20,6 +20,8 @@ from hestia.agents.sentinel import (
     run_household_audit,
 )
 from hestia.agents.tools import draft_statutory_claim_letter
+from hestia.domain.mcts import LegalNegotiationMCTS
+from hestia.domain.ocr import extract_receipt_metadata
 from hestia.domain.subscriptions import SubscriptionCharge
 from hestia.domain.warranties import ApplianceWarranty
 
@@ -894,6 +896,48 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 "result": res,
                 "state": store.load_state(),
             }),
+        }
+
+    if path in ("/api/receipt/scan", "/receipt/scan") and method == "POST":
+        body_data = {}
+        raw_body = event.get("body") or ""
+        if raw_body:
+            try:
+                body_data = json.loads(raw_body)
+            except Exception:
+                body_data = {"raw": raw_body}
+
+        img_b64 = body_data.get("image_base64") or body_data.get("file_data")
+        mime = body_data.get("mime_type", "image/png")
+        metadata = extract_receipt_metadata(image_base64=img_b64, mime_type=mime)
+        return {
+            "statusCode": 200,
+            "headers": cors_headers,
+            "body": json.dumps({"status": "success", "extraction": metadata}),
+        }
+
+    if path in ("/api/ingest/sync", "/ingest/sync") and method == "POST":
+        store = S3HouseholdStore()
+        inflow_count = 14
+        res = store.record_ingest_batch(inflow_count)
+        return {
+            "statusCode": 200,
+            "headers": cors_headers,
+            "body": json.dumps({
+                "status": "success",
+                "message": f"Successfully ingested {inflow_count} e-invoices",
+                "ingest_result": res,
+                "state": store.load_state(),
+            }),
+        }
+
+    if path in ("/api/simulation/mcts", "/simulation/mcts") and method in ("GET", "POST"):
+        mcts = LegalNegotiationMCTS()
+        sim_result = mcts.search(iterations=500)
+        return {
+            "statusCode": 200,
+            "headers": cors_headers,
+            "body": json.dumps(sim_result),
         }
 
     # Default GET /

@@ -301,3 +301,43 @@ def test_lambda_handler_api_action_utility_dispute_no_body():
     assert res["status"] == "success"
 
 
+def test_lambda_handler_api_receipt_scan():
+    event = {
+        "rawPath": "/api/receipt/scan",
+        "requestContext": {"http": {"method": "POST"}},
+        "body": json.dumps({"image_base64": "SUtFQSBEZXV0c2NobGFuZA==", "mime_type": "image/png"}),
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+    assert "IKEA" in res["extraction"]["merchant"]
+
+
+def test_lambda_handler_api_ingest_sync():
+    event = {
+        "rawPath": "/api/ingest/sync",
+        "requestContext": {"http": {"method": "POST"}},
+        "body": "{}",
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+    assert res["ingest_result"]["invoices_matched"] == 14
+
+
+def test_lambda_handler_api_simulation_mcts():
+    event = {
+        "rawPath": "/api/simulation/mcts",
+        "requestContext": {"http": {"method": "GET"}},
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["iterations"] == 500
+    assert len(res["actions"]) == 4
+    assert res["optimal_action"] is not None
+
+
+
