@@ -81,6 +81,35 @@ Elena Weber`;
     document.body.removeChild(element);
   };
 
+  const handleDownloadOdr = () => {
+    const odrText = `EU ONLINE DISPUTE RESOLUTION (ODR) / CONCILIATION DOSSIER
+Pursuant to Directive 2013/11/EU & German VSBG (Verbraucherstreitbeilegungsgesetz)
+
+COMPLAINANT: Elena Weber, Sendlinger Str. 42, 80331 München
+RESPONDENT: ${appliance.seller_name} (${appliance.seller_email})
+PURCHASE REF: ${appliance.brand} ${appliance.name} (Invoice #${appliance.receipt_id})
+CONTESTED AMOUNT: €185.00 EUR (Unreimbursed Statutory Warranty Repair)
+
+SUMMARY OF DISPUTE:
+The consumer purchased the appliance on ${appliance.purchase_date}. A mechanical defect occurred within month 22.
+Under Directive 2019/771 Article 10(1) and BGB § 437, the statutory period of liability is 24 months.
+Store staff wrongfully refused coverage under the pretext of an expired 1-year commercial guarantee.
+The claimant incurred €185.00 in necessary repair expenses and requests conciliation via the German Universal Conciliation Body (Universalschlichtungsstelle des Bundes).
+
+EVIDENCE ATTACHMENTS:
+1. Proof of purchase: #${appliance.receipt_id}
+2. Repair receipt: €185.00 paid on 2026-09-02
+3. Cryptographic Hestia Audit Seal: sealed on Amazon S3`;
+
+    const element = document.createElement('a');
+    const file = new Blob([odrText], { type: 'text/plain;charset=utf-8' });
+    element.href = URL.createObjectURL(file);
+    element.download = `Hestia-EU-ODR-Escalation-Dossier-${appliance.brand}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
       <div className="max-w-2xl w-full bg-[#0d121c] border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -139,6 +168,18 @@ Elena Weber`;
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               <span className="font-sans text-[11px]">Export .txt</span>
+            </button>
+            <button
+              onClick={handleDownloadOdr}
+              className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg hover:bg-white/5 cursor-pointer text-xs flex items-center gap-1 border border-amber-500/30 bg-amber-500/10"
+              title="Download EU Online Dispute Resolution mediation packet"
+            >
+              <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span className="font-sans text-[11px] text-amber-300">ODR Pack</span>
             </button>
             <button
               onClick={onClose}

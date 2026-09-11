@@ -105,3 +105,28 @@ def test_warranty_expiry_month_rollover():
     assert expiry == date(2026, 2, 10)
 
 
+def test_warranty_expiry_month_end_31st():
+    w = ApplianceWarranty(
+        item_name="Smart Oven",
+        serial_number="OVEN-31",
+        purchase_date=date(2024, 10, 31),
+        statutory_months=24,
+    )
+    # 24 months from Oct 31, 2024 is Oct 31, 2026 (not clamped to 28)
+    expiry = w.get_expiry_date()
+    assert expiry == date(2026, 10, 31)
+
+
+def test_warranty_expiry_leap_year_rollover():
+    w = ApplianceWarranty(
+        item_name="Induction Hob",
+        serial_number="HOB-29",
+        purchase_date=date(2024, 2, 29),
+        statutory_months=24,
+    )
+    # 24 months from Feb 29, 2024 (leap) is Feb 28, 2026 (non-leap)
+    expiry = w.get_expiry_date()
+    assert expiry == date(2026, 2, 28)
+
+
+

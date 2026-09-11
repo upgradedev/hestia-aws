@@ -9,6 +9,8 @@ import { ArchitectureView } from './components/ArchitectureView';
 import { FormalNoticeModal } from './components/FormalNoticeModal';
 import { ReceiptUploadModal } from './components/ReceiptUploadModal';
 import { UtilityDisputeModal } from './components/UtilityDisputeModal';
+import { LandingPage } from './components/LandingPage';
+import { EmailSyncModal } from './components/EmailSyncModal';
 
 import {
   INITIAL_SUMMARY,
@@ -28,7 +30,7 @@ import {
 } from './types';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('landing');
   const [summary, setSummary] = useState<HouseholdSummary>(INITIAL_SUMMARY);
   const [appliances, setAppliances] = useState<ApplianceWarranty[]>(INITIAL_APPLIANCES);
   const [outflows, setOutflows] = useState<PaymentOutflow[]>(INITIAL_OUTFLOWS);
@@ -43,6 +45,7 @@ export const App: React.FC = () => {
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isUtilityModalOpen, setIsUtilityModalOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
 
   const [dispatchHistory, setDispatchHistory] = useState<DispatchRecord[]>([
     {
@@ -297,10 +300,20 @@ export const App: React.FC = () => {
         onToggleLocale={() => setLocale((prev) => (prev === 'en' ? 'de' : 'en'))}
         onResetDemo={handleResetDemo}
         onSelectTab={setActiveTab}
+        onOpenSyncModal={() => setIsSyncModalOpen(true)}
       />
 
       {/* Main Viewport Container */}
-      <main className="flex-1 max-w-[1500px] w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <main className={`flex-1 w-full mx-auto ${activeTab === 'landing' ? '' : 'max-w-[1500px] p-4 sm:p-6 lg:p-8'}`}>
+        {/* VIEW 0: LANDING PAGE */}
+        {activeTab === 'landing' && (
+          <LandingPage
+            locale={locale}
+            onLaunchCockpit={() => setActiveTab('overview')}
+            onOpenSyncModal={() => setIsSyncModalOpen(true)}
+          />
+        )}
+
         {/* VIEW 1: CONSUMER DASHBOARD (ACTION INBOX) */}
         {activeTab === 'overview' && (
           <ConsumerDashboard
@@ -384,6 +397,15 @@ export const App: React.FC = () => {
         isOpen={isUtilityModalOpen}
         onClose={() => setIsUtilityModalOpen(false)}
         onDispute={handleUtilityDispute}
+      />
+
+      {/* Cold-Start Ingestion Simulator Modal */}
+      <EmailSyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        onComplete={() => {
+          setActiveTab('overview');
+        }}
       />
 
       {/* Simple, Clean Footer */}

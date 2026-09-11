@@ -15,6 +15,7 @@ from typing import Any
 # Default initial state matching the verified Athens Apartment 4B scenario
 DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
     "version": "1.0.0",
+    "version_seq": 1,
     "last_updated": "2026-09-11T12:00:00Z",
     "household_name": "Athens Apartment 4B (Urban Household)",
     "homeowner_name": "Elena Georgiou",
@@ -246,7 +247,8 @@ class S3HouseholdStore:
         return self._memory_state
 
     def save_state(self, state: dict[str, Any]) -> None:
-        """Persist household state to S3 and in-memory cache."""
+        """Persist household state to S3 and in-memory cache with monotonic sequence increment."""
+        state["version_seq"] = state.get("version_seq", 0) + 1
         state["last_updated"] = datetime.now(UTC).isoformat()
         self._memory_state = state
 

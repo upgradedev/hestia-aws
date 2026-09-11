@@ -80,7 +80,7 @@ export interface HouseholdSummary {
   active_sentinels: number;
 }
 
-export type ActiveTab = 'overview' | 'vault' | 'subscriptions' | 'journeys' | 'gtm' | 'architecture';
+export type ActiveTab = 'landing' | 'overview' | 'vault' | 'subscriptions' | 'journeys' | 'gtm' | 'architecture';
 
 export interface JourneyStep {
   id: string;

@@ -13,6 +13,7 @@ def test_in_memory_load_and_save():
     state = store.load_state()
     assert state["household_name"] == "Athens Apartment 4B (Urban Household)"
     assert len(state["appliances"]) >= 2
+    assert state.get("version_seq") == 1
 
     # Mutate and save
     state["household_name"] = "Patras Flat 2A"
@@ -20,6 +21,7 @@ def test_in_memory_load_and_save():
 
     reloaded = store.load_state()
     assert reloaded["household_name"] == "Patras Flat 2A"
+    assert reloaded.get("version_seq") == 2
 
 
 def test_s3_mock_load_success():

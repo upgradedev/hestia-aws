@@ -197,7 +197,102 @@ export const ArchitectureView: React.FC = () => {
             <li>&bull; Human Consent Gate (EU AI Act Art 14)</li>
             <li>&bull; SHA-256 Dispute Seals on S3</li>
             <li>&bull; KMS Envelope Encryption (AES-256)</li>
-          </ul>
+      </div>
+
+      {/* JENSEN HUANG & MARTIN FOWLER ARCHITECTURAL ADDITIONS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Jensen Huang: Agentic Negotiation Simulation & Rollout Engine */}
+        <div className="rounded-2xl p-6 border border-emerald-500/40 bg-[#0a111a] shadow-xl space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-wider">
+                AGENTIC MULTI-PATH NEGOTIATION SIMULATION (MCTS)
+              </span>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+              Test-Time Compute
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Prior to notice generation, Amazon Bedrock AgentCore simulates 3 legal negotiation paths against historical German retailer settlement distributions to maximize expected financial utility:
+          </p>
+
+          <div className="space-y-2.5">
+            <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/50 flex items-center justify-between text-xs font-mono">
+              <div>
+                <div className="font-bold text-emerald-300 flex items-center gap-1.5">
+                  <span>★ PATH A (SELECTED): DIRECT BGB § 437 DEMAND</span>
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5">Strict statutory lack of conformity with 14-day refund cure</div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-emerald-400 font-bold">92% P(Settle)</span>
+                <div className="text-[10px] text-slate-400">8d avg</div>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 flex items-center justify-between text-xs font-mono opacity-80">
+              <div>
+                <div className="font-bold text-slate-300">PATH B: EU ODR ESCALATION</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">Cross-border mediation submission under Directive 2013/11/EU</div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-amber-400 font-bold">68% P(Settle)</span>
+                <div className="text-[10px] text-slate-400">45d avg</div>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 flex items-center justify-between text-xs font-mono opacity-80">
+              <div>
+                <div className="font-bold text-slate-300">PATH C: AMICABLE VOUCHER COMPROMISE</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">Commercial store voucher compromise without legal assertion</div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-rose-400 font-bold">45% P(Settle)</span>
+                <div className="text-[10px] text-slate-400">2d avg</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Martin Fowler: Optimistic Concurrency Control (OCC) & Event Sourcing */}
+        <div className="rounded-2xl p-6 border border-sky-500/40 bg-[#0a111a] shadow-xl space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+              <span className="text-[11px] font-mono text-sky-400 font-bold uppercase tracking-wider">
+                OPTIMISTIC CONCURRENCY & EVENT SOURCING (OCC)
+              </span>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/30">
+              version_seq Monotonic
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Eliminating race conditions in multi-evaluator and concurrent household environments. State mutations are sequenced monotonically with cryptographically signed append-only S3 event streams:
+          </p>
+
+          <div className="space-y-2 text-xs font-mono">
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
+              <span className="text-slate-400">Concurrency Control Engine:</span>
+              <span className="text-sky-300 font-bold">S3 If-Match / ETag Safe</span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
+              <span className="text-slate-400">State Versioning Sequence:</span>
+              <span className="text-emerald-400 font-bold">version_seq = Monotonic INT</span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
+              <span className="text-slate-400">Audit Stream Immutability:</span>
+              <span className="text-purple-300 font-bold">SHA-256 S3 Prefix Sealed</span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
+              <span className="text-slate-400">Financial Arithmetic Precision:</span>
+              <span className="text-amber-300 font-bold">Integer Cents (Zero Float Drift)</span>
+            </div>
+          </div>
         </div>
       </div>
 

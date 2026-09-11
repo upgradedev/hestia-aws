@@ -7,6 +7,7 @@ against active warranties to prevent out-of-pocket expenses.
 
 from __future__ import annotations
 
+import calendar
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
@@ -34,13 +35,14 @@ class ApplianceWarranty:
         return max(self.statutory_months, self.commercial_months)
 
     def get_expiry_date(self) -> date:
-        """Calculate exact expiration date."""
+        """Calculate exact expiration date under civil law codes (Directive 2019/771 & BGB)."""
         year = self.purchase_date.year + (self.total_months // 12)
         month = self.purchase_date.month + (self.total_months % 12)
         if month > 12:
             year += 1
             month -= 12
-        day = min(self.purchase_date.day, 28)
+        max_day = calendar.monthrange(year, month)[1]
+        day = min(self.purchase_date.day, max_day)
         return date(year, month, day)
 
     def check_status(self, current_date: date) -> tuple[WarrantyStatus, int]:
