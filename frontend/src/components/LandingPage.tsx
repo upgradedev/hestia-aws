@@ -69,7 +69,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Regulatory Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-amber-500/30 shadow-lg shadow-amber-500/10 text-xs font-mono text-amber-300 mb-8 animate-fade-in">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-          <span>AUTONOMOUS HOUSEHOLD SENTINEL // DIRECTIVE (EU) 2019/771 & RIGHT TO REPAIR</span>
+          <span>AUTONOMOUS HOUSEHOLD SENTINEL // DIRECTIVE (EU) 2019/771 &amp; {locale === 'de' ? 'BGB § 437 (GERMANY)' : 'RIGHT TO REPAIR (PAN-EU)'}</span>
         </div>
 
         {/* Hero Title */}
