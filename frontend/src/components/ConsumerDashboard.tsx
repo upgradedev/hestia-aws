@@ -176,7 +176,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                 <button
                   onClick={onOpenNoticeModal}
-                  className="w-full sm:w-auto flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="w-full sm:w-auto flex-1 min-h-[44px] py-3 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="22" y1="2" x2="11" y2="13" />
@@ -222,7 +222,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 <button
                   onClick={() => handleSubCancel(trialAlert.item_id || 'sub-002')}
                   disabled={isProcessingSub}
-                  className="w-full sm:w-auto flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+                  className="w-full sm:w-auto flex-1 min-h-[44px] py-3 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
                 >
                   {isProcessingSub ? (
                     <span>Executing cancellation...</span>
@@ -271,7 +271,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                 <button
                   onClick={onViewAllSubscriptions}
-                  className="w-full sm:w-auto flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="w-full sm:w-auto flex-1 min-h-[44px] py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -317,7 +317,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                 <button
                   onClick={onOpenReceiptModal}
-                  className="w-full sm:w-auto flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="w-full sm:w-auto flex-1 min-h-[44px] py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="16 16 12 12 8 16" />
@@ -362,7 +362,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                 <button
                   onClick={onOpenUtilityDisputeModal}
-                  className="w-full sm:w-auto flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="w-full sm:w-auto flex-1 min-h-[44px] py-3 px-6 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
