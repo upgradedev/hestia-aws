@@ -37,4 +37,4 @@
 ### [02:05 - 02:30] AWS Architecture & Conclusion
 - **Visual:** Clean animated architecture diagram showing AWS Strands Agents SDK, AWS Lambda, Amazon Bedrock (Claude 3.5 Haiku), and deterministic Python domain models. Show GitHub Actions green CI badge (35 tests, 100% coverage).
 - **Narration:**
-  "Under the hood, Hestia is 100% serverless on AWS Lambda and Amazon Bedrock. By using pure integer-precision math in its domain tools, Hestia eliminates arithmetic hallucinations. 35 comprehensive tests guarantee 100% statement and branch coverage. Hestia: protecting everyday household rights and wealth without taking your time."
+  "Under the hood, Hestia is 100% serverless on AWS Lambda and Amazon Bedrock. By using pure integer-precision math in its domain tools, Hestia eliminates arithmetic hallucinations. 37 unit and property tests guarantee 100% statement and branch coverage. Hestia: protecting everyday household rights and wealth without taking your time."

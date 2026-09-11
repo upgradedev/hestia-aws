@@ -4,14 +4,14 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-import sys
 sys.path.insert(0, str(ROOT))
 
-from infra.hestia_api_stack import template as api_tmpl
+from infra.hestia_api_stack import template as api_tmpl  # noqa: E402
 
 BUILD_DIR = ROOT / "build"
 PKG_DIR = BUILD_DIR / "pkg"
@@ -23,7 +23,9 @@ STACK_NAME = "hestia-afh-api"
 
 
 def get_git_sha() -> str:
-    res = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True)
+    res = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True
+    )
     return res.stdout.strip()
 
 

@@ -11,3 +11,8 @@ node_modules/
 frontend/dist/
 .venv/
 .env
+*.mp3
+*.webm
+*.mp4
+capture/
+narration/

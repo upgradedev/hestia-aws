@@ -1,8 +1,10 @@
-"""Generate pristine standalone distribution assets for Hestia frontend."""
-import shutil
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))
+from hestia.app.web import render_html  # noqa: E402
+
 DIST = ROOT / "frontend" / "dist"
 ASSETS = DIST / "assets"
 
@@ -72,7 +74,8 @@ async function checkHealth() {
       const badge = document.getElementById('api-badge');
       if (badge) {
         badge.innerText = 'AWS Lambda Live';
-        badge.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+        badge.className = 'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full ' +
+          'text-[11px] font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
       }
     }
   } catch(e) {
@@ -93,13 +96,17 @@ async function dispatchClaim(itemId) {
     const data = await res.json();
     if (msg) {
       msg.style.display = 'flex';
-      msg.innerText = 'Notice dispatched! ' + (data.message || 'Directive 2019/771/EU claim recorded.');
+      msg.innerText = 'Notice dispatched! ' + (
+          data.message || 'Directive 2019/771/EU claim recorded.'
+        );
     }
     if (btn) btn.innerText = 'Notice Dispatched';
   } catch(e) {
     if (msg) {
       msg.style.display = 'flex';
-      msg.innerText = 'Notice dispatched (simulated offline fallback). Directive 2019/771/EU claim recorded.';
+      msg.innerText = (
+          'Notice dispatched (simulated offline fallback). Directive 2019/771/EU claim recorded.'
+        );
     }
     if (btn) btn.innerText = 'Notice Dispatched';
   }
@@ -115,14 +122,15 @@ window.addEventListener('DOMContentLoaded', () => {
 """
 (ASSETS / "app.js").write_text(JS_CONTENT, encoding="utf-8")
 
-import sys
-sys.path.insert(0, str(ROOT / "src"))
-from hestia.app.web import render_html
 html_content = render_html()
 
 # Ensure it includes the asset tags
 if "/assets/style.css" not in html_content:
-    html_content = html_content.replace("</head>", '<link rel="stylesheet" href="/assets/style.css">\n<script src="/assets/app.js" defer></script>\n</head>')
+    html_content = html_content.replace(
+        "</head>",
+        '<link rel="stylesheet" href="/assets/style.css">\n'
+        '<script src="/assets/app.js" defer></script>\n</head>'
+    )
 
 (DIST / "index.html").write_text(html_content, encoding="utf-8")
 print(f"Generated pristine frontend dist in {DIST}")

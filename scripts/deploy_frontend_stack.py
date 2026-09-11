@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from infra.frontend_stack import template as frontend_tmpl
+from infra.frontend_stack import template as frontend_tmpl  # noqa: E402
 
 BUILD_DIR = ROOT / "build"
 REGION = "eu-west-1"
