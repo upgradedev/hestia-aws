@@ -214,7 +214,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span className="text-xs font-mono text-amber-400 font-bold">STEP 02 // RECONCILE</span>
             <h3 className="text-base font-bold text-white">Deterministic Legal Math</h3>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Python domain models calculate exact 24-month statutory horizons (BGB § 437) and flag anti-joins (>€50 unbacked transactions) with zero hallucinations.
+              Python domain models calculate exact 24-month statutory horizons (BGB § 437) and flag anti-joins (&gt;€50 unbacked transactions) with zero hallucinations.
             </p>
           </div>
 
