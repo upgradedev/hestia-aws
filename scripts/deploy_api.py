@@ -46,6 +46,8 @@ def get_git_sha() -> str:
 
 
 def package():
+    if os.environ.get("CI") != "true":
+        raise ValueError("Packaging is CI-only")
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     if PKG_DIR.exists():
         shutil.rmtree(PKG_DIR)
@@ -65,7 +67,8 @@ def package():
     subprocess.run([
         sys.executable, "-c",
         "from botocore.session import Session; "
-        "members = Session().get_service_model('s3').operation_model('PutObject').input_shape.members; "
+        "operation = Session().get_service_model('s3').operation_model('PutObject'); "
+        "members = operation.input_shape.members; "
         "assert {'IfMatch', 'IfNoneMatch'} <= members.keys()",
     ], check=True, env={**os.environ, "PYTHONPATH": str(PKG_DIR),
                        "AWS_EC2_METADATA_DISABLED": "true"})

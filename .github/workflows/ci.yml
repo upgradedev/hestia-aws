@@ -28,7 +28,7 @@ jobs:
 
       - name: ruff check
         run: |
-          python -m ruff check src tests infra
+          python -m ruff check src tests infra scripts/ci_api_server.py scripts/deploy_api.py
 
       - name: run test suite with coverage
         run: |
@@ -44,3 +44,16 @@ jobs:
             coverage.xml
             pytest-results.xml
           if-no-files-found: warn
+
+      - name: Package isolated demo runtime without AWS access
+        run: |
+          python -c "from scripts.deploy_api import package; package()"
+          cd build/pkg
+          python -S -c "from hestia.app.web import lambda_handler; import json; response=lambda_handler({'rawPath':'/healthz','requestContext':{'http':{'method':'GET'}}},None); health=json.loads(response['body']); assert response['statusCode']==200 and health['live_send'] is False and health['live_model'] is False"
+
+      - name: Retain candidate runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-runtime-candidate
+          path: build/hestia-api.zip
+          if-no-files-found: error
