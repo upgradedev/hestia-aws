@@ -10,7 +10,7 @@ The URL is a navigation link, not a deployment receipt. This document describes 
 
 ## Evidence-bound mode inventory
 
-[PRIMARY: repository inspection, 2026-09-12] Implementation baseline: `39e148536080e0957cc36dbd3ca8ea6b74785800`. Reproduce each inspection with `git show 39e148536080e0957cc36dbd3ca8ea6b74785800:<path>` using the paths below. This is repository evidence, not a pipeline result or live measurement. Later integration changes require a new reviewed SHA.
+[PRIMARY: repository inspection, 2026-09-12] Implementation baseline: `39e148536080e0957cc36dbd3ca8ea6b74785800`. Inspect the baseline with `git show 39e148536080e0957cc36dbd3ca8ea6b74785800:<path>`. The inventory below includes the subsequent hardening changes in this tree; reproduce them with `git rev-parse HEAD` and `git show HEAD:<path>`. This is repository evidence, not a pipeline result or live measurement. CI receipts must identify the tested revision separately.
 
 | Surface | Mode and useful behavior | Evidence path | Boundary / next evidence needed |
 |---|---|---|---|
@@ -23,9 +23,9 @@ The URL is a navigation link, not a deployment receipt. This document describes 
 | Persistence | Implemented S3 adapter: scoped `demo/workspaces/` keys, `If-None-Match` creation and `If-Match` updates; CI uses an in-memory store | `src/hestia/adapters/storage.py`, `scripts/ci_api_server.py` | Conditional writes and SHA-256 digests are not WORM storage or third-party signatures |
 | Household rules | Implemented: date comparisons, subscription deltas, receipt matching and utility baseline comparisons on supplied records | `src/hestia/agents/sentinel.py`, `src/hestia/domain/` | Fixture thresholds are assumptions; legal eligibility and real-world accuracy remain unverified |
 | Manual receipt reference | Implemented: visitor can link a receipt reference to a supplied outflow | `src/hestia/app/api.py` | A typed reference is not OCR or proof of document authenticity |
-| Import / OCR preparation | Pending separate intake integration: manual review imports and OCR adapter preparation | `src/hestia/app/api.py` | At the baseline, scan and sync report unavailable; actual OCR stays disabled |
+| Document / manual import | Implemented in source: bounded PNG/JSON validation or manual facts, saved original/corrected records, exact reviewed subset, conditional commit, dedupe and replay | `src/hestia/app/intake.py`, `src/hestia/domain/intake.py`, `src/hestia/domain/ocr.py` | PNG text is not extracted; OCR stays unavailable. No account connection, appliance creation or document authenticity is inferred. Only hashes and reviewed facts are retained |
 | Bank / mailbox / retailer feeds | Not connected | `src/hestia/app/api.py` | No PSD2 feed, mailbox ingestion or retailer account sync is established |
-| Bedrock / Strands | Disabled in the demo route; optional construction and drafting helpers exist in source | `src/hestia/agents/sentinel.py`, `src/hestia/app/claims.py`, `infra/hestia_api_stack.py` | No paid live model result or AI-quality measurement is claimed |
+| Bedrock / Strands | Disabled in the demo route; optional agent construction exists in source, while consumer review letters are deterministic | `src/hestia/agents/sentinel.py`, `src/hestia/app/claims.py`, `infra/hestia_api_stack.py` | No paid live model result or AI-quality measurement is claimed |
 | AgentCore / Bedrock Guardrails / Action Groups | Proposed, not connected | `docs/BEDROCK_AGENTCORE_ARCHITECTURE.md` | Helper names and API metadata do not prove managed-service deployment |
 | SES | Disabled in the demo route and denied by infrastructure source | `src/hestia/app/claims.py`, `infra/hestia_api_stack.py` | Simulated outbox records are not sent email |
 | Optional MCTS | Toy illustration on explicit request; fixed assumptions, separate from claim preparation | `src/hestia/domain/mcts.py`, `src/hestia/app/api.py` | No empirical settlement probability, legal-route recommendation or measured time-to-resolution |
@@ -57,15 +57,19 @@ No certification, regulatory risk classification or completed AWS review is clai
 
 <a id="integration-testbook"></a>
 
-Integration testbook anchor: the coordinator can add exact-revision requirements-to-tests mappings and CI receipts here after integration. Current HE10 status: tests added, NOT_RUN. No local builds, tests, installs or hooks were run; no new CI result is claimed.
+The table defines the integrated regression testbook. Commands below run only in CI; their existence is not a passing result. Read the workflow checkout SHA and retained artifacts together. Automated checks do not complete deployed acceptance, legal review or independent human UAT (NOT_RUN).
 
 | Requirement | Targeted regression evidence | Integration receipt |
 |---|---|---|
-| Claims remain evidence-bound in detailed copy | `tests/test_claims_inventory.py`; `frontend/tests/claims-inventory.spec.ts` | NOT_RUN; attach SHA, UTC, report and failures |
-| Disabled/not-connected providers stay visible | Browser architecture tiers, toy-response boundary and unknown commercial metrics | NOT_RUN |
-| Synthetic journeys never imply completed outcomes | Browser traversal of every journey and static fixture assertions | NOT_RUN |
-| API console preserves read-only behavior and error reporting | New console regression plus existing `frontend/tests/p0-session.spec.ts` | NOT_RUN |
-| Case provenance, exact approval and outcome consent remain intact | Existing `tests/test_case_api.py`, `tests/test_case_lifecycle.py`, `frontend/tests/case-lifecycle.spec.ts` | NOT_RUN for integrated revision |
+| HE5 document bytes and manual correction | `tests/test_ocr.py`; `tests/test_intake.py::test_json_correction_exact_review_commit_and_reload_retain_real_input_provenance`; `frontend/tests/intake.spec.ts` JSON correction/reload journey | Backend JUnit plus browser HTTP state assertions; malformed bytes must fail without a draft |
+| HE6 exact import, partial rows, dedupe and isolation | `tests/test_intake.py` partial-batch, stale/digest/consent, cross-session, concurrent-write and lost-response tests; corresponding `frontend/tests/intake.spec.ts` journeys | Valid rows only after explicit subset consent; one persisted result after retry; no provider call |
+| HE7 separate warranty facts and cautious wording | `tests/test_legal_guards.py` delivery/leap-day, statutory vs commercial, missing/contradictory facts, currency, draft tamper and current redress tests | JUnit proves technical guards, not legal entitlement or a jurisdiction-specific legal opinion |
+| HE8 coherent facts and unknown vs zero | `tests/test_intake.py::test_canonical_metric_projection_ignores_stale_summary_and_uses_inclusive_threshold`; `frontend/tests/display-facts.spec.ts`; `frontend/tests/snapshot-consistency.spec.ts` | Backend record projection plus desktop/mobile presentation fixtures with changed amounts, reload and keyboard navigation; real recovery stays zero |
+| HE9 complete saved case journey | `tests/test_case_api.py`, `tests/test_case_lifecycle.py`, `frontend/tests/case-lifecycle.spec.ts` | Actual CI HTTP journey: review, exact approval, follow-up, partial/rejected/resolved outcome and replay; independent human acceptance remains separate |
+| HE10 truthful detailed claims and read-only console | `tests/test_claims_inventory.py`; `frontend/tests/claims-inventory.spec.ts` | Injected false copy must fail; browser checks every journey, provider limits, unknown metrics and error reporting |
+| Preserved P0 authority and deployment contract | Existing `frontend/tests/p0-session.spec.ts`, Python authority/storage tests and `frontend/acceptance/` | Existing negative gates and exact-content acceptance calibration remain required; calibration is not an AWS deployment receipt |
+
+The HE8 snapshot tests intentionally replace GET responses to test presentation and are not backend-write evidence. Intake and case journeys use the actual CI HTTP API and persisted isolated state; the lost-response journey intentionally aborts only after the server has committed. `display-facts.spec.ts` contains pure-function Playwright cases, not browser journeys. Source/PR checks run on each change and on merges to main. The frontend publication step stays owner-gated.
 
 | CI scope | Command / workflow | Evidence required before reporting a result |
 |---|---|---|

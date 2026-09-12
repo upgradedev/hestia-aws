@@ -64,7 +64,10 @@ test('HE8 zero repair never becomes the sample amount', async ({ page }) => {
 
 test('HE8 missing amount fails closed instead of fabricating money', async ({ page }) => {
   await snapshot(page, null, true);
-  await expect(page.getByRole('alert')).toContainText('Invalid server response');
-  await expect(page.getByTestId('recovery-amount')).toHaveCount(0);
-  await expect(page.getByTestId('review-claim')).toHaveCount(0);
+  await expect(page.getByTestId('recovery-amount')).toHaveText('Not available');
+  await expect(page.getByTestId('reviewed-facts')).toContainText('Amount not recorded');
+  await expect(page.getByTestId('review-claim')).toBeDisabled();
+  await expect(page.getByTestId('prepare-case-notice')).toBeDisabled();
+  await page.getByRole('button', { name: 'View recorded household assets', exact: true }).click();
+  await expect(page.getByTestId('repair-cost-app-001')).toContainText('Repair amount not recorded');
 });

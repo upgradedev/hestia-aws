@@ -118,7 +118,9 @@ export const SentinelRadar: React.FC<SentinelRadarProps> = ({
 
                 <div className="text-right">
                   <span className="text-xs font-bold text-emerald-400 font-mono">
-                    €{alert.potential_savings_eur.toFixed(2)} recorded exposure
+                    {alert.category === 'warranty_claim' || alert.category === 'receipt_gap'
+                      ? alert.documented_amount_eur === undefined ? 'Amount not recorded' : `€${alert.documented_amount_eur.toFixed(2)} recorded amount`
+                      : `€${alert.potential_savings_eur.toFixed(2)} comparison amount`}
                   </span>
                 </div>
               </div>

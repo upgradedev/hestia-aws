@@ -121,11 +121,12 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
                 </div>
               </div>
 
+              {(isDefective && (app.repair_amount_cents ?? 0) <= 0) && <p className="text-xs text-amber-300">A documented positive repair amount is required before preparing a notice.</p>}
               {/* Action Buttons */}
               {isDefective ? (
                 <button
                   onClick={() => onOpenClaimModal(app)}
-                  disabled={actionsDisabled}
+                  disabled={actionsDisabled || (app.repair_amount_cents ?? 0) <= 0}
                   data-testid={'review-appliance-' + app.id}
                   className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs shadow-lg shadow-rose-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >

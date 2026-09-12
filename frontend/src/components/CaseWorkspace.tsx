@@ -26,11 +26,12 @@ export function CaseWorkspace({ state, enabled, onPrepare, onUpdate, onRefresh }
             <div><dt className="text-slate-400">Receipt reference</dt><dd>{item.receipt_reference ?? 'Missing receipt reference'}</dd></div>
             <div><dt className="text-slate-400">Purchase / repair date</dt><dd>{item.purchase_date} / {item.repair_date ?? 'Not recorded'}</dd></div>
             <div><dt className="text-slate-400">Seller</dt><dd>{item.seller_name}<br />{item.seller_email}</dd></div>
-            <div><dt className="text-slate-400">Recorded repair cost</dt><dd>€{(item.repair_amount_cents / 100).toFixed(2)} (not recovered)</dd></div>
+            <div><dt className="text-slate-400">Recorded repair cost</dt><dd>{item.repair_amount_known === false ? 'Amount not recorded' : `€${(item.repair_amount_cents / 100).toFixed(2)} (not recovered)`}</dd></div>
             <div className="sm:col-span-2"><dt className="text-slate-400">Reported problem</dt><dd>{item.repair_issue}</dd></div>
           </dl>
           <p className="text-sm text-amber-300">Synthetic facts, not OCR or independent verification. Check these facts before continuing. The notice does not establish legal eligibility.</p>
-          <button data-testid="prepare-case-notice" disabled={!enabled} onClick={() => onPrepare(item.id)} className="px-5 py-3 rounded-xl bg-amber-400 text-slate-950 font-bold disabled:opacity-50">Facts reviewed: prepare exact notice</button>
+          <button data-testid="prepare-case-notice" disabled={!enabled || item.repair_amount_known === false || item.repair_amount_cents <= 0} onClick={() => onPrepare(item.id)} className="px-5 py-3 rounded-xl bg-amber-400 text-slate-950 font-bold disabled:opacity-50">Facts reviewed: prepare exact notice</button>
+          {(item.repair_amount_known === false || item.repair_amount_cents <= 0) && <p className="text-sm text-amber-300">A documented positive repair amount is required before preparing a notice.</p>}
           {!enabled && <p className="text-sm text-slate-400">Begin the isolated demo session above to save your first case.</p>}
         </> : <p role="status">No appliance has a documented repair to review. Automatic OCR and provider inbox sync are unavailable; no case was fabricated.</p>}
       </div>}

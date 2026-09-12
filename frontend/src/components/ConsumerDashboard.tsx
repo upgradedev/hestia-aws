@@ -54,6 +54,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
   const warrantyAlert = alerts.find((a) => a.category === 'warranty_claim');
   const hasWarrantyAlert = !!warrantyAlert;
+  const hasPositiveRepair = (warrantyAlert?.documented_amount_eur ?? 0) > 0;
   const trialAlert = alerts.find((a) => a.action_type === 'cancel_trial');
   const priceCreepAlert = alerts.find((a) => a.category === 'price_creep' && a.action_type !== 'cancel_trial');
   const receiptAlert = alerts.find((a) => a.category === 'receipt_gap');
@@ -68,7 +69,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       {message && <p role="status" className="text-amber-300">{message}</p>}
       <details data-testid="metric-definitions" className="text-xs text-slate-400">
         <summary className="cursor-pointer">Where these metrics come from</summary>
-        <p className="mt-2">Source: canonical records in this synthetic household snapshot. Version {snapshotVersion ?? 'unavailable'}; observed {snapshotObservedAt ?? 'unavailable'}.</p>
+        <p className="mt-2">Source: canonical records in this synthetic household snapshot. Version {snapshotVersion ?? 'unavailable'}; snapshot timestamp {snapshotObservedAt ?? 'unavailable'}.</p>
         <p>Repair costs sum open recorded repairs. Purchase value sums recorded appliance prices, not insured value. Monthly subscription exposure includes trial charges and positive price changes. Missing receipts sum unlinked outflows of at least €50. None of these amounts is money recovered.</p>
       </details>
       {/* 1. TOP 3-SECOND METRIC CARDS (Clear, Large Numbers, Zero Jargon) */}
@@ -84,7 +85,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             )}
           </div>
           <div data-testid="recovery-amount" className="text-3xl lg:text-4xl font-black text-white font-mono mt-2">
-            €{summary.potential_recovery_eur.toFixed(2)}
+            {summary.documented_repair_cost_eur === undefined ? 'Not available' : `€${summary.documented_repair_cost_eur.toFixed(2)}`}
           </div>
           <p className="text-xs text-amber-300 mt-2">Evidence to review, not an entitlement or money recovered.</p>
           <p className="text-xs text-slate-300 mt-2">
@@ -193,7 +194,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   </div>
                 </div>
                 <span className="text-lg font-black font-mono text-emerald-400 self-start sm:self-auto">
-                  €{warrantyAlert?.potential_savings_eur.toFixed(2)}
+                  {warrantyAlert?.documented_amount_eur === undefined ? 'Amount not recorded' : `€${warrantyAlert.documented_amount_eur.toFixed(2)} recorded`}
                 </span>
               </div>
 
@@ -209,7 +210,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                 <button
                   onClick={() => onOpenNoticeModal(warrantyAlert?.item_id)}
-                  disabled={actionsDisabled || !warrantyAlert?.item_id}
+                  disabled={actionsDisabled || !warrantyAlert?.item_id || !hasPositiveRepair}
                   data-testid="review-claim"
                   className="w-full sm:w-auto flex-1 min-h-[44px] py-3 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
@@ -219,7 +220,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   </svg>
                   <span>{warrantyAlert?.action_label}</span>
                 </button>
-                <span className="text-[11px] text-slate-500 font-mono">Exact preview before approval</span>
+                <span className="text-[11px] text-slate-500 font-mono">{hasPositiveRepair ? 'Exact preview before approval' : 'A documented positive repair amount is required'}</span>
               </div>
             </div>
           )}
@@ -342,7 +343,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   </div>
                 </div>
                 <span className="text-lg font-black font-mono text-amber-300 self-start sm:self-auto">
-                  €{receiptAlert.potential_savings_eur.toFixed(2)}
+                  {receiptAlert.documented_amount_eur === undefined ? 'Evidence gap' : `€${receiptAlert.documented_amount_eur.toFixed(2)} purchase`}
                 </span>
               </div>
 
