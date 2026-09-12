@@ -6,9 +6,15 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AWS_EC2_METADATA_DISABLED: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,8 +28,19 @@ jobs:
 
       - name: ruff check
         run: |
-          python -m ruff check src tests
+          python -m ruff check src tests infra
 
       - name: run test suite with coverage
         run: |
-          python -m pytest --cov=hestia --cov-report=term-missing tests/
+          python -m compileall -q src tests
+          python -m pytest --cov=hestia --cov-branch --cov-fail-under=85 --cov-report=term-missing --cov-report=xml --junitxml=pytest-results.xml tests/ infra/
+
+      - name: Retain exact-revision test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-p0-evidence
+          path: |
+            coverage.xml
+            pytest-results.xml
+          if-no-files-found: warn

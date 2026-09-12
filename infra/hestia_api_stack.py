@@ -59,8 +59,8 @@ def template():
         "Statement": [
             {
                 "Effect": "Allow",
-                "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
-                "Resource": [attr("State", "Arn"), sub("${State.Arn}/*")],
+                "Action": ["s3:GetObject", "s3:PutObject"],
+                "Resource": sub("${State.Arn}/demo/workspaces/*"),
             },
             {
                 "Effect": "Allow",
@@ -71,22 +71,8 @@ def template():
                 ),
             },
             {
-                "Effect": "Allow",
-                "Action": [
-                    "bedrock:InvokeModel",
-                    "bedrock:InvokeModelWithResponseStream",
-                ],
-                "Resource": "*",
-            },
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "ses:SendRawEmail",
-                    "ses:SendEmail",
-                    "ses:GetSendQuota",
-                    "ses:GetIdentityVerificationAttributes",
-                    "ses:ListIdentities",
-                ],
+                "Effect": "Deny",
+                "Action": ["bedrock:*", "ses:*", "s3:DeleteObject", "s3:DeleteObjectVersion"],
                 "Resource": "*",
             },
         ],
@@ -101,12 +87,15 @@ def template():
         "Code": {"S3Bucket": ref("CodeBucket"), "S3Key": ref("CodeKey")},
         "Timeout": 28,
         "MemorySize": 512,
-        "ReservedConcurrentExecutions": 10,
+        "ReservedConcurrentExecutions": 2,
         "Environment": {"Variables": {
             "HESTIA_STATE_BUCKET": ref("State"),
             "HESTIA_STATE_PREFIX": "audit/",
             "HESTIA_COMMIT_SHA": ref("CommitSha"),
             "HESTIA_SES_REGION": "eu-west-1",
+            "HESTIA_DEMO_SECRET": sub(
+                "{{resolve:secretsmanager:${DemoSecretArn}:SecretString}}"
+            ),
         }},
         "Tags": [{"Key": "project", "Value": "hestia-agentsforhumans"}],
     }
@@ -114,7 +103,7 @@ def template():
     api_props = {
         "Name": "hestia-afh-api",
         "ProtocolType": "HTTP",
-        "Description": "Anonymous household sentinel operations cockpit and ROC actions.",
+        "Description": "Read-only preview and capability-scoped synthetic demo actions.",
     }
 
     integration_props = {
@@ -144,6 +133,13 @@ def template():
             },
             "CodeKey": {"Type": "String", "AllowedPattern": "releases/[0-9a-f]{40}/hestia-api.zip"},
             "CommitSha": {"Type": "String", "AllowedPattern": "[0-9a-f]{40}"},
+            "DemoSecretArn": {
+                "Type": "String",
+                "Description": "Dedicated demo-signing secret ARN; value at least 32 bytes.",
+                "AllowedPattern": (
+                    "arn:aws:secretsmanager:eu-west-1:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+"
+                ),
+            },
         },
         "Resources": {
             "State": {
@@ -195,7 +191,7 @@ def template():
                 "Type": "AWS::ApiGatewayV2::Stage",
                 "Properties": {
                     "ApiId": ref("Api"), "StageName": "$default", "AutoDeploy": True,
-                    "DefaultRouteSettings": {"ThrottlingRateLimit": 20, "ThrottlingBurstLimit": 40},
+                    "DefaultRouteSettings": {"ThrottlingRateLimit": 2, "ThrottlingBurstLimit": 4},
                 },
             },
             "Permission": {"Type": "AWS::Lambda::Permission", "Properties": permission_props},

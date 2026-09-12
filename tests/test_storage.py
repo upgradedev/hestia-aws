@@ -1,271 +1,218 @@
-"""Tests for S3HouseholdStore persistent adapter."""
-
+"""HE4: conditional persistence, failed writes and isolated workspace regressions."""
 from __future__ import annotations
 
+import copy
 import json
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock
 
-from hestia.adapters.storage import S3HouseholdStore
+import pytest
+
+from hestia.adapters.storage import (
+    S3HouseholdStore,
+    StateMissing,
+    StorageConflict,
+    StorageError,
+    fresh_demo_state,
+)
+from tests.fakes import ConditionalS3, service_error
+
+SCOPE = "a" * 32
 
 
-def test_in_memory_load_and_save():
+def cloud_store(s3=None, scope=SCOPE):
+    return S3HouseholdStore(bucket_name="test-bucket", workspace_id=scope,
+                            s3_client=s3 or ConditionalS3())
+
+
+def test_in_memory_load_and_save_are_copies(monkeypatch):
+    monkeypatch.setenv("HESTIA_STATE_BUCKET", "must-not-be-used")
     store = S3HouseholdStore(bucket_name="")
     state = store.load_state()
-    assert state["household_name"] == "Athens Apartment 4B (Urban Household)"
-    assert len(state["appliances"]) >= 2
-    assert state.get("version_seq") == 1
-
-    # Mutate and save
-    state["household_name"] = "Patras Flat 2A"
+    state["household_name"] = "Updated"
+    assert store.load_state()["household_name"] != "Updated"
     store.save_state(state)
+    assert store.load_state()["household_name"] == "Updated"
+    assert state["version_seq"] == 2
+    assert store.bucket == ""
 
-    reloaded = store.load_state()
-    assert reloaded["household_name"] == "Patras Flat 2A"
-    assert reloaded.get("version_seq") == 2
+
+def test_independent_default_memory_workspaces():
+    first, second = S3HouseholdStore(bucket_name=""), S3HouseholdStore(bucket_name="")
+    state = first.load_state()
+    state["household_name"] = "Private A"
+    first.save_state(state)
+    assert second.load_state()["household_name"] != "Private A"
 
 
-def test_s3_mock_load_success():
-    mock_s3 = MagicMock()
-    mock_body = MagicMock()
-    mock_body.read.return_value = json.dumps({"test_key": "test_val"}).encode("utf-8")
-    mock_s3.get_object.return_value = {"Body": mock_body}
+def test_s3_requires_trusted_scope_and_scopes_all_prefixes():
+    with pytest.raises(ValueError):
+        S3HouseholdStore(bucket_name="bucket")
+    for invalid in ("../state", "A" * 32, "", "a" * 33, "a/b"):
+        with pytest.raises(ValueError):
+            cloud_store(scope=invalid)
+    store = cloud_store()
+    assert store.state_key == f"demo/workspaces/{SCOPE}/state.json"
+    assert store.audit_prefix.startswith(store.prefix)
+    assert store.outbox_prefix.startswith(store.prefix)
 
-    store = S3HouseholdStore(bucket_name="test-bucket", s3_client=mock_s3)
+
+def test_bootstrap_only_missing_and_conditional():
+    s3 = ConditionalS3()
+    store = cloud_store(s3)
+    initial = store.load_state()
+    assert initial["version_seq"] == 1
+    assert s3.calls[-1][1]["IfNoneMatch"] == "*"
+    assert store.load_state() == initial
+    assert len([c for c in s3.calls if c[0] == "put"]) == 1
+
+
+@pytest.mark.parametrize("error", [
+    service_error("AccessDenied"), service_error("NoSuchBucket"), TimeoutError(),
+    Exception("NoSuchKey"),
+])
+def test_read_failure_never_seeds_or_resets(error):
+    s3 = ConditionalS3()
+    s3.read_error = error
+    with pytest.raises(StorageError):
+        cloud_store(s3).load_state()
+    assert not any(c[0] == "put" for c in s3.calls)
+
+
+def test_missing_existing_session_not_recreated():
+    s3 = ConditionalS3()
+    with pytest.raises(StateMissing):
+        cloud_store(s3).load_state(create=False)
+    assert not any(c[0] == "put" for c in s3.calls)
+
+
+def test_corrupt_state_never_replaced():
+    s3 = ConditionalS3()
+    store = cloud_store(s3)
+    store.load_state()
+    key = (store.bucket, store.state_key)
+    for content in (b"{broken", b"[]", b'{"version_seq":true}', b"\xff"):
+        s3.objects[key]["Body"] = content
+        count = len(s3.calls)
+        with pytest.raises(StorageError):
+            store.load_state()
+        assert not any(c[0] == "put" for c in s3.calls[count:])
+        assert s3.objects[key]["Body"] == content
+
+
+def test_missing_etag_and_unreadable_body_fail_closed():
+    s3 = MagicMock()
+    s3.get_object.return_value = {"Body": MagicMock()}
+    s3.get_object.return_value["Body"].read.return_value = json.dumps(fresh_demo_state()).encode()
+    with pytest.raises(StorageError, match="revision"):
+        cloud_store(s3).load_state()
+    s3.get_object.return_value["Body"].read.side_effect = OSError()
+    with pytest.raises(StorageError, match="unreadable"):
+        cloud_store(s3).load_state()
+    s3.put_object.assert_not_called()
+
+
+def test_stale_s3_and_memory_writers_cannot_overwrite():
+    for shared in (None, ConditionalS3()):
+        scope = "b" * 32 if shared is None else "c" * 32
+        first = (cloud_store(shared, scope) if shared
+                 else S3HouseholdStore(bucket_name="", workspace_id=scope))
+        second = (cloud_store(shared, scope) if shared
+                  else S3HouseholdStore(bucket_name="", workspace_id=scope))
+        left, right = first.load_state(), second.load_state()
+        left["household_name"] = "Winner"
+        right["household_name"] = "Loser"
+        first.save_state(left)
+        with pytest.raises(StorageConflict):
+            second.save_state(right)
+        assert second.load_state()["household_name"] == "Winner"
+
+
+def test_failed_write_does_not_update_caller_or_committed_state():
+    s3 = ConditionalS3()
+    store = cloud_store(s3)
+    original = store.load_state()
+    candidate = copy.deepcopy(original)
+    candidate["household_name"] = "Unsaved"
+    s3.write_error = service_error("AccessDenied")
+    with pytest.raises(StorageError):
+        store.save_state(candidate)
+    assert candidate["version_seq"] == original["version_seq"]
+    assert store.load_state() == original
+
+
+def test_lost_write_response_requires_readback_not_success_fallback():
+    s3 = ConditionalS3()
+    store = cloud_store(s3)
     state = store.load_state()
-    assert state == {"test_key": "test_val"}
+    s3.lose_response = True
+    state["household_name"] = "Committed"
+    with pytest.raises(StorageError, match="unconfirmed"):
+        store.save_state(state)
+    assert state["version_seq"] == 1
+    assert store.load_state()["household_name"] == "Committed"
+    assert store.load_state()["version_seq"] == 2
 
 
-def test_s3_mock_load_fallback_on_exception():
-    mock_s3 = MagicMock()
-    mock_s3.get_object.side_effect = Exception("NoSuchKey")
+def test_parallel_bootstrap_does_not_replace_winner():
+    s3 = ConditionalS3()
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        values = list(pool.map(lambda _: cloud_store(s3).load_state(), range(4)))
+    assert all(v["version_seq"] == 1 for v in values)
 
-    store = S3HouseholdStore(bucket_name="test-bucket", s3_client=mock_s3)
+
+def test_audit_and_reset_preserve_history_and_monotonic_version():
+    store = S3HouseholdStore(bucket_name="")
     state = store.load_state()
-    assert state["household_name"] == "Athens Apartment 4B (Urban Household)"
-    assert mock_s3.put_object.called
-
-
-def test_s3_save_state_exception_swallowed():
-    mock_s3 = MagicMock()
-    mock_s3.put_object.side_effect = Exception("S3 write error")
-
-    store = S3HouseholdStore(bucket_name="test-bucket", s3_client=mock_s3)
-    # Should not raise
-    store.save_state({"test": 1})
-    assert store._memory_state["test"] == 1
-
-
-def test_s3_get_s3_real_client(monkeypatch):
-    store = S3HouseholdStore(bucket_name="test-bucket")
-    mock_boto = MagicMock()
-    monkeypatch.setattr("boto3.client", mock_boto)
-    client = store._get_s3()
-    assert client == mock_boto.return_value
-
-
-def test_s3_get_s3_fallback(monkeypatch):
-    store = S3HouseholdStore(bucket_name="test-bucket")
-    # Test when boto3 client creation fails
-    monkeypatch.setattr("boto3.client", MagicMock(side_effect=Exception("No credentials")))
-    assert store._get_s3() is None
-
-
-def test_append_audit_event():
-    mock_s3 = MagicMock()
-    store = S3HouseholdStore(bucket_name="test-bucket", s3_client=mock_s3)
-
-    seal = store.append_audit_event("test_action", {"foo": "bar"})
+    state["drafts"]["consumed"] = {"consumed": True}
+    state["action_count"] = 5
+    store.save_state(state)
+    seal = store.append_audit_event("review", {"amount": 18500})
     assert len(seal) == 64
-    assert mock_s3.put_object.called
-
-    # S3 failure swallowed
-    mock_s3.put_object.side_effect = Exception("PutObject failed")
-    seal2 = store.append_audit_event("test_action", {"foo": "bar"})
-    assert seal2 == seal
-
-
-def test_record_claim_dispatch():
-    store = S3HouseholdStore(bucket_name="")
-    rec = store.record_claim_dispatch(
-        item_id="app-001",
-        seller="Kotsovolos Megastore",
-        seller_email="support@kotsovolos.example.gr",
-        letter="Formal statutory claim notice under EU Directive 2019/771/EU",
-        statutory_basis="Directive (EU) 2019/771, Article 10(1)",
-        model_id="eu.anthropic.claude-haiku-4-5-20251001-v1:0",
-    )
-    assert rec["status"] == "dispatched"
-    assert rec["item_id"] == "app-001"
-    assert len(rec["cryptographic_seal"]) == 64
-
-    # Check updated state
-    state = store.load_state()
-    app = next(a for a in state["appliances"] if a["id"] == "app-001")
-    assert app["claim_status"] == "dispatched"
-    assert state["summary"]["unclaimed_recovery_cents"] == 0
-
-
-def test_record_subscription_cancellation():
-    store = S3HouseholdStore(bucket_name="")
-    # Cancel expiring trial
-    res = store.record_subscription_cancellation("Fitness Stream Pro")
-    assert res["status"] == "cancelled"
-    assert res["service_name"] == "Fitness Stream Pro"
-
-    state = store.load_state()
-    sub = next(s for s in state["subscriptions"] if s["service_name"] == "Fitness Stream Pro")
-    assert sub["status"] == "cancelled"
-
-    # Cancel price creep sub
-    res2 = store.record_subscription_cancellation("Cloud Backup Vault")
-    assert res2["status"] == "cancelled"
-
-    # Cancel non-existent service
-    res4 = store.record_subscription_cancellation("NonExistent Service")
-    assert res4["status"] == "cancelled"
-
-
-def test_record_receipt_upload():
-    store = S3HouseholdStore(bucket_name="")
-    # Match existing missing receipt
-    res = store.record_receipt_upload(
-        merchant="Leroy Merlin DIY",
-        amount_cents=8550,
-        receipt_id="REC-2026-LEROY-TEST",
-    )
-    assert res["status"] == "linked"
-    assert res["matched"] is True
-    assert res["new_missing_receipt_cents"] == 0
-
-    state = store.load_state()
-    out = next(o for o in state["outflows"] if o["merchant"] == "Leroy Merlin DIY")
-    assert out["has_receipt"] is True
-    assert out["receipt_id"] == "REC-2026-LEROY-TEST"
-    assert "REC-2026-LEROY-TEST" in state["saved_receipts"]
-
-    # Upload unlinked receipt when another unbacked outflow >= 5000 exists
-    state["outflows"].append({
-        "id": "out-999",
-        "merchant": "Mega Hardware",
-        "amount_cents": 9500,
-        "date": "2026-09-08",
-        "has_receipt": False,
-        "receipt_id": None,
-        "category": "Home Maintenance",
-        "status": "missing_receipt",
-    })
-    store.save_state(state)
-
-    res2 = store.record_receipt_upload(
-        merchant="Independent Bakery",
-        amount_cents=1200,
-        receipt_id="REC-2026-BAKERY-TEST",
-    )
-    assert res2["status"] == "stored"
-    assert res2["matched"] is False
-    assert res2["new_missing_receipt_cents"] == 9500
-
-
-def test_record_claim_dispatch_with_remaining_open_claims():
-    store = S3HouseholdStore(bucket_name="")
-    state = store.load_state()
-    # Add a second appliance with open repair claim
-    state["appliances"].append({
-        "id": "app-099",
-        "item_name": "Espresso Machine",
-        "serial_number": "ESP-99",
-        "purchase_date": "2025-01-10",
-        "statutory_months": 24,
-        "commercial_months": 24,
-        "receipt_reference": "REC-ESP",
-        "purchase_price_cents": 45000,
-        "seller_name": "Coffee Hub",
-        "seller_email": "info@coffeehub.gr",
-        "has_repair_claim": True,
-        "repair_date": "2026-08-10",
-        "repair_amount_cents": 8000,
-        "repair_issue": "Pump pressure failure",
-        "claim_status": "open",
-    })
-    store.save_state(state)
-
-    rec = store.record_claim_dispatch(
-        item_id="app-001",
-        seller="Kotsovolos Megastore",
-        seller_email="support@kotsovolos.example.gr",
-        letter="Claim letter",
-        statutory_basis="Directive (EU) 2019/771",
-        model_id="eu.anthropic.claude-haiku-4-5-20251001-v1:0",
-    )
-    assert rec["status"] == "dispatched"
-    updated_state = store.load_state()
-    assert updated_state["summary"]["unclaimed_recovery_cents"] == 8000
-
-
-def test_reset_state():
-    store = S3HouseholdStore(bucket_name="")
-    # First modify state
-    state = store.load_state()
-    state["household_name"] = "Modified Name"
-    state["summary"]["unclaimed_recovery_cents"] = 0
-    store.save_state(state)
-    assert store.load_state()["household_name"] == "Modified Name"
-
-    # Reset
+    before = store.load_state()
     fresh = store.reset_state()
-    assert fresh["household_name"] == "Athens Apartment 4B (Urban Household)"
-    assert fresh["summary"]["unclaimed_recovery_cents"] == 18500
-    assert len(fresh["reset_seal"]) == 64
+    assert fresh["drafts"] == before["drafts"]
+    assert fresh["action_count"] == 5
+    assert fresh["version_seq"] > before["version_seq"]
+    assert fresh["generation"] == 1
+    assert len(fresh["audit_events"]) == len(before["audit_events"]) + 1
+    assert fresh["dispatch_records"] == []
 
 
-def test_record_utility_dispute():
+def test_audit_failure_propagates_and_direct_transport_is_closed():
+    s3 = ConditionalS3()
+    store = cloud_store(s3)
+    store.load_state()
+    s3.write_error = service_error("AccessDenied")
+    with pytest.raises(StorageError):
+        store.append_audit_event("review", {})
+    assert store.load_state()["audit_events"] == []
+    with pytest.raises(PermissionError):
+        store.save_outbox_email("unapproved")
+    with pytest.raises(PermissionError):
+        store.record_claim_dispatch("unapproved")
+    with pytest.raises(NotImplementedError):
+        store.record_ingest_batch()
+    assert store.get_outbox_status()["delivered_count"] == 0
+
+
+def test_size_limit_invalid_state_and_unloaded_save():
     store = S3HouseholdStore(bucket_name="")
-    res = store.record_utility_dispute(
-        provider="Stadtwerke Munich",
-        excess_cents=5400,
-        legal_basis="AVBWasserV § 18",
-    )
-    assert res["status"] == "disputed"
-    assert res["record"]["provider"] == "Stadtwerke Munich"
-    assert res["record"]["excess_eur"] == 54.00
-    assert len(res["cryptographic_seal"]) == 64
-
+    with pytest.raises(StorageConflict):
+        store.save_state(fresh_demo_state())
     state = store.load_state()
-    assert len(state["utility_dispatches"]) >= 1
+    state["oversize"] = "x" * store.MAX_STATE_BYTES
+    with pytest.raises(StorageError, match="size"):
+        store.save_state(state)
+    with pytest.raises(StorageError):
+        store.save_state({"version_seq": 1})
 
 
-def test_save_outbox_email():
-    mock_s3 = MagicMock()
-    store = S3HouseholdStore(bucket_name="test-bucket", s3_client=mock_s3)
-    res = store.save_outbox_email(
-        disp_id="disp-test-123",
-        to_addr="retailer@example.com",
-        subject="Statutory Notice",
-        letter="Full claim letter text",
-        statutory_basis="Directive 2019/771",
-        merkle_seal="abcdef123456",
-    )
-    assert res["status"] == "queued_in_outbox"
-    assert res["message_id"] == "<disp-test-123@hestia.household>"
-    assert res["outbox_key"] == "outbox/disp-test-123.eml"
-    assert mock_s3.put_object.called
-
-
-def test_record_ingest_batch():
-    store = S3HouseholdStore(bucket_name="")
-    res = store.record_ingest_batch(invoices_count=14)
-    assert res["status"] == "ingested"
-    assert res["invoices_matched"] == 14
-    assert res["unclaimed_recovery_eur"] == 185.00
-    assert len(res["cryptographic_seal"]) == 64
-
-
-def test_get_outbox_status():
-    store = S3HouseholdStore(bucket_name="")
-    outbox_status = store.get_outbox_status()
-    assert outbox_status["outbox_prefix"] == "outbox/"
-    assert "ses_telemetry" in outbox_status
-    assert "total_outbox_records" in outbox_status
+def test_client_initialization_failure_is_not_memory_fallback():
+    with pytest.raises(StorageError):
+        S3HouseholdStore(
+            bucket_name="test", workspace_id=SCOPE,
+        ).load_state()
 
 
 

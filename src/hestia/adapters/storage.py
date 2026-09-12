@@ -1,18 +1,20 @@
 """Persistent storage adapter for Hestia household state and audit logs.
 
-Provides atomic persistence to Amazon S3 with cryptographic event sealing,
-falling back to in-memory storage for offline testing and local evaluation.
+Uses conditional Amazon S3 writes and explicit in-memory mode for CI.
+Storage failures never fall back to a successful in-memory mutation.
 """
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
+import re
+import threading
+import uuid
 from datetime import UTC, datetime
 from typing import Any
-
-from hestia.domain.ses_dispatcher import SESDispatchService
 
 # Default initial state matching the verified Athens Apartment 4B scenario
 DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
@@ -197,429 +199,221 @@ DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
 }
 
 
+class StorageError(RuntimeError):
+    """Persistence failed; no success or fallback may be inferred."""
+
+
+class StorageConflict(StorageError):
+    """A conditional write lost a race. Reload before making another decision."""
+
+
+class StateMissing(StorageError):
+    """The scoped workspace no longer exists."""
+
+
 class S3HouseholdStore:
-    """Read/write storage for Hestia household state with cryptographic sealing."""
+    """Scoped conditional state writes; explicit in-memory mode is for CI only."""
+
+    _states: dict[str, dict[str, Any]] = {}
+    _lock = threading.RLock()
+    MAX_STATE_BYTES = 262144
 
     def __init__(
         self,
         bucket_name: str | None = None,
         region_name: str = "eu-west-1",
-        state_key: str = "state/household_state.json",
-        audit_prefix: str = "audit/",
-        outbox_prefix: str = "outbox/",
+        workspace_id: str | None = None,
         s3_client: Any = None,
     ) -> None:
-        self.bucket = bucket_name or os.environ.get("HESTIA_STATE_BUCKET", "")
+        self.bucket = (os.environ.get("HESTIA_STATE_BUCKET", "")
+                       if bucket_name is None else bucket_name)
         self.region_name = region_name
-        self.state_key = state_key
-        self.audit_prefix = audit_prefix
-        self.outbox_prefix = outbox_prefix
+        if workspace_id is None:
+            if self.bucket:
+                raise ValueError("A trusted workspace scope is required for S3")
+            workspace_id = uuid.uuid4().hex
+        if not re.fullmatch(r"[a-f0-9]{32}", workspace_id):
+            raise ValueError("Invalid workspace scope")
+        self.workspace_id = workspace_id
+        self.prefix = f"demo/workspaces/{workspace_id}/"
+        self.state_key = self.prefix + "state.json"
+        self.audit_prefix = self.prefix + "audit/"
+        self.outbox_prefix = self.prefix + "outbox/"
         self._s3_client = s3_client
-        self._memory_state: dict[str, Any] | None = None
+        self._etag: str | None = None
+        self._loaded_version: int | None = None
 
     def _get_s3(self) -> Any:
-        if self._s3_client is not None:
-            return self._s3_client
         if not self.bucket:
             return None
-        try:
-            import boto3
-
-            self._s3_client = boto3.client("s3", region_name=self.region_name)
-            return self._s3_client
-        except Exception:
-            return None
-
-    def load_state(self) -> dict[str, Any]:
-        """Load household state from S3, initializing with default state if missing."""
-        s3 = self._get_s3()
-        if s3 is not None and self.bucket:
+        if self._s3_client is None:
             try:
-                response = s3.get_object(Bucket=self.bucket, Key=self.state_key)
-                content = response["Body"].read().decode("utf-8")
-                data = json.loads(content)
-                self._memory_state = data
-                return data
-            except Exception:
-                # Key does not exist or S3 read failed; bootstrap state
-                default_state = json.loads(json.dumps(DEFAULT_HOUSEHOLD_STATE))
-                self.save_state(default_state)
-                return default_state
+                import boto3
 
-        if self._memory_state is None:
-            self._memory_state = json.loads(json.dumps(DEFAULT_HOUSEHOLD_STATE))
-        return self._memory_state
+                self._s3_client = boto3.client("s3", region_name=self.region_name)
+            except Exception as exc:
+                raise StorageError("Storage is unavailable") from exc
+        return self._s3_client
+
+    @staticmethod
+    def _error_code(exc: Exception) -> str:
+        response = getattr(exc, "response", {})
+        return str(response.get("Error", {}).get("Code", ""))
+
+    @staticmethod
+    def _validate(data: Any) -> None:
+        if (
+            not isinstance(data, dict)
+            or type(data.get("version_seq")) is not int
+            or data["version_seq"] < 1
+            or not isinstance(data.get("summary"), dict)
+            or any(not isinstance(data.get(key), list) for key in
+                   ("appliances", "subscriptions", "outflows", "dispatch_records"))
+        ):
+            raise StorageError("Stored workspace is invalid; it was not reset")
+
+    def load_state(self, *, create: bool = True) -> dict[str, Any]:
+        s3 = self._get_s3()
+        if s3 is None:
+            with self._lock:
+                data = self._states.get(self.workspace_id)
+                if data is None:
+                    if not create:
+                        raise StateMissing("Workspace not found")
+                    data = fresh_demo_state()
+                    self._states[self.workspace_id] = copy.deepcopy(data)
+                self._validate(data)
+                self._loaded_version = data["version_seq"]
+                return copy.deepcopy(data)
+        try:
+            response = s3.get_object(Bucket=self.bucket, Key=self.state_key)
+        except Exception as exc:
+            if self._error_code(exc) != "NoSuchKey":
+                raise StorageError("Workspace could not be read; it was not reset") from exc
+            if not create:
+                raise StateMissing("Workspace not found") from exc
+            data = fresh_demo_state()
+            try:
+                response = s3.put_object(
+                    Bucket=self.bucket, Key=self.state_key, Body=self._encode(data),
+                    ContentType="application/json", IfNoneMatch="*",
+                )
+            except Exception as write_exc:
+                if self._error_code(write_exc) in (
+                    "PreconditionFailed", "ConditionalRequestConflict",
+                ):
+                    return self.load_state(create=False)
+                raise StorageError("Workspace creation is unconfirmed") from write_exc
+            self._capture(response, data)
+            return copy.deepcopy(data)
+        try:
+            content = response["Body"].read(self.MAX_STATE_BYTES + 1)
+            if len(content) > self.MAX_STATE_BYTES:
+                raise StorageError("Stored workspace exceeds its size limit")
+            data = json.loads(content.decode("utf-8"))
+            self._validate(data)
+        except Exception as exc:
+            raise StorageError("Stored workspace is unreadable; it was not reset") from exc
+        self._capture(response, data)
+        return copy.deepcopy(data)
+
+    def _capture(self, response: dict[str, Any], data: dict[str, Any]) -> None:
+        etag = response.get("ETag")
+        if not isinstance(etag, str) or not etag:
+            raise StorageError("Missing storage revision; outcome must be reconciled")
+        self._etag = etag
+        self._loaded_version = data["version_seq"]
+
+    def _encode(self, state: dict[str, Any]) -> bytes:
+        payload = json.dumps(
+            state, ensure_ascii=False, allow_nan=False, sort_keys=True,
+        ).encode("utf-8")
+        if len(payload) > self.MAX_STATE_BYTES:
+            raise StorageError("Workspace size limit reached")
+        return payload
 
     def save_state(self, state: dict[str, Any]) -> None:
-        """Persist household state to S3 and in-memory cache with monotonic sequence increment."""
-        state["version_seq"] = state.get("version_seq", 0) + 1
-        state["last_updated"] = datetime.now(UTC).isoformat()
-        self._memory_state = state
-
+        self._validate(state)
+        expected = state["version_seq"]
+        if self._loaded_version is None or expected != self._loaded_version:
+            raise StorageConflict("Reload the workspace before saving")
+        candidate = copy.deepcopy(state)
+        candidate["version_seq"] = expected + 1
+        candidate["last_updated"] = datetime.now(UTC).isoformat()
+        payload = self._encode(candidate)
         s3 = self._get_s3()
-        if s3 is not None and self.bucket:
+        if s3 is None:
+            with self._lock:
+                current = self._states.get(self.workspace_id)
+                if current is None or current["version_seq"] != expected:
+                    raise StorageConflict("Workspace changed; reload before retrying")
+                self._states[self.workspace_id] = copy.deepcopy(candidate)
+        else:
+            if self._etag is None:
+                raise StorageConflict("Missing expected storage revision")
             try:
-                payload = json.dumps(state, indent=2).encode("utf-8")
-                s3.put_object(
-                    Bucket=self.bucket,
-                    Key=self.state_key,
-                    Body=payload,
-                    ContentType="application/json",
+                response = s3.put_object(
+                    Bucket=self.bucket, Key=self.state_key, Body=payload,
+                    ContentType="application/json", IfMatch=self._etag,
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                if self._error_code(exc) in ("PreconditionFailed", "ConditionalRequestConflict"):
+                    raise StorageConflict("Workspace changed; reload before retrying") from exc
+                raise StorageError("Save outcome is unconfirmed; reload before retrying") from exc
+            self._capture(response, candidate)
+        self._loaded_version = candidate["version_seq"]
+        state.clear()
+        state.update(candidate)
 
     def append_audit_event(self, action: str, payload: dict[str, Any]) -> str:
-        """Log timestamped audit event to S3 and return its cryptographic SHA-256 seal."""
-        now = datetime.now(UTC)
-        iso_ts = now.strftime("%Y%m%dT%H%M%SZ")
-        serialized = json.dumps(payload, sort_keys=True)
-        seal = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
-
-        event_record = {
-            "action": action,
-            "timestamp": now.isoformat(),
-            "cryptographic_seal": seal,
-            "payload": payload,
-        }
-
-        s3 = self._get_s3()
-        if s3 is not None and self.bucket:
-            try:
-                event_key = f"{self.audit_prefix}{iso_ts}_{action}_{seal[:8]}.json"
-                s3.put_object(
-                    Bucket=self.bucket,
-                    Key=event_key,
-                    Body=json.dumps(event_record, indent=2).encode("utf-8"),
-                    ContentType="application/json",
-                )
-            except Exception:
-                pass
-
+        state = self.load_state(create=False)
+        seal = self.add_audit_event(state, action, payload)
+        self.save_state(state)
         return seal
 
-    def record_claim_dispatch(
-        self,
-        item_id: str,
-        seller: str,
-        seller_email: str,
-        letter: str,
-        statutory_basis: str,
-        model_id: str,
-    ) -> dict[str, Any]:
-        """Mark appliance claim as dispatched, seal audit event, and persist to S3."""
-        state = self.load_state()
-
-        disp_id = f"disp-{int(datetime.now(UTC).timestamp())}"
-        now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M")
-
-        seal = self.append_audit_event(
-            action="claim_dispatch",
-            payload={
-                "dispatch_id": disp_id,
-                "item_id": item_id,
-                "seller": seller,
-                "seller_email": seller_email,
-                "statutory_basis": statutory_basis,
-                "model_id": model_id,
-            },
-        )
-
-        # Generate RFC 5322 MIME message and store in outbox
-        outbox_info = self.save_outbox_email(
-            disp_id=disp_id,
-            to_addr=seller_email,
-            subject=f"Notice of Lack of Conformity: {item_id} (Ref: {disp_id})",
-            letter=letter,
-            statutory_basis=statutory_basis,
-            merkle_seal=seal,
-        )
-
-        record = {
-            "id": disp_id,
-            "item_id": item_id,
-            "status": "dispatched",
-            "delivery_status": outbox_info.get("delivery_status", "DELIVERED_VIA_SES"),
-            "ses_message_id": outbox_info.get("ses_message_id"),
-            "timestamp": now_str,
-            "seller": seller,
-            "seller_email": seller_email,
-            "statutory_basis": statutory_basis,
-            "letter_preview": letter[:200] + ("..." if len(letter) > 200 else ""),
-            "full_letter": letter,
-            "cryptographic_seal": seal,
-            "model_id": model_id,
-            "outbox_delivery": outbox_info,
-        }
-
-        # Update appliance status
-        for app in state.get("appliances", []):
-            if app.get("id") == item_id:
-                app["claim_status"] = "dispatched"
-
-        # Update summary
-        unclaimed = 0
-        for app in state.get("appliances", []):
-            if app.get("has_repair_claim") and app.get("claim_status") == "open":
-                unclaimed += app.get("repair_amount_cents", 0)
-        state["summary"]["unclaimed_recovery_cents"] = unclaimed
-
-        records = state.setdefault("dispatch_records", [])
-        records.append(record)
-        self.save_state(state)
-        return record
-
-    def save_outbox_email(
-        self,
-        disp_id: str,
-        to_addr: str,
-        subject: str,
-        letter: str,
-        statutory_basis: str,
-        merkle_seal: str,
-    ) -> dict[str, Any]:
-        """Format RFC 5322 notice, persist to S3 outbox, and automate SES dispatch."""
-        now = datetime.now(UTC)
-        date_header = now.strftime("%a, %d %b %Y %H:%M:%S +0000")
-        msg_id = f"<{disp_id}@hestia.household>"
-
-        mime_text = (
-            f"From: Hestia Household Sentinel <sentinel@hestia.household>\r\n"
-            f"To: {to_addr}\r\n"
-            f"Subject: {subject}\r\n"
-            f"Date: {date_header}\r\n"
-            f"Message-ID: {msg_id}\r\n"
-            f"MIME-Version: 1.0\r\n"
-            f"Content-Type: text/plain; charset=utf-8\r\n"
-            f"X-Hestia-Statutory-Basis: {statutory_basis}\r\n"
-            f"X-Hestia-Merkle-Seal: {merkle_seal}\r\n"
-            f"\r\n"
-            f"{letter}\r\n"
-        )
-
-        s3 = self._get_s3()
-        s3_key = f"{self.outbox_prefix}{disp_id}.eml"
-        if s3 is not None and self.bucket:
-            try:
-                s3.put_object(
-                    Bucket=self.bucket,
-                    Key=s3_key,
-                    Body=mime_text.encode("utf-8"),
-                    ContentType="message/rfc822",
-                )
-            except Exception:
-                pass
-
-        dispatcher = SESDispatchService(
-            region_name=self.region_name,
-            s3_client=s3,
-            bucket_name=self.bucket,
-            outbox_prefix=self.outbox_prefix,
-        )
-        delivery_receipt = dispatcher.dispatch_outbox_email(
-            disp_id=disp_id,
-            mime_text=mime_text,
-            eml_s3_key=s3_key,
-        )
-
-        return {
-            "message_id": msg_id,
-            "outbox_key": s3_key,
-            "status": "queued_in_outbox",
-            "delivery_status": delivery_receipt.get("status", "DELIVERED_VIA_SES"),
-            "ses_message_id": delivery_receipt.get("ses_message_id"),
-            "smtp_response": delivery_receipt.get("smtp_response"),
-            "rfc5322_size_bytes": len(mime_text),
-            "delivery_receipt": delivery_receipt,
-        }
+    @staticmethod
+    def add_audit_event(state: dict[str, Any], action: str, payload: dict[str, Any]) -> str:
+        """Audit and business state commit together; a hash is not a WORM certificate."""
+        seal = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+        state.setdefault("audit_events", []).append({
+            "id": uuid.uuid4().hex, "action": action, "timestamp": datetime.now(UTC).isoformat(),
+            "cryptographic_seal": seal, "payload": copy.deepcopy(payload),
+        })
+        return seal
 
     def get_outbox_status(self) -> dict[str, Any]:
-        """Aggregate outbox status, delivery receipts, and SES quota telemetry."""
-        state = self.load_state()
+        state = self.load_state(create=False)
         dispatches = state.get("dispatch_records", [])
-
-        dispatcher = SESDispatchService(
-            region_name=self.region_name,
-            s3_client=self._get_s3(),
-            bucket_name=self.bucket,
-            outbox_prefix=self.outbox_prefix,
-        )
-        telemetry = dispatcher.get_ses_telemetry()
-
         return {
-            "outbox_prefix": self.outbox_prefix,
-            "total_outbox_records": len(dispatches),
-            "delivered_count": sum(
-                1 for d in dispatches if d.get("delivery_status") == "DELIVERED_VIA_SES"
-            ),
-            "records": dispatches,
-            "ses_telemetry": telemetry,
+            "outbox_prefix": self.outbox_prefix, "total_outbox_records": len(dispatches),
+            "delivered_count": 0, "records": dispatches,
+            "ses_telemetry": {"status": "disabled", "mode": "simulated"},
         }
+
+    def record_claim_dispatch(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise PermissionError("Use an exact prepared claim and its one-use approval")
+
+    def save_outbox_email(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise PermissionError("Direct outbox writes cannot authorize transport")
 
     def record_ingest_batch(self, invoices_count: int = 14) -> dict[str, Any]:
-        """Process batch transaction ingestion, reconcile household state, and persist to S3."""
-        state = self.load_state()
-        state["summary"]["protected_items_count"] = max(4, len(state.get("appliances", [])))
-        state["summary"]["protected_assets_cents"] = 342600
-        state["summary"]["unclaimed_recovery_cents"] = 18500
-        state["summary"]["missing_receipt_cents"] = 8550
-
-        seal = self.append_audit_event(
-            action="ingest_batch",
-            payload={
-                "invoices_matched": invoices_count,
-                "appliances_registered": 4,
-                "unclaimed_defect_cents": 18500,
-                "sanitized_pii": True,
-            },
-        )
-        self.save_state(state)
-        return {
-            "status": "ingested",
-            "invoices_matched": invoices_count,
-            "protected_value_eur": 3426.00,
-            "unclaimed_recovery_eur": 185.00,
-            "cryptographic_seal": seal,
-            "state": state,
-        }
-
-    def record_subscription_cancellation(self, service_name: str) -> dict[str, Any]:
-        """Cancel subscription, update monthly leakage metric, and persist state."""
-        state = self.load_state()
-        cancelled_sub: dict[str, Any] | None = None
-
-        for sub in state.get("subscriptions", []):
-            if sub.get("service_name") == service_name or sub.get("id") == service_name:
-                sub["status"] = "cancelled"
-                cancelled_sub = sub
-
-        # Recalculate monthly leakage
-        monthly_waste = 0
-        for sub in state.get("subscriptions", []):
-            if sub.get("status") in ("expiring_trial", "duplicate_overlap"):
-                monthly_waste += sub.get("monthly_cents", 0)
-            elif sub.get("status") == "price_creep":
-                old_c = sub.get("previous_monthly_cents", sub.get("monthly_cents", 0))
-                new_c = sub.get("monthly_cents", 0)
-                monthly_waste += max(0, new_c - old_c)
-
-        state["summary"]["monthly_sub_leakage_cents"] = monthly_waste
-
-        saved_cents = cancelled_sub.get("monthly_cents", 0) if cancelled_sub else 0
-        seal = self.append_audit_event(
-            action="cancel_subscription",
-            payload={"service_name": service_name, "saved_monthly_cents": saved_cents},
-        )
-
-        self.save_state(state)
-        return {
-            "status": "cancelled",
-            "service_name": service_name,
-            "new_monthly_leakage_cents": monthly_waste,
-            "cryptographic_seal": seal,
-        }
-
-    def record_receipt_upload(
-        self, merchant: str, amount_cents: int, receipt_id: str
-    ) -> dict[str, Any]:
-        """Link receipt to transaction, resolve anti-join alert, and persist state."""
-        state = self.load_state()
-        matched = False
-
-        for out in state.get("outflows", []):
-            if not out.get("has_receipt") and (
-                out.get("merchant").lower() == merchant.lower()
-                or merchant.lower() in out.get("merchant").lower()
-            ):
-                out["has_receipt"] = True
-                out["receipt_id"] = receipt_id
-                out["status"] = "verified"
-                matched = True
-
-        state.setdefault("saved_receipts", []).append(receipt_id)
-
-        # Recalculate missing receipt sum
-        missing_sum = 0
-        for out in state.get("outflows", []):
-            if not out.get("has_receipt") and out.get("amount_cents", 0) >= 5000:
-                missing_sum += out.get("amount_cents", 0)
-        state["summary"]["missing_receipt_cents"] = missing_sum
-
-        seal = self.append_audit_event(
-            action="receipt_upload",
-            payload={
-                "merchant": merchant,
-                "amount_cents": amount_cents,
-                "receipt_id": receipt_id,
-                "matched": matched,
-            },
-        )
-
-        self.save_state(state)
-        return {
-            "status": "linked" if matched else "stored",
-            "receipt_id": receipt_id,
-            "matched": matched,
-            "new_missing_receipt_cents": missing_sum,
-            "cryptographic_seal": seal,
-        }
+        raise NotImplementedError("Receipt sync is not connected; no invoices were imported")
 
     def reset_state(self) -> dict[str, Any]:
-        """Reset household state in memory and S3 back to pristine baseline."""
-        fresh = json.loads(json.dumps(DEFAULT_HOUSEHOLD_STATE))
-        fresh["last_updated"] = datetime.now(UTC).isoformat()
-        self._memory_state = fresh
-
-        seal = self.append_audit_event(
-            action="state_reset",
-            payload={
-                "reason": "demo_baseline_reseeded",
-                "timestamp": fresh["last_updated"],
-            },
-        )
-        fresh["reset_seal"] = seal
+        state = self.load_state(create=False)
+        fresh = fresh_demo_state()
+        # Preserve receipts, consumed tokens, revisions and quotas across a demo reset.
+        for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count"):
+            fresh[key] = copy.deepcopy(state.get(key, fresh.get(key)))
+        fresh["generation"] = state.get("generation", 0) + 1
+        fresh["reset_seal"] = self.add_audit_event(fresh, "demo_reset", {"simulated": True})
         self.save_state(fresh)
         return fresh
 
-    def record_utility_dispute(
-        self,
-        provider: str = "Stadtwerke Munich",
-        excess_cents: int = 5400,
-        legal_basis: str = "AVBWasserV § 18",
-    ) -> dict[str, Any]:
-        """Record utility meter dispute, reduce anomaly count, and seal audit event."""
-        state = self.load_state()
-        for u in state.get("utility_bills", []):
-            u["status"] = "disputed"
-            u["legal_basis"] = legal_basis
 
-        seal = self.append_audit_event(
-            action="utility_meter_dispute",
-            payload={
-                "provider": provider,
-                "excess_cents": excess_cents,
-                "legal_basis": legal_basis,
-            },
-        )
-
-        now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M")
-        record = {
-            "id": f"util-disp-{int(datetime.now(UTC).timestamp())}",
-            "provider": provider,
-            "status": "dispatched",
-            "timestamp": now_str,
-            "excess_eur": excess_cents / 100,
-            "legal_basis": legal_basis,
-            "cryptographic_seal": seal,
-        }
-
-        state.setdefault("utility_dispatches", []).append(record)
-        state["summary"]["active_anomalies_count"] = max(
-            0, state["summary"]["active_anomalies_count"] - 1
-        )
-        self.save_state(state)
-        return {
-            "status": "disputed",
-            "record": record,
-            "cryptographic_seal": seal,
-        }
+def fresh_demo_state() -> dict[str, Any]:
+    state = copy.deepcopy(DEFAULT_HOUSEHOLD_STATE)
+    # Historical seed text is an illustration, not a provider delivery receipt.
+    state["dispatch_records"] = []
+    state.update(mode="simulated", drafts={}, audit_events=[], action_count=0, generation=0)
+    return state
