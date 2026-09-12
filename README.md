@@ -28,6 +28,9 @@ The narrower public mode is a security boundary, not an AI-quality result.
    Its new required DemoSecretArn parameter is an ARN, not a secret value. Retain the
    existing state bucket and historical keys. Only new demo/workspaces/ keys are writable.
    Confirm the packaged boto3/botocore support both PutObject conditional parameters.
+   The legacy deployment entry point now requires CI, --approved-commit and
+   --demo-secret-arn; it bundles the tested storage SDK and creates a change set
+   with --no-execute-changeset. Running it does not apply that change set.
 3. The backend IAM/config/code cutover and frontend publication require separate release
    authority. Main merges still run CI but no longer publish this incompatible frontend
    automatically. The manual frontend workflow requires the already-approved backend SHA

@@ -1,7 +1,10 @@
-"""Package and deploy Hestia API backend to AWS eu-west-1."""
+"""Prepare an approved API change set in CI; never execute a production cutover."""
 from __future__ import annotations
 
+import argparse
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -20,6 +23,19 @@ REGION = "eu-west-1"
 ACCOUNT = "308857099262"
 DEPLOY_BUCKET = f"hestia-afh-deploy-{ACCOUNT}-{REGION}"
 STACK_NAME = "hestia-afh-api"
+SDK_VERSION = "1.43.93"
+
+
+def validate_release(approved_commit: str, secret_arn: str, actual_commit: str) -> None:
+    if os.environ.get("CI") != "true":
+        raise ValueError("Packaging and change-set preparation are CI-only")
+    if not re.fullmatch(r"[0-9a-f]{40}", approved_commit) or approved_commit != actual_commit:
+        raise ValueError("The complete approved commit must match the checked-out revision")
+    if not re.fullmatch(
+        rf"arn:aws:secretsmanager:{REGION}:{ACCOUNT}:secret:[A-Za-z0-9/_+=.@-]+",
+        secret_arn,
+    ):
+        raise ValueError("A dedicated demo secret ARN in the deployment account is required")
 
 
 def get_git_sha() -> str:
@@ -40,6 +56,20 @@ def package():
     dest_hestia = PKG_DIR / "hestia"
     shutil.copytree(src_hestia, dest_hestia, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
+    # The demo does not invoke Strands/Bedrock. Bundle its tested storage SDK so
+    # conditional writes do not depend on the Lambda runtime's changing SDK.
+    subprocess.run([
+        sys.executable, "-m", "pip", "install", "--only-binary=:all:",
+        "--target", str(PKG_DIR), f"boto3=={SDK_VERSION}",
+    ], check=True)
+    subprocess.run([
+        sys.executable, "-c",
+        "from botocore.session import Session; "
+        "members = Session().get_service_model('s3').operation_model('PutObject').input_shape.members; "
+        "assert {'IfMatch', 'IfNoneMatch'} <= members.keys()",
+    ], check=True, env={**os.environ, "PYTHONPATH": str(PKG_DIR),
+                       "AWS_EC2_METADATA_DISABLED": "true"})
+
     # Create zip
     if ZIP_PATH.exists():
         ZIP_PATH.unlink()
@@ -51,8 +81,9 @@ def package():
     print(f"Created deployment package {ZIP_PATH} ({ZIP_PATH.stat().st_size} bytes)")
 
 
-def deploy():
+def deploy(approved_commit: str, demo_secret_arn: str):
     sha = get_git_sha()
+    validate_release(approved_commit, demo_secret_arn, sha)
     print(f"Current commit SHA: {sha}")
     key = f"releases/{sha}/hestia-api.zip"
 
@@ -75,8 +106,9 @@ def deploy():
     tmpl_path.write_text(json.dumps(api_tmpl(), indent=2))
     print(f"Rendered template {tmpl_path}")
 
-    # 4. Deploy stack
-    print(f"Deploying CloudFormation stack {STACK_NAME} in {REGION}...")
+    # 4. Prepare only. Applying this IAM/auth/storage change needs a separately
+    # reviewed execution against the exact change-set ARN and matching frontend.
+    print(f"Preparing CloudFormation change set for {STACK_NAME} in {REGION}...")
     subprocess.run([
         "aws", "cloudformation", "deploy",
         "--template-file", str(tmpl_path),
@@ -87,6 +119,8 @@ def deploy():
         f"CodeBucket={DEPLOY_BUCKET}",
         f"CodeKey={key}",
         f"CommitSha={sha}",
+        f"DemoSecretArn={demo_secret_arn}",
+        "--no-execute-changeset",
         "--no-fail-on-empty-changeset",
         "--no-cli-pager"
     ], check=True)
@@ -101,7 +135,7 @@ def deploy():
         "--no-cli-pager"
     ], check=True, capture_output=True, text=True)
     outputs = {item["OutputKey"]: item["OutputValue"] for item in json.loads(desc.stdout)}
-    print("Stack outputs:")
+    print("Existing (unchanged) stack outputs; the prepared change set has NOT been executed:")
     for k, v in outputs.items():
         print(f"  {k}: {v}")
 
@@ -109,4 +143,8 @@ def deploy():
 
 
 if __name__ == "__main__":
-    deploy()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--approved-commit", required=True)
+    parser.add_argument("--demo-secret-arn", required=True)
+    args = parser.parse_args()
+    deploy(args.approved_commit, args.demo_secret_arn)

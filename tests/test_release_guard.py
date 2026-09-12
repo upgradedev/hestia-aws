@@ -4,11 +4,14 @@ from __future__ import annotations
 import copy
 import json
 from io import BytesIO
+from types import SimpleNamespace
 from urllib.error import HTTPError
 
 import pytest
 from infra.check_p0_backend import validate
 from infra.frontend_smoke import smoke_test
+from scripts import deploy_api
+from scripts.deploy_api import validate_release
 
 SHA = "a" * 40
 HEALTH = {
@@ -16,6 +19,43 @@ HEALTH = {
     "live_send": False, "live_model": False, "storage_configured": True,
     "demo_sessions_configured": True,
 }
+
+
+def test_change_set_requires_ci_exact_revision_and_scoped_secret(monkeypatch):
+    arn = "arn:aws:secretsmanager:eu-west-1:308857099262:secret:hestia-demo-signing-abcdef"
+    monkeypatch.delenv("CI", raising=False)
+    with pytest.raises(ValueError, match="CI-only"):
+        validate_release(SHA, arn, SHA)
+    monkeypatch.setenv("CI", "true")
+    validate_release(SHA, arn, SHA)
+    for approved, secret, actual in (
+        ("short", arn, SHA), (SHA, arn, "b" * 40),
+        (SHA, "secret-value", SHA), (SHA, arn.replace("308857099262", "000000000000"), SHA),
+    ):
+        with pytest.raises(ValueError):
+            validate_release(approved, secret, actual)
+
+
+def test_release_command_only_prepares_change_set(monkeypatch, tmp_path):
+    arn = "arn:aws:secretsmanager:eu-west-1:308857099262:secret:hestia-demo-signing-abcdef"
+    commands = []
+    monkeypatch.setenv("CI", "true")
+    monkeypatch.setattr(deploy_api, "BUILD_DIR", tmp_path)
+    monkeypatch.setattr(deploy_api, "get_git_sha", lambda: SHA)
+    monkeypatch.setattr(deploy_api, "package", lambda: None)
+
+    def run(command, **kwargs):
+        commands.append(command)
+        return SimpleNamespace(stdout="[]")
+
+    monkeypatch.setattr(deploy_api.subprocess, "run", run)
+    deploy_api.deploy(SHA, arn)
+    prepare = [command for command in commands if "deploy" in command]
+    assert len(prepare) == 1
+    assert "--no-execute-changeset" in prepare[0]
+    assert f"DemoSecretArn={arn}" in prepare[0]
+    assert f"CommitSha={SHA}" in prepare[0]
+    assert not any("execute-change-set" in command for command in commands)
 
 
 def test_backend_release_requires_exact_safe_revision():
