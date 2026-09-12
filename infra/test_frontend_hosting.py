@@ -84,6 +84,14 @@ class FrontendHostingTests(unittest.TestCase):
         self.assertIn("resolve:secretsmanager", env["HESTIA_DEMO_SECRET"]["Fn::Sub"])
         self.assertNotIn("Default", tmpl["Parameters"]["DemoSecretArn"])
         self.assertEqual(resources["Function"]["Properties"]["ReservedConcurrentExecutions"], 2)
+        reader = resources["ReaderRole"]["Properties"]["Policies"][0]["PolicyDocument"]
+        reader_deny = next(s for s in reader["Statement"] if s["Effect"] == "Deny")
+        self.assertIn("s3:PutObject", reader_deny["Action"])
+        self.assertEqual(resources["Route"]["Properties"]["Target"],
+                         {"Fn::Sub": "integrations/${ReaderIntegration}"})
+        writes = [r["Properties"] for name, r in resources.items() if name.startswith("WriteRoute")]
+        self.assertTrue(all(r["RouteKey"].startswith("POST ") for r in writes))
+        self.assertTrue(any(r["RouteKey"] == "POST /action/claim" for r in writes))
 
     def test_conditional_write_sdk_contract(self):
         from botocore.session import get_session

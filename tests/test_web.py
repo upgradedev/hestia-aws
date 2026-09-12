@@ -10,7 +10,7 @@ import pytest
 from hestia.adapters.storage import S3HouseholdStore
 from hestia.app import api
 from hestia.app.access import authorize_demo
-from hestia.app.web import build_audit, lambda_handler, render_html
+from hestia.app.web import build_audit, lambda_handler, read_lambda_handler, render_html
 from tests.fakes import ConditionalS3, service_error
 
 
@@ -72,6 +72,15 @@ def test_readonly_root_health_preview_make_no_cloud_calls():
     assert code == 200 and state["read_only_preview"] is True
     assert state["dispatch_records"] == []
     assert "drafts" not in state
+
+
+def test_reader_function_rejects_writes_even_with_a_valid_capability(sandbox):
+    token = session()
+    event = {"path": "/api/demo/session", "httpMethod": "POST",
+             "headers": {"Authorization": "Bearer " + token}, "body": "{}"}
+    assert read_lambda_handler(event, None)["statusCode"] == 405
+    event.update(path="/api/state", httpMethod="GET")
+    assert read_lambda_handler(event, None)["statusCode"] == 200
 
 
 def test_build_and_static_preview_remain_available(monkeypatch):

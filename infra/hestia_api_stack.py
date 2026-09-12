@@ -123,7 +123,7 @@ def template():
         ),
     }
 
-    return {
+    result = {
         "AWSTemplateFormatVersion": "2010-09-09",
         "Description": "Hestia Agents for Humans household sentinel API and operations cockpit.",
         "Parameters": {
@@ -204,6 +204,67 @@ def template():
             "DeployedSha": {"Value": ref("CommitSha")},
         },
     }
+    # The public reader carries no write credential. Mutations have a separate
+    # function/role and still enforce the capability + exact-approval boundary.
+    resources = result["Resources"]
+    reader_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {"Effect": "Allow", "Action": ["s3:GetObject"],
+             "Resource": sub("${State.Arn}/demo/workspaces/*")},
+            {"Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+             "Resource": sub(
+                 "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:"
+                 "log-group:/aws/lambda/hestia-afh-reader:*"
+             )},
+            {"Effect": "Deny", "Action": ["s3:PutObject", "s3:DeleteObject",
+                                          "s3:DeleteObjectVersion", "ses:*", "bedrock:*"],
+             "Resource": "*"},
+        ],
+    }
+    resources["ReaderRole"] = {
+        "Type": "AWS::IAM::Role",
+        "Properties": {
+            "RoleName": "hestia-afh-reader-runtime",
+            "AssumeRolePolicyDocument": resources["Role"]["Properties"]["AssumeRolePolicyDocument"],
+            "Policies": [{"PolicyName": "scoped-read-only", "PolicyDocument": reader_policy}],
+        },
+    }
+    resources["ReaderLogs"] = {
+        "Type": "AWS::Logs::LogGroup",
+        "Properties": {"LogGroupName": "/aws/lambda/hestia-afh-reader", "RetentionInDays": 14},
+    }
+    resources["ReaderFunction"] = {
+        "Type": "AWS::Lambda::Function", "DependsOn": "ReaderLogs",
+        "Properties": {**fn_props, "FunctionName": "hestia-afh-reader",
+                       "Handler": "hestia.app.web.read_lambda_handler",
+                       "Role": attr("ReaderRole", "Arn")},
+    }
+    resources["ReaderIntegration"] = {
+        "Type": "AWS::ApiGatewayV2::Integration",
+        "Properties": {**integration_props, "IntegrationUri": attr("ReaderFunction", "Arn")},
+    }
+    resources["ReaderPermission"] = {
+        "Type": "AWS::Lambda::Permission",
+        "Properties": {**permission_props, "FunctionName": attr("ReaderFunction", "Arn")},
+    }
+    resources["Route"]["Properties"]["Target"] = sub("integrations/${ReaderIntegration}")
+    # Explicit methods, including historical aliases, avoid a default writer route.
+    write_paths = (
+        "/api/demo/session", "/api/action/claim/prepare", "/api/action/claim", "/action/claim",
+        "/api/action/cancel", "/action/cancel_trial", "/api/action/utility_dispute",
+        "/action/utility_dispute", "/api/action/reset", "/action/reset", "/api/action/receipt",
+        "/api/receipt/scan", "/receipt/scan", "/api/ingest/sync", "/ingest/sync",
+        "/api/outbox/dispatch", "/outbox/dispatch", "/api/outbox/status", "/outbox/status",
+    )
+    for number, path in enumerate(write_paths):
+        resources[f"WriteRoute{number}"] = {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {"ApiId": ref("Api"), "RouteKey": f"POST {path}",
+                           "Target": sub("integrations/${Integration}")},
+        }
+    result["Outputs"]["ReaderFunctionName"] = {"Value": ref("ReaderFunction")}
+    return result
 
 
 if __name__ == "__main__":

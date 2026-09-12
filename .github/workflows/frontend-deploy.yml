@@ -61,9 +61,11 @@ jobs:
         run: python infra/frontend_publish.py --sha "${{ github.sha }}" --stack hestia-frontend | tee frontend-release.json
 
       - name: Verify Deployed CloudFront Endpoint
+        env:
+          HESTIA_APPROVED_BACKEND_SHA: ${{ inputs.approved_backend_sha }}
         run: |
           URL=$(python -c 'import json; print(json.load(open("frontend-release.json"))["url"])')
-          python infra/frontend_smoke.py --url "$URL" --sha "${{ github.sha }}"
+          python infra/frontend_smoke.py --url "$URL" --sha "${{ github.sha }}" --backend-sha "$HESTIA_APPROVED_BACKEND_SHA"
 
       - uses: actions/upload-artifact@v4
         if: always()

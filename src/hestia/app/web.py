@@ -17,7 +17,7 @@ from hestia.agents.sentinel import (
     run_household_audit,
 )
 from hestia.agents.tools import draft_statutory_claim_letter
-from hestia.app.api import handle_api
+from hestia.app.api import handle_api, response
 from hestia.domain.subscriptions import SubscriptionCharge
 from hestia.domain.warranties import ApplianceWarranty
 
@@ -647,6 +647,15 @@ footer.meta-bar {{
 </body>
 </html>
 """
+
+
+def read_lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+    """Reader Lambda cannot execute mutations even through an unexpected route."""
+    method = (event.get("requestContext", {}).get("http", {}).get("method")
+              or event.get("httpMethod") or "GET").upper()
+    if method not in ("GET", "OPTIONS"):
+        return response(405, {"status": "error", "message": "This endpoint is read-only."})
+    return lambda_handler(event, context)
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:

@@ -12,7 +12,7 @@ the current CloudFront or Lambda revision; check the release receipt.
 | Approval | The server prepares the exact recipient, subject, text, amount and source revision before sign-off. Changed or expired evidence is rejected. |
 | Outcome | Approval records a SIMULATED artifact. It does not send mail, cancel a provider subscription or recover money. |
 | Persistence | S3 creation uses If-None-Match; updates use If-Match. Failed or uncertain writes never become successful in-memory fallbacks. |
-| Provider access | Public runtime IAM denies SES and Bedrock. The isolated demo cannot enable either by request flags. |
+| Provider access | Separate reader and demo-writer functions. Reader IAM denies writes; both deny SES and Bedrock. Request flags cannot enable providers. |
 | Verification | Unit/API tests and Playwright run in GitHub Actions only. Automated tests are not independent human UAT. |
 
 Current provider ingestion and receipt OCR are explicitly unavailable in this safe demo;
