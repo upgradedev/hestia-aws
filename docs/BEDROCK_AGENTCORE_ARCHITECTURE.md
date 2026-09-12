@@ -1,147 +1,58 @@
-# Hestia: Household Sentinel Amazon Bedrock AgentCore Architecture
+# Hestia architecture: implemented demo and optional provider design
 
-This document specifies how Hestia's autonomous household financial, warranty, and subscription sentinel maps to the **Amazon Bedrock AgentCore** architecture and everyday consumer agent runtime primitives.
+AgentCore is not connected in the public demo. The filename retains an earlier design reference; it is not a deployment claim. The implemented path uses Python HTTP handlers, deterministic notice preparation, explicit approval and scoped conditional persistence.
 
----
+[PRIMARY: repository inspection, 2026-09-12] Baseline `39e148536080e0957cc36dbd3ca8ea6b74785800`. Reproduce the inventory with `git show 39e148536080e0957cc36dbd3ca8ea6b74785800:<path>`. No live runtime or current-revision CI check was performed for this correction.
 
-## 1. Executive Summary
+## Implemented source flow
 
-Hestia is an everyday autonomous AI sentinel protecting family finances from silent leakage:
-1. **Statutory Warranty Defense**: Automatically correlates appliance repair invoices against EU Directive 2019/771/EU 2-year mandatory conformity guarantees, drafting recovery claims.
-2. **Subscription Leakage Mitigation**: Detects stealth month-over-month price hikes, tracks expiring free trials, and eliminates duplicate family streaming/software services.
-3. **Completeness & Anomaly Detection**: Flags high-value bank expenses lacking proof-of-purchase and detects anomalous utility spikes (water, electricity, gas) before catastrophic leakages compound.
-
-By adhering to the Amazon Bedrock AgentCore paradigm, Hestia decouples LLM conversational synthesis, deterministic consumer law logic, privacy guardrails, and persistent household memory into cloud-native primitives.
-
-```
-                  ┌─────────────────────────────────────────┐
-                  │    Bank Feeds / Invoices / Utility Bills│
-                  └────────────────────┬────────────────────┘
-                                       │
-                                       ▼
-                  ┌─────────────────────────────────────────┐
-                  │     Amazon Bedrock Guardrails (PII)     │
-                  │   (Payment Cards, IBANs, Personal Data) │
-                  └────────────────────┬────────────────────┘
-                                       │ Sanitized Context
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       Amazon Bedrock AgentCore Runtime                      │
-│                                                                             │
-│   ┌───────────────────────┐                 ┌──────────────────────────┐   │
-│   │   Household Sentinel  │                 │    Claim Drafter Agent   │   │
-│   │ (Claude 3.5 Haiku)    │                 │ (Claude 3.5 Haiku)       │   │
-│   └───────────┬───────────┘                 └─────────────▲────────────┘   │
-│               │                                           │                 │
-│               ▼                                           │                 │
-│   ┌───────────────────────────────────────────────────────┴────────────┐   │
-│   │                 Bedrock Action Groups (Deterministic)              │   │
-│   │   - ApplianceWarrantyActionGroup: check_status(), evaluate_claim() │   │
-│   │   - SubscriptionActionGroup: detect_creep(), audit_trials()        │   │
-│   │   - CompletenessActionGroup: audit_missing(), detect_spikes()      │   │
-│   └───────────────────────────────────┬────────────────────────────────┘   │
-│                                       │                                     │
-│                                       ▼                                     │
-│   ┌────────────────────────────────────────────────────────────────────┐   │
-│   │        Homeowner Decision Hub (Bedrock Return-of-Control)          │   │
-│   │   - Disputed Repair Claim -> Review Pre-Drafted Statutory Letter   │   │
-│   │   - Expiring Trial -> One-Click Cancel / Reminder Trigger          │   │
-│   │   - Utility Spike -> Household Leakage Alert Checklist             │   │
-│   └────────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
+```text
+Synthetic preview -> explicit demo session -> scoped capability
+                                            |
+                           supplied household facts
+                                            |
+                            deterministic notice draft
+                                            |
+                             exact human approval
+                                            |
+                   simulated outcome + audit + case timeline
+                                            |
+                   conditional session-scoped state write
 ```
 
----
+This is a source topology, not a recorded execution trace. Approval does not send email, terminate a subscription or recover money. Case follow-up records manual/synthetic reports and attested outcomes; merchant confirmation remains unknown.
 
-## 2. Bedrock AgentCore Primitive Mapping
+| Component | Implemented role | Evidence | Limit |
+|---|---|---|---|
+| API and capabilities | Public synthetic preview and explicit isolated sessions; authenticated scoped actions | `src/hestia/app/api.py`, `src/hestia/app/access.py` | Demo scope is not production account identity |
+| Notice preparation / approval | Server binds the exact review template, source revision and approval proof; replay retains the recorded result | `src/hestia/app/claims.py` | An application approval flow is not Bedrock Return-of-Control |
+| Household audit functions | Compare supplied dates, prices, receipts and utility baselines | `src/hestia/agents/sentinel.py`, `src/hestia/domain/` | A fixture rule is not verified legal eligibility or continuous provider monitoring |
+| Case timeline | Preserve actor/time/source, references, planning deadlines, replies and outcome attestations | `src/hestia/app/cases.py`, `src/hestia/domain/cases.py` | Outcomes do not independently verify money received |
+| State adapter | S3 conditional creation/update under `demo/workspaces/`; CI in-memory store | `src/hestia/adapters/storage.py`, `scripts/ci_api_server.py` | Versioning and digests are not WORM storage or digital signatures |
+| Reader / writer roles | Separate functions and policies; reader denies writes; both deny SES and Bedrock | `infra/hestia_api_stack.py` | Effective deployed permissions need release-bound verification |
 
-| Hestia Component | Bedrock AgentCore Equivalent | Implementation & Role |
-| :--- | :--- | :--- |
-| **`hestia.agents.sentinel`** | **Supervisor Agent** | Orchestrates weekly household financial sweeps, compiling prioritized digests and actionable recovery items. |
-| **`hestia.domain.warranties`** | **Bedrock Action Group: Warranty Engine** | Deterministic domain service calculating statutory periods, expiration milestones, and repair reimbursement eligibility. |
-| **`hestia.domain.subscriptions`** | **Bedrock Action Group: Subscription Auditor** | Evaluates price deltas, trial expiration deadlines, and duplicate service categories without LLM arithmetic errors. |
-| **`hestia.domain.completeness`** | **Bedrock Action Group: Completeness Reconciler**| Anti-joins bank transactions against saved receipts and flags utility baseline spikes exceeding predefined thresholds. |
-| **Claim Drafter Agent** | **Bedrock Collaborating Agent** | Generates legally grounded claim letters under consumer protection regulations (e.g., EU Directive 2019/771/EU) using verified facts. |
-| **Bedrock Return-of-Control**| **Human-in-the-Loop Gatekeeper** | Returns control to the homeowner for approval before dispatching dispute emails or cancelling recurring subscriptions. |
+## Provider inventory
 
----
+| Provider or mechanism | Mode | What would establish more |
+|---|---|---|
+| PSD2 / bank stream | Not connected | Authorized adapter, provenance and retained integration evidence |
+| Mailbox / retailer sync | Not connected | Authorized source-specific import and explicit consent |
+| Receipt OCR | Disabled | Reviewed adapter plus input/output and failure evidence; adapter preparation alone is not OCR execution |
+| Manual imports | Pending separate intake integration | Reviewed import records, source labels and manual correction flow; no paid provider activation |
+| Strands / Bedrock | Optional source helpers; disabled in the public preparation path | Authorized paid model execution and exact model/input/output evidence |
+| AgentCore runtime | Proposed, not connected | Actual runtime resources and invocation receipt |
+| Managed Bedrock Guardrails | Proposed, not connected | Configured guardrail ID and invocation evidence; `sanitize_pii` is only a local pattern filter |
+| Managed Bedrock Action Groups | Proposed, not connected | Deployed action-group configuration and exercised contracts; Python functions alone are not managed Action Groups |
+| SES | Disabled; simulated outbox only | Separately authorized delivery integration and provider-confirmed receipts |
 
-## 3. Bedrock Action Group OpenAPI Contract
+Provider helper names and returned metadata, including an AgentCore label in a fallback helper, do not prove that a managed runtime executed. No active OpenAPI action-group endpoint is asserted by this document.
 
-Hestia exposes deterministic domain operations to the Bedrock AgentCore runtime via OpenAPI 3.0 schemas:
+## Optional MCTS illustration
 
-```yaml
-openapi: 3.0.0
-info:
-  title: Hestia Household Sentinel Action Groups
-  version: 1.0.0
-  description: Deterministic household warranty, subscription, and completeness services for Amazon Bedrock.
-paths:
-  /warranties/evaluate-claim:
-    post:
-      summary: Evaluate out-of-pocket appliance repair against statutory warranty
-      operationId: evaluateRepairClaim
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [itemName, purchaseDate, repairDate, repairAmountCents]
-              properties:
-                itemName:
-                  type: string
-                purchaseDate:
-                  type: string
-                  format: date
-                repairDate:
-                  type: string
-                  format: date
-                repairAmountCents:
-                  type: integer
-      responses:
-        '200':
-          description: Claim eligibility decision and statutory justification
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  isCovered:
-                    type: boolean
-                  claimableAmountCents:
-                    type: integer
-                  reason:
-                    type: string
+`GET /api/simulation/mcts` is an explicit toy calculation outside claim preparation (`src/hestia/app/api.py`). `src/hestia/domain/mcts.py` supplies fixed priors and simulated rollouts. The API marks the response illustrative and the empirical success rate null. Its legacy action names, including an ODR-labelled branch, are toy identifiers, not current legal routes. There is no real settlement sample, observed resolution time or validated recommendation behind them.
 
-  /subscriptions/audit:
-    post:
-      summary: Audit active recurring charges for price creep and trial expirations
-      operationId: auditSubscriptions
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [charges, currentDate]
-              properties:
-                charges:
-                  type: array
-                  items:
-                    type: object
-                currentDate:
-                  type: string
-                  format: date
-      responses:
-        '200':
-          description: List of detected anomalies and monthly cost impact
-```
+The architecture UI labels this toy mode beside both its control and API response. It does not turn fixed probabilities or the most-visited branch into an empirical prediction. Actual recovery and time-to-resolution are unmeasured.
 
----
+## Verification boundary
 
-## 4. Operational Invariants and Safety
-
-1. **Zero Hallucination Arithmetic**: Every euro and cent calculation is performed within Python integer-based domain models (`*_cents`), completely isolated from LLM token prediction.
-2. **Deterministic Statutory Rules**: Expiration dates and statutory conformity periods are calculated according to jurisdictional consumer law, not estimated by language models.
-3. **Homeowner Sovereignty**: Hestia never executes payment cancellations or legal claims without explicit homeowner Return-of-Control authorization.
+Repository implementation, CI synthetic execution, live read-only observations, human attestation and live mutating drills are separate evidence levels. New claims regression tests are pending CI at the integration SHA. Coverage, latency, costs, AI quality and independent human UAT cannot be inferred from this architecture. See the [README testbook](../README.md#integration-testbook) and [assurance gaps](assurance.md).
