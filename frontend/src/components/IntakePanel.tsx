@@ -132,7 +132,7 @@ export const IntakePanel: React.FC<IntakePanelProps> = ({ route, enabled, stateV
       <input data-testid="intake-file" type="file" accept="image/png,application/json,.json" disabled={!enabled || pending} onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} className="block w-full py-2" />
     </label>
     <label className="block">Saved intake / resume after reload
-      <select data-testid="intake-history" className="block w-full bg-slate-900 p-2" value={id} disabled={!enabled || pending} onChange={e => resume(e.target.value)}>
+      <select data-testid="intake-history" aria-label="Saved intake / resume after reload" className="block w-full bg-slate-900 p-2" value={id} disabled={!enabled || pending} onChange={e => resume(e.target.value)}>
         <option value="">New manual entry</option>
         {saved.map(d => <option key={d.id} value={d.id}>{d.status} · {d.input_sha256.slice(0, 12)} · {d.source}</option>)}
       </select>
@@ -141,7 +141,7 @@ export const IntakePanel: React.FC<IntakePanelProps> = ({ route, enabled, stateV
     {!advanced && <fieldset disabled={formDisabled} data-testid="intake-simple-form" className="space-y-3 min-w-0">
       <legend className="font-bold mb-2">Add one record</legend>
       <label className="block">What are you adding?
-        <select className={inputClass} value={form.kind} onChange={e => {
+        <select aria-label="What are you adding?" className={inputClass} value={form.kind} onChange={e => {
           const kind = e.target.value as EntryKind;
           editForm({ kind, identity: '', receiptId: '', name: '', date: '', amount: '', category: kind === 'subscription' ? 'Productivity' : 'Home', trial: false, trialEnd: '', previousAmount: '' });
         }}>
@@ -149,7 +149,7 @@ export const IntakePanel: React.FC<IntakePanelProps> = ({ route, enabled, stateV
         </select>
       </label>
       {form.kind === 'receipt' && transactions.length > 0 && <label className="block">Choose a recorded transaction
-        <select className={inputClass} value={transactions.some(row => row.transaction_id === form.identity) ? form.identity : ''} onChange={e => {
+        <select aria-label="Choose a recorded transaction" className={inputClass} value={transactions.some(row => row.transaction_id === form.identity) ? form.identity : ''} onChange={e => {
           const row = transactions.find(record => record.transaction_id === e.target.value);
           if (row) editForm({ identity: String(row.transaction_id), name: String(row.merchant ?? ''), date: String(row.date ?? ''), amount: euros(row.amount_cents) });
         }}>
