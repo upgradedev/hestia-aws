@@ -232,3 +232,39 @@ test('case update cannot save an unattested resolution and reports real boundary
   await expect(page.getByTestId('case-status')).toHaveText('Pending response');
   expect((await savedState(request, token)).cases[0].outcome).toBeNull();
 });
+
+test('outcome attestation binds amount, summary, evidence, source and current case revision', async ({ page, request }) => {
+  const { token } = await openCase(page);
+  await update(page, 'start_tracking', { deadline: '2026-10-01' });
+  await fillUpdate(page, 'resolve', { amount: '49.00' });
+  await expect(page.getByTestId('save-case-update')).toBeEnabled();
+  for (const [field, value] of [['case-amount', '50.00'], ['case-evidence', 'FIXTURE-CHANGED-EVIDENCE'], ['case-note', 'Changed outcome explanation']]) {
+    await page.getByTestId(field).fill(value);
+    await expect(page.getByTestId('case-attestation')).not.toBeChecked();
+    await expect(page.getByTestId('save-case-update')).toBeDisabled();
+    await page.getByTestId('case-attestation').check();
+    await expect(page.getByTestId('save-case-update')).toBeEnabled();
+  }
+  await page.getByTestId('case-source').selectOption('synthetic_reply');
+  await expect(page.getByTestId('case-attestation')).not.toBeChecked();
+  await page.getByTestId('case-attestation').check();
+  const c = (await savedState(request, token)).cases[0];
+  const changed = await request.post(`${backend}/api/case/update`, { headers: bearer(token), data: {
+    case_id: c.id, expected_revision: c.revision, request_id: 'e'.repeat(32), action: 'set_deadline',
+    source: 'manual_update', note: 'Another household view revised the deadline', evidence_reference: 'FIXTURE-NEW-REVISION', deadline: '2026-10-05',
+  } });
+  expect(changed.status()).toBe(200);
+  await page.getByTestId('refresh-state').click();
+  await expect(page.getByTestId('case-attestation')).not.toBeChecked();
+  await expect(page.getByTestId('save-case-update')).toBeDisabled();
+  await expect(page.getByTestId('case-amount')).toHaveValue('50.00');
+  await expect(page.getByTestId('case-evidence')).toHaveValue('FIXTURE-CHANGED-EVIDENCE');
+  await expect(page.getByTestId('case-note')).toHaveValue('Changed outcome explanation');
+  await page.getByTestId('case-attestation').check();
+  const saved = page.waitForResponse(r => r.url().endsWith('/api/case/update'));
+  await page.getByTestId('save-case-update').click();
+  expect((await saved).status()).toBe(200);
+  const final = (await savedState(request, token)).cases[0];
+  expect(final.outcome?.amount_cents).toBe(5000);
+  expect(final.outcome?.evidence_reference).toBe('FIXTURE-CHANGED-EVIDENCE');
+});
