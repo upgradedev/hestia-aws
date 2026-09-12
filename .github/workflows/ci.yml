@@ -28,12 +28,19 @@ jobs:
 
       - name: ruff check
         run: |
-          python -m ruff check src tests infra scripts/ci_api_server.py scripts/deploy_api.py
+          python -m ruff check src tests infra scripts/ci_api_server.py scripts/deploy_api.py tools/measure.py tools/ablate.py
 
       - name: run test suite with coverage
         run: |
           python -m compileall -q src tests
           python -m pytest --cov=hestia --cov-branch --cov-fail-under=85 --cov-report=term-missing --cov-report=xml --junitxml=pytest-results.xml tests/ infra/
+
+      - name: Retain executed synthetic measurements without rewriting history
+        run: |
+          mkdir -p build
+          python tools/measure.py --output build/synthetic-measurement.json
+          python tools/ablate.py --output build/synthetic-ablation.json
+          python -c "import os,json,datetime; print(json.dumps({'source_sha':os.environ['GITHUB_SHA'],'run_id':os.environ['GITHUB_RUN_ID'],'attempt':os.environ['GITHUB_RUN_ATTEMPT'],'observed_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'mode':'synthetic_ci','human_uat':'NOT_RUN','live_model':False,'live_send':False}))" > build/verification-context.json
 
       - name: Retain exact-revision test evidence
         if: always()
@@ -43,6 +50,9 @@ jobs:
           path: |
             coverage.xml
             pytest-results.xml
+            build/synthetic-measurement.json
+            build/synthetic-ablation.json
+            build/verification-context.json
           if-no-files-found: warn
 
       - name: Package isolated demo runtime without AWS access
