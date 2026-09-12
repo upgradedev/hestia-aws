@@ -32,7 +32,7 @@ export function CaseWorkspace({ state, enabled, onPrepare, onUpdate, onRefresh }
           <p className="text-sm text-amber-300">Synthetic facts, not OCR or independent verification. Check these facts before continuing. The notice does not establish legal eligibility.</p>
           <button data-testid="prepare-case-notice" disabled={!enabled} onClick={() => onPrepare(item.id)} className="px-5 py-3 rounded-xl bg-amber-400 text-slate-950 font-bold disabled:opacity-50">Facts reviewed: prepare exact notice</button>
           {!enabled && <p className="text-sm text-slate-400">Begin the isolated demo session above to save your first case.</p>}
-        </> : <p role="status">No appliance has a documented repair to review. Receipt scanning and external import are unavailable; no case was fabricated.</p>}
+        </> : <p role="status">No appliance has a documented repair to review. Automatic OCR and provider inbox sync are unavailable; no case was fabricated.</p>}
       </div>}
       {c && <>
         <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/20 to-slate-900 p-5 sm:p-7 space-y-4">
