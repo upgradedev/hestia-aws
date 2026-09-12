@@ -85,6 +85,9 @@ test('explicit demo → exact server preview → simulated approval → reload r
   expect(draft.homeowner_name).toBe(session.state.homeowner_name);
   expect(draft.notice).toContain('Bosch Series 6');
   expect(draft.notice).not.toContain('Elena Weber');
+  await test.info().attach('exact-notice-desktop', {
+    body: await page.getByRole('dialog').screenshot(), contentType: 'image/png',
+  });
 
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.getByRole('button', { name: 'Copy Text', exact: true }).click();
@@ -118,6 +121,9 @@ test('explicit demo → exact server preview → simulated approval → reload r
   await page.getByRole('button', { name: 'Close notice', exact: true }).click();
   await expectNoRecovery(page, request, session.token, 1);
   await expect(page.getByTestId('dispatch-record')).toHaveCount(1);
+  await test.info().attach('recorded-simulation-desktop', {
+    body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+  });
   await page.reload();
   await page.getByTestId('launch-cockpit').click();
   await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
@@ -149,6 +155,27 @@ test('HTTP abort retains the pending claim, disables approval, and never replays
   await page.unroute('**/api/action/claim');
   await openNotice(page);
   await expect(page.getByRole('dialog').getByRole('alert')).toHaveCount(0);
+});
+
+test('notice keyboard focus is contained and mobile approval remains an explicit review', async ({ page, request }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const session = await start(page);
+  await openNotice(page);
+  await expect(page.getByRole('dialog')).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByTestId('approve-claim')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Copy Text', exact: true })).toBeFocused();
+  await test.info().attach('exact-notice-mobile', {
+    body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+  });
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByTestId('review-claim')).toBeFocused();
+  await openNotice(page);
+  await page.getByTestId('approve-claim').click();
+  await expect(page.getByTestId('claim-result')).toContainText('No email sent');
+  await expectNoRecovery(page, request, session.token, 1);
 });
 
 test('lost response after a real backend commit shows uncertainty until reload reveals history', async ({ page, request }) => {
