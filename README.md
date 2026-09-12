@@ -27,6 +27,8 @@ The narrower public mode is a security boundary, not an AI-quality result.
 2. Render the API template and inspect a CloudFormation change set before applying it.
    Its new required DemoSecretArn parameter is an ARN, not a secret value. Retain the
    existing state bucket and historical keys. Only new demo/workspaces/ keys are writable.
+   Fresh sessions reserve a new scope with a conditional PutObject before any read;
+   this does not need ListBucket or reinterpret AccessDenied as an empty household.
    Confirm the packaged boto3/botocore support both PutObject conditional parameters.
    The legacy deployment entry point now requires CI, --approved-commit and
    --demo-secret-arn; it bundles the tested storage SDK and creates a change set

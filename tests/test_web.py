@@ -114,6 +114,26 @@ def test_missing_signing_key_or_storage_no_implicit_fallback(monkeypatch):
     assert call("/api/demo/session", {})[0] == 503
 
 
+def test_session_creation_succeeds_with_no_list_bucket_permission(sandbox):
+    sandbox.missing_without_list = True
+    token = session()
+    assert sandbox.calls[0][0] == "put"
+    assert sandbox.calls[0][1]["IfNoneMatch"] == "*"
+    assert call("/api/state", token=token, method="GET")[0] == 200
+    assert call("/api/action/claim", approval(prepared(token)), token)[0] == 200
+
+
+@pytest.mark.parametrize("legacy_action", [None, "claim_letter", "cancel_sub"])
+def test_legacy_html_has_no_write_forms_or_fabricated_execution(legacy_action):
+    html = render_html(approved_action=legacy_action)
+    assert "Read-only synthetic illustration" in html
+    assert "https://drusjukc9d4oc.cloudfront.net/" in html
+    assert "<form" not in html
+    assert "Return-of-Control Executed" not in html
+    assert "webhook triggered" not in html
+    assert "Merkle Proof" not in html
+
+
 def test_session_isolation_and_exact_preview_approval_reload(sandbox):
     first, second = session(), session()
     draft = prepared(first)

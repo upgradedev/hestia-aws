@@ -21,6 +21,7 @@ class ConditionalS3:
         self.read_error = None
         self.write_error = None
         self.lose_response = False
+        self.missing_without_list = False
 
     def get_object(self, **kwargs):
         self.calls.append(("get", copy.deepcopy(kwargs)))
@@ -29,7 +30,7 @@ class ConditionalS3:
         with self.lock:
             key = (kwargs["Bucket"], kwargs["Key"])
             if key not in self.objects:
-                raise service_error("NoSuchKey")
+                raise service_error("AccessDenied" if self.missing_without_list else "NoSuchKey")
             value = self.objects[key]
             return {"Body": io.BytesIO(value["Body"]), "ETag": value["ETag"]}
 

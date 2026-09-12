@@ -8,7 +8,6 @@ Presents the Unified Household Operations Cockpit:
 
 from __future__ import annotations
 
-import hashlib
 from datetime import date
 from typing import Any
 
@@ -121,16 +120,8 @@ def build_audit(scenario_key: str = "family_flat") -> tuple[HouseholdAuditDigest
 
 def render_html(scenario_key: str = "family_flat", approved_action: str | None = None) -> str:
     digest, data = build_audit(scenario_key)
-    current_date = data["current_date"]
     homeowner = data["homeowner_name"]
     outlays_total = sum(t["amount_cents"] for t in data["bank_transactions"]) / 100
-
-    # Compute digest fingerprint
-    payload_str = (
-        f"{current_date}:{digest.total_reimbursable_cents}:"
-        f"{digest.monthly_subscription_waste_cents}"
-    )
-    sha = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
 
     claim_letter = ""
     if data["repairs"]:
@@ -143,21 +134,12 @@ def render_html(scenario_key: str = "family_flat", approved_action: str | None =
             homeowner_name=homeowner,
         )
 
-    action_banner = ""
-    if approved_action == "claim_letter":
-        action_banner = (
-        '<div class="banner-success">'
-        '<strong>✓ Return-of-Control Executed:</strong> Statutory claim letter signed and '
-        'queued for registered postal/email dispatch to retailer under EU Directive 2019/771/EU.'
-        f'<div class="digest-pill">Merkle Proof: {sha[:24]}...</div>'
-        '</div>'
-    )
-    elif approved_action == "cancel_sub":
-        action_banner = (
-        '<div class="banner-success">'
-        '<strong>✓ Return-of-Control Executed:</strong> Trial cancellation webhook triggered for '
-        'Fitness Stream Pro prior to auto-billing. Monthly recurring €19.99 saved.'
-        '</div>'
+    # A legacy rendering argument is not an authorization or execution receipt.
+    action_banner = (
+        '<div class="banner-success"><strong>Read-only synthetic illustration.</strong> '
+        'No model inference, email, provider action or financial recovery occurs on this page. '
+        '<a href="https://drusjukc9d4oc.cloudfront.net/">Open the Hestia application</a> '
+        'to begin an isolated demo session and review an exact server-prepared notice.</div>'
     )
 
     return f"""<!doctype html>
@@ -474,7 +456,7 @@ footer.meta-bar {{
     </div>
   </div>
   <div class="telemetry-pills">
-    <span class="pill active">● Sentinel Active</span>
+    <span class="pill">Read-only synthetic illustration</span>
     <span class="pill">Framework: AWS Strands Agents SDK</span>
     <span class="pill">Legal Engine: Directive 2019/771/EU</span>
   </div>
@@ -606,18 +588,13 @@ footer.meta-bar {{
           <span class="badge b-success">€185.00 Claim</span>
         </div>
         <p style="font-size:12px; color:var(--text-muted); margin:8px 0;">
-          The agent has drafted a formal statutory demand letter under EU Directive 2019/771/EU.'
-          ' Review text below and click approve to send to retailer:
+          This is an illustrative template, not an approved notice or a delivery receipt.
+          Open the application to prepare and review an exact simulated notice:
         </p>
 
         <div class="letter-box">{claim_letter}</div>
 
-        <form method="POST" action="/action/claim" style="margin-top:14px;">
-          <input type="hidden" name="scenario" value="{scenario_key}">
-          <button type="submit" class="btn primary" style="width:100%;">
-            ✓ Approve & Authorize Legal Claim Dispatch
-          </button>
-        </form>
+        <p style="margin-top:14px;">Approval and dispatch are unavailable on this read-only page.</p>
       </div>
 
       <div class="roc-card">
@@ -628,12 +605,7 @@ footer.meta-bar {{
         <p style="font-size:12px; color:var(--text-muted); margin:8px 0;">
           Fitness Stream Pro free trial expires 2026-09-14. Zero watch activity observed in 10 days.
         </p>
-        <form method="POST" action="/action/cancel_trial">
-          <input type="hidden" name="scenario" value="{scenario_key}">
-          <button type="submit" class="btn danger" style="width:100%;">
-            ✕ Cancel Free Trial (Save €19.99/mo)
-          </button>
-        </form>
+        <p>Illustrative alert only. No subscription is cancelled and no savings are recorded.</p>
       </div>
     </div>
   </div>

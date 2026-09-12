@@ -67,6 +67,47 @@ def test_bootstrap_only_missing_and_conditional():
     assert len([c for c in s3.calls if c[0] == "put"]) == 1
 
 
+def test_fresh_scope_creation_does_not_require_list_or_read_authority():
+    s3 = ConditionalS3()
+    s3.missing_without_list = True
+    state = cloud_store(s3).create_workspace()
+    assert [kind for kind, _ in s3.calls] == ["put"]
+    assert s3.calls[0][1]["IfNoneMatch"] == "*"
+    assert cloud_store(s3).load_state(create=False) == state
+    before = copy.deepcopy(s3.objects)
+    with pytest.raises(StorageConflict):
+        cloud_store(s3).create_workspace()
+    assert s3.objects == before
+
+
+def test_memory_scope_collision_cannot_issue_access_to_existing_state():
+    store = S3HouseholdStore(bucket_name="", workspace_id=SCOPE)
+    initial = store.create_workspace()
+    with pytest.raises(StorageConflict):
+        store.create_workspace()
+    assert store.load_state(create=False) == initial
+
+
+@pytest.mark.parametrize("error", [service_error("AccessDenied"), TimeoutError()])
+def test_explicit_creation_failure_never_falls_back(error):
+    s3 = ConditionalS3()
+    s3.write_error = error
+    with pytest.raises(StorageError):
+        cloud_store(s3).create_workspace()
+    assert s3.objects == {}
+
+
+def test_lost_creation_reply_keeps_reservation_and_does_not_overwrite():
+    s3 = ConditionalS3()
+    s3.lose_response = True
+    with pytest.raises(StorageError):
+        cloud_store(s3).create_workspace()
+    before = copy.deepcopy(s3.objects)
+    with pytest.raises(StorageConflict):
+        cloud_store(s3).create_workspace()
+    assert s3.objects == before
+
+
 @pytest.mark.parametrize("error", [
     service_error("AccessDenied"), service_error("NoSuchBucket"), TimeoutError(),
     Exception("NoSuchKey"),

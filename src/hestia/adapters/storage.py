@@ -272,6 +272,34 @@ class S3HouseholdStore:
         ):
             raise StorageError("Stored workspace is invalid; it was not reset")
 
+    def create_workspace(self) -> dict[str, Any]:
+        """Reserve a freshly server-generated scope without a speculative GET.
+
+        S3 hides missing keys behind AccessDenied without ListBucket authority.
+        An atomic create proves absence; a collision never grants existing state
+        to a newly issued capability, and an unreadable object is never replaced.
+        """
+        data = fresh_demo_state()
+        s3 = self._get_s3()
+        if s3 is None:
+            with self._lock:
+                if self.workspace_id in self._states:
+                    raise StorageConflict("Workspace scope is already reserved")
+                self._states[self.workspace_id] = copy.deepcopy(data)
+                self._loaded_version = data["version_seq"]
+        else:
+            try:
+                response = s3.put_object(
+                    Bucket=self.bucket, Key=self.state_key, Body=self._encode(data),
+                    ContentType="application/json", IfNoneMatch="*",
+                )
+            except Exception as exc:
+                if self._error_code(exc) in ("PreconditionFailed", "ConditionalRequestConflict"):
+                    raise StorageConflict("Workspace scope is already reserved") from exc
+                raise StorageError("Workspace creation is unconfirmed") from exc
+            self._capture(response, data)
+        return copy.deepcopy(data)
+
     def load_state(self, *, create: bool = True) -> dict[str, Any]:
         s3 = self._get_s3()
         if s3 is None:

@@ -246,7 +246,7 @@ def _handle_api(event: dict[str, Any]) -> dict[str, Any]:
     if path == "/api/demo/session" and method == "POST":
         require_fields(_body(event, headers), set())
         token, access = issue_demo_access()
-        state = store_for(access.workspace_id).load_state()
+        state = store_for(access.workspace_id).create_workspace()
         return response(201, {"token": token, "expires_at": access.expires_at,
                               "mode": "simulated", "state": public_state(state)})
     if path == "/api/simulation/mcts" and method in ("GET", "POST"):
