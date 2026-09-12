@@ -107,7 +107,7 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
         className="max-w-2xl w-full bg-[#0d121c] border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-4 bg-slate-900 border-b border-white/10 flex items-center justify-between gap-3">
           <div>
-            <h3 id="formal-notice-title" className="text-sm font-bold text-white">Formal Statutory Notice of Lack of Conformity</h3>
+            <h3 id="formal-notice-title" className="text-sm font-bold text-white">Repair Notice for Human Review</h3>
             <p className="text-[11px] font-mono text-slate-400">Server preview · isolated simulation · no email will be sent</p>
           </div>
           <div className="flex items-center gap-2">
@@ -130,7 +130,7 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
             </div>
             <div className="border-t border-b border-white/10 py-2.5">
               <div><strong>SUBJECT:</strong> <span data-testid="notice-subject">{draft.subject}</span></div>
-              <div><strong>CLAIM SUM:</strong> <span data-testid="notice-amount">{(draft.amount_cents / 100).toFixed(2)} {draft.currency}</span></div>
+              <div><strong>RECORDED REPAIR COST:</strong> <span data-testid="notice-amount">{(draft.amount_cents / 100).toFixed(2)} {draft.currency}</span></div>
             </div>
             <pre data-testid="server-notice" className="whitespace-pre-wrap break-words font-mono text-xs">{draft.notice}</pre>
             <p className="text-xs text-slate-400">Approval expires: {new Date(expiryMillis(draft.expires_at)).toLocaleString()}. Prepared from the recorded facts; no eligibility decision is implied.</p>

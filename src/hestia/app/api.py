@@ -6,6 +6,7 @@ import binascii
 import json
 import os
 import re
+from datetime import UTC, datetime
 from typing import Any
 
 from hestia.adapters.storage import (
@@ -14,6 +15,7 @@ from hestia.adapters.storage import (
     StorageConflict,
     StorageError,
     fresh_demo_state,
+    preserve_intake,
 )
 from hestia.app.access import APIError, authorize_demo, issue_demo_access
 from hestia.app.cases import update_case
@@ -25,7 +27,10 @@ from hestia.app.claims import (
     require_fields,
     text_field,
 )
+from hestia.app.intake import intake_action
 from hestia.domain.mcts import LegalNegotiationMCTS
+from hestia.domain.metrics import summary_from_records
+from hestia.domain.ocr import content_hash
 
 MAX_BODY_BYTES = 32768
 HEADERS = {
@@ -57,6 +62,11 @@ PROTECTED_POST = {
 
 
 def response(status: int, data: Any) -> dict[str, Any]:
+    # Project all API state responses, including claim/case responses and legacy stored snapshots.
+    if isinstance(data, dict):
+        state = data.get("state", data)
+        if isinstance(state, dict) and "outflows" in state and "version_seq" in state:
+            state["summary"] = summary_from_records(state)
     return {"statusCode": status, "headers": HEADERS, "body": json.dumps(data, allow_nan=False)}
 
 
@@ -134,20 +144,39 @@ def _record_local_action(
         for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count"):
             fresh[key] = state[key]
         fresh["cases"] = state.get("cases", [])
+        preserve_intake(state, fresh)
         fresh["generation"] = state.get("generation", 0) + 1
         state = fresh
         result = {"status": "simulated", "message": "Demo data reset; audit history retained."}
     elif path == "/api/action/cancel":
-        require_fields(body, {"service_name"})
+        require_fields(body, {"service_name"}, {"subscription_id", "expected_monthly_cents"})
         name = text_field(body, "service_name")
-        sub = next((s for s in state["subscriptions"]
-                    if name in (s["id"], s["service_name"])), None)
+        matches = [s for s in state["subscriptions"]
+                   if (s["id"] == body["subscription_id"] if "subscription_id" in body
+                       else name in (s["id"], s["service_name"]))]
+        if len(matches) > 1:
+            raise APIError(409, "Ambiguous subscription name; use subscription_id")
+        sub = matches[0] if matches else None
         if sub is None:
             raise APIError(404, "Subscription not found.")
+        if name not in (sub["id"], sub["service_name"]) or (
+            "expected_monthly_cents" in body and (
+                type(body["expected_monthly_cents"]) is not int
+                or body["expected_monthly_cents"] != sub["monthly_cents"]
+            )
+        ):
+            raise APIError(409, "Subscription facts changed; review before requesting")
         if sub.get("demo_cancellation_requested"):
             return {"status": "simulated", "replayed": True, "state": public_state(state),
                     "result": {"status": "simulated", "service_name": name}}
         sub["demo_cancellation_requested"] = True
+        sub["cancellation_request"] = {
+            "subscription_id": sub["id"], "service_name": sub["service_name"],
+            "monthly_cents": sub["monthly_cents"], "trial_end_date": sub.get("trial_end_date"),
+            "status": "synthetic_requested", "actor": "demo_user",
+            "requested_facts_hash": content_hash(body),
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
         result = {"status": "simulated", "service_name": name,
                   "message": "Demo request recorded. No provider subscription was cancelled."}
     elif path == "/api/action/utility_dispute":
@@ -168,14 +197,18 @@ def _record_local_action(
         result = {"status": "simulated", "provider": provider,
                   "message": "Demo request only; no provider was contacted."}
     else:
-        require_fields(body, {"merchant", "amount_cents", "receipt_id"})
+        require_fields(body, {"merchant", "amount_cents", "receipt_id"}, {"transaction_id"})
         merchant = text_field(body, "merchant")
         receipt_id = text_field(body, "receipt_id", 100)
         amount = body["amount_cents"]
         if type(amount) is not int or not 0 < amount <= 10000000:
             raise APIError(400, "Invalid amount_cents.")
-        outflow = next((o for o in state["outflows"]
-                        if o["merchant"] == merchant and o["amount_cents"] == amount), None)
+        matches = [o for o in state["outflows"]
+                   if o["merchant"] == merchant and o["amount_cents"] == amount
+                   and ("transaction_id" not in body or o["id"] == body["transaction_id"])]
+        if len(matches) > 1:
+            raise APIError(409, "Ambiguous transaction; use transaction_id")
+        outflow = matches[0] if matches else None
         if outflow is None:
             raise APIError(404, "No matching transaction; no fallback record was changed.")
         if outflow.get("has_receipt"):
@@ -186,6 +219,12 @@ def _record_local_action(
         if receipt_id in state["saved_receipts"]:
             raise APIError(409, "Receipt already belongs to another record.")
         outflow.update(has_receipt=True, receipt_id=receipt_id, status="manually_recorded")
+        state.setdefault("intake_provenance", []).append({
+            "record_id": outflow["id"], "collection": "outflows", "source": "manual_reference",
+            "input_sha256": content_hash(body), "facts": dict(body), "actor": "demo_user",
+            "mode": "synthetic",
+            "timestamp": datetime.now(UTC).isoformat(),
+        })
         state["saved_receipts"].append(receipt_id)
         state["summary"]["missing_receipt_cents"] = sum(
             o["amount_cents"] for o in state["outflows"]
@@ -263,9 +302,12 @@ def _handle_api(event: dict[str, Any]) -> dict[str, Any]:
     body = _body(event, headers) if method == "POST" else {}
     if path == "/api/outbox/dispatch":
         raise APIError(403, "Direct dispatch is disabled. Approve an exact prepared notice.")
-    if path in ("/api/receipt/scan", "/api/ingest/sync"):
-        raise APIError(501, "Provider integration is not enabled in this demo. No change was made.")
     store = store_for(access.workspace_id)
+    if path in ("/api/receipt/scan", "/api/ingest/sync"):
+        try:
+            return response(200, intake_action(store, body, path))
+        except ValueError as exc:
+            raise APIError(400, str(exc)) from exc
     if path == "/api/state":
         return response(200, public_state(store.load_state(create=False)))
     if path == "/api/outbox/status":

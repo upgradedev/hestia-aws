@@ -1,194 +1,96 @@
-# Hestia AWS: Autonomous Household Financial and Warranty Sentinel
+# Hestia: household review and simulated case follow-up
 
-## P0 candidate: isolated demo and exact approval
+Hestia turns synthetic household records into a reviewable notice and a saved case timeline, so a visitor can inspect the facts, approve the exact text, and record a next step.
 
-This revision changes the demo contract. It must not be deployed over an older backend
-without a coordinated, owner-approved cutover. Source/CI validation is not proof of
-the current CloudFront or Lambda revision; check the release receipt.
+The example household is fictional. Approval records a simulation: it does not send email, cancel a provider subscription, or recover money. A case outcome entered by a visitor is an attestation, not independent merchant confirmation. Independent human UAT is NOT_RUN.
 
-| Boundary | Behavior in this revision |
-|---|---|
-| Public access | Read-only synthetic preview. Explicit demo start issues an expiring capability for one isolated workspace. |
-| Approval | The server prepares the exact recipient, subject, text, amount and source revision before sign-off. Changed or expired evidence is rejected. |
-| Outcome | Approval records a SIMULATED artifact. It does not send mail, cancel a provider subscription or recover money. |
-| Persistence | S3 creation uses If-None-Match; updates use If-Match. Failed or uncertain writes never become successful in-memory fallbacks. |
-| Provider access | Separate reader and demo-writer functions. Reader IAM denies writes; both deny SES and Bedrock. Request flags cannot enable providers. |
-| Verification | Unit/API tests and Playwright run in GitHub Actions only. Automated tests are not independent human UAT. |
+[Demo entry point](https://drusjukc9d4oc.cloudfront.net/) · [Backend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml) · [Frontend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml)
 
-Current provider ingestion and receipt OCR are explicitly unavailable in this safe demo;
-the older capability descriptions below are product intent, not proof of active integrations.
-The narrower public mode is a security boundary, not an AI-quality result.
+The URL is a navigation link, not a deployment receipt. This document describes source; current frontend/backend identity and availability require a release receipt. Source corrections do not authorize deployment.
 
-### Approval-only rollout and recovery
+## Evidence-bound mode inventory
 
-1. Review the exact candidate SHA, CI artifacts, IAM diff and stored-state compatibility.
-   Provision a dedicated Secrets Manager signing secret (at least 32 random bytes) only
-   after owner authorization; never place its value in source, logs or frontend assets.
-2. Render the API template and inspect a CloudFormation change set before applying it.
-   Its new required DemoSecretArn parameter is an ARN, not a secret value. Retain the
-   existing state bucket and historical keys. Only new demo/workspaces/ keys are writable.
-   Fresh sessions reserve a new scope with a conditional PutObject before any read;
-   this does not need ListBucket or reinterpret AccessDenied as an empty household.
-   Confirm the packaged boto3/botocore support both PutObject conditional parameters.
-   The legacy deployment entry point now requires CI, --approved-commit and
-   --demo-secret-arn; it bundles the tested storage SDK and creates a change set
-   with --no-execute-changeset. Running it does not apply that change set.
-3. The backend IAM/config/code cutover and frontend publication require separate release
-   authority. Main merges still run CI but no longer publish this incompatible frontend
-   automatically. The manual frontend workflow requires the already-approved backend SHA
-   and checks its live capabilities before obtaining release credentials.
-4. Verify exact frontend/backend SHAs, anonymous-write denial and one approved isolated
-   synthetic session, including changed-draft rejection, replay, reload and state isolation.
-   Do not test by sending real email or modifying historical household records.
-5. On failure, keep writes disabled and serve read-only preview while reconciling receipts.
-   Do not automatically restore permissive SES/model IAM or the old unguarded action routes.
-   Preserved release artifacts and S3 versions support an explicitly reviewed paired rollback;
-   capability-key rotation revokes demo sessions and requires owner approval.
+[PRIMARY: repository inspection, 2026-09-12] Implementation baseline: `39e148536080e0957cc36dbd3ca8ea6b74785800`. Inspect the baseline with `git show 39e148536080e0957cc36dbd3ca8ea6b74785800:<path>`. The inventory below includes the subsequent hardening changes in this tree; reproduce them with `git rev-parse HEAD` and `git show HEAD:<path>`. This is repository evidence, not a pipeline result or live measurement. CI receipts must identify the tested revision separately.
 
-No production migration, secret creation, real send or paid model activation is performed
-by the source verification workflows.
-
-[![ci](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml/badge.svg)](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml)
-[![frontend-ci](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml)
-[![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
-[![python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
-
-**Hestia reconciles household debits against statutory warranty law and subscription baselines, recovering out-of-pocket appliance repairs through human-approved legal notices.**
-
-Built for **Elena**, a working parent in Munich managing three household appliance warranties, recurring family subscriptions, and utility bills without time to audit consumer protection laws.
-
----
-
-## Try it without installing anything
-
-**[https://drusjukc9d4oc.cloudfront.net/](https://drusjukc9d4oc.cloudfront.net/)**
-
-No account, no login, no local installation required. Opens directly on the 3-column operations cockpit:
-1. **Household Inventory**: appliances with live 24-month statutory warranty horizons (EU Directive 2019/771/EU), recurring subscriptions, and card debits flagged for missing receipts (>50 EUR anti-join).
-2. **Sentinel Radar**: animated radar feed prioritizing statutory warranty recovery, price creep spikes, and trial expirations.
-3. **Return-of-Control (ROC)**: human approval gate previewing formal notice letters before dispatch, backed by cryptographic dispute audit trails.
-
----
-
-## 1. The Everyday Problem
-
-Every year, modern households lose 500 EUR to 1,200 EUR due to four silent financial leaks:
-1. **Unexercised Statutory Warranties**: When major appliances (washers, refrigerators, TVs) malfunction within the mandatory 2-year statutory warranty period (EU Directive 2019/771/EU), consumers routinely pay repair technicians out-of-pocket, unaware that retailers are legally obligated to cover repair or replacement costs.
-2. **Stealth Price Creeping**: Subscriptions quietly raise prices by 1 EUR to 4 EUR per month without clear notification, compounding across dozens of digital services.
-3. **Zombie Free Trials**: 7-day or 30-day free trials convert into non-refundable annual charges without warning.
-4. **Utility Leakage and Spikes**: Water leaks, faulty thermostats, or meter reading errors remain unnoticed until multi-hundred euro bills arrive weeks later.
-
-**Hestia** operates as an autonomous, privacy-conscious domestic sentinel. It reconciles bank debits, scans utility statements, monitors warranty rights, and prepares pre-drafted reimbursement claim letters with human-in-the-loop Return-of-Control.
-
----
-
-## 2. Core Capabilities
-
-### A. Statutory Warranty and Repair Reimbursement Engine
-- **Statutory Guarantee Tracking**: Enforces mandatory 2-year statutory warranty windows alongside commercial manufacturer guarantees.
-- **Repair Invoice Reconciliation**: Cross-examines out-of-pocket repair costs against warranty dates, verifying whether the repair is 100% reimbursable under consumer protection law.
-- **Claim Drafting**: Formulates statutory reimbursement notices ready for retailer submission.
-
-### B. Subscription Leakage Auditor
-- **Price Creep Detection**: Identifies month-over-month price jumps across recurring subscriptions.
-- **Trial Expiration Horizon**: Triggers actionable alerts 3 to 7 days before free trials convert into paid tiers.
-- **Duplicate Service Scanner**: Detects redundant active subscriptions in identical categories (e.g., multiple streaming or cloud storage tiers).
-
-### C. Household Completeness and Utility Guard
-- **Receipt Anti-Join**: Highlights major bank debits (>50 EUR) lacking digital receipt or warranty proof, prompting proactive uploads before receipts fade or get discarded.
-- **Utility Baseline Anomaly Detection**: Compares current utility charges (water, gas, electricity) against seasonal baselines, immediately flagging surges exceeding 30%.
-
----
-
-## 3. Measured Results and Ablations
-
-Every number is produced by a reproducible command against the synthetic benchmark corpus:
-
-```bash
-python tools/measure.py
-python tools/ablate.py
-```
-
-### Measured Headline Results ([`docs/measurement.json`](docs/measurement.json))
-- **Headline Out-of-Pocket Recovery**: **185.00 EUR** recovered on a defective Bosch washing machine repair under EU Directive 2019/771/EU.
-- **Stealth Subscription Creep Caught**: **4.00 EUR/mo** (+40.0% unannounced hike) flagged on CloudVault Pro.
-- **Trial Auto-Renewal Exposure Guarded**: **419.88 EUR/year** intercepted prior to trial lock-in.
-- **Total Economic Exposure Guarded**: **791.88 EUR** across 4 household domains.
-- **Arithmetic Invariants**: 100% held with 0 calculation hallucinations.
-
-### What Each Rule is Worth ([`docs/ablation.json`](docs/ablation.json))
-| Rule | With Rule | Without Rule | Economic Delta |
+| Surface | Mode and useful behavior | Evidence path | Boundary / next evidence needed |
 |---|---|---|---|
-| **Statutory 2-year warranty window (Directive 2019/771/EU)** | 185 EUR repair invoice recognized as reimbursable; formal notice prepared | Consumer pays 185 EUR out-of-pocket, assuming commercial 1-year guarantee expired | +185.00 EUR |
-| **Subscription price creep detector** | Flags +4.00 EUR/mo stealth increase within 24 hours of posting | Silent ongoing fee increase totaling 48.00 EUR annually unnoticed | +48.00 EUR |
-| **7-day trial conversion horizon alert** | Warns user 3 days prior to non-refundable annual conversion | Converts automatically into 34.99 EUR non-refundable charge | +34.99 EUR |
-| **Receipt anti-join on outlays > 50 EUR** | Flags 85.00 EUR purchase missing digital proof before paper fades | Receipt discarded; warranty proof lost for future statutory claims | +85.00 EUR |
+| Anonymous preview | Implemented: read-only synthetic household records | `src/hestia/app/api.py` | Reading the preview does not create a private workspace |
+| Demo session | Implemented: explicit start creates an expiring capability for an isolated workspace | `src/hestia/app/access.py`, `src/hestia/app/api.py` | Demo access is not household identity verification |
+| Notice preparation | Implemented: deterministic review template; server binds recipient, subject, text, amount and source revision | `src/hestia/app/claims.py` | Draft language and fixture dates do not establish legal entitlement |
+| Approval and history | Simulated: approval, result and audit entry persist together; stale evidence and altered approval are rejected | `src/hestia/app/claims.py` | No delivery receipt, provider cancellation or recovery follows from approval |
+| Case follow-up | Implemented in source: actor, time, evidence reference, planning deadline, manual/synthetic replies, partial/resolved outcomes and reopen | `src/hestia/app/cases.py`, `src/hestia/domain/cases.py` | Attested amounts are separate from real recovery; evidence references are not independently authenticated |
+| Reader / writer | Implemented in infrastructure source: separate functions and roles; reader denies writes; both deny SES and Bedrock | `infra/hestia_api_stack.py` | Effective deployed IAM needs exact-release verification |
+| Persistence | Implemented S3 adapter: scoped `demo/workspaces/` keys, `If-None-Match` creation and `If-Match` updates; CI uses an in-memory store | `src/hestia/adapters/storage.py`, `scripts/ci_api_server.py` | Conditional writes and SHA-256 digests are not WORM storage or third-party signatures |
+| Household rules | Implemented: date comparisons, subscription deltas, receipt matching and utility baseline comparisons on supplied records | `src/hestia/agents/sentinel.py`, `src/hestia/domain/` | Fixture thresholds are assumptions; legal eligibility and real-world accuracy remain unverified |
+| Manual receipt reference | Implemented: visitor can link a receipt reference to a supplied outflow | `src/hestia/app/api.py` | A typed reference is not OCR or proof of document authenticity |
+| Document / manual import | Implemented in source: bounded PNG/JSON validation or manual facts, saved original/corrected records, exact reviewed subset, conditional commit, dedupe and replay | `src/hestia/app/intake.py`, `src/hestia/domain/intake.py`, `src/hestia/domain/ocr.py` | PNG text is not extracted; OCR stays unavailable. No account connection, appliance creation or document authenticity is inferred. Only hashes and reviewed facts are retained |
+| Bank / mailbox / retailer feeds | Not connected | `src/hestia/app/api.py` | No PSD2 feed, mailbox ingestion or retailer account sync is established |
+| Bedrock / Strands | Disabled in the demo route; optional agent construction exists in source, while consumer review letters are deterministic | `src/hestia/agents/sentinel.py`, `src/hestia/app/claims.py`, `infra/hestia_api_stack.py` | No paid live model result or AI-quality measurement is claimed |
+| AgentCore / Bedrock Guardrails / Action Groups | Proposed, not connected | `docs/BEDROCK_AGENTCORE_ARCHITECTURE.md` | Helper names and API metadata do not prove managed-service deployment |
+| SES | Disabled in the demo route and denied by infrastructure source | `src/hestia/app/claims.py`, `infra/hestia_api_stack.py` | Simulated outbox records are not sent email |
+| Optional MCTS | Toy illustration on explicit request; fixed assumptions, separate from claim preparation | `src/hestia/domain/mcts.py`, `src/hestia/app/api.py` | No empirical settlement probability, legal-route recommendation or measured time-to-resolution |
 
----
+## Explore the demo
 
-## 4. Amazon Bedrock AgentCore Architecture
+1. Open the cockpit and inspect the synthetic preview. Start an isolated demo session explicitly to enable its scoped actions.
+2. Review the household facts and prepare the exact server notice. Inspect its recipient, text, amount and evidence before approving the simulation.
+3. Open the saved case, record a manual or synthetic follow-up, and inspect the timeline. A planning deadline is a user-entered next step, not a verified legal deadline.
+4. Use About / Advanced to inspect illustrative journeys, commercial hypotheses and the read-only API console. Unknown and disabled states are visible beside the feature they limit.
 
-Hestia is architected natively for the Amazon Bedrock AgentCore paradigm:
+Source case follow-up is not a statement that the currently deployed URL includes this revision. A newer frontend must not be published over an incompatible backend.
 
-- **Bedrock Supervisor Agent**: Synthesizes multi-source financial events into a clear weekly Household Health Digest using Anthropic Claude on Bedrock.
-- **Bedrock Action Groups**: Exposes deterministic, integer-precision domain models via OpenAPI specifications for warranties, subscriptions, and completeness audits, guaranteeing zero arithmetic hallucinations.
-- **Bedrock Return-of-Control (ROC)**: Ensures homeowner autonomy. Hestia never executes cancellations or dispatches claims without explicit approval.
-- **Bedrock Guardrails**: Filters payment cards, IBANs, and sensitive personal data before model inference.
+## Synthetic examples and measurements
 
-See [docs/BEDROCK_AGENTCORE_ARCHITECTURE.md](docs/BEDROCK_AGENTCORE_ARCHITECTURE.md) for technical specifications and OpenAPI contracts.
+The amounts in `frontend/src/data/seedData.ts` are synthetic example inputs, not household savings. A repair invoice value is an amount for review; a subscription difference is arithmetic on supplied prices; a missing receipt is an evidence gap. None establishes reimbursement, prevented spending or a real outcome.
 
----
+`tools/measure.py` and `tools/ablate.py` operate on synthetic fixtures. Historical `docs/measurement.json` and `docs/ablation.json` remain unchanged: their recovery/exposure/delta labels describe synthetic amounts and rule assumptions, not real impact, seller confirmation or avoided household expenditure. They were not regenerated for this correction. Test counts, coverage, model accuracy, hallucination rates, cost, margin, ROI, market size, customer count and merchant settlement rates are unknown or unmeasured for this revision.
 
-## 5. Assurance, AWS Well-Architected and EU AI Act
+Any future measurement must identify its command, input sample, exact SHA, UTC execution time and retained output. Synthetic arithmetic, automated CI, live read-only checks, human attestation and live mutating drills must remain distinguishable.
 
-[`docs/assurance.md`](docs/assurance.md) holds three structured tables:
-1. **AWS Well-Architected Framework**: Operational Excellence, Security, Reliability, Performance Efficiency, Cost Optimisation, Sustainability, plus the 2026 Agentic AI Lens.
-2. **EU AI Act (Regulation EU 2024/1689)**: Articles 10, 12, 13, 14, 15, and 50 with honest residual gaps.
-3. **Data Protection and GDPR**: Complete data mapping demonstrating zero personal data processed in the demonstration.
+## Architecture and assurance
 
----
+The operative source flow is HTTP API to scoped Python handlers to conditional state persistence. Human approval is an application mechanism. It is not evidence of Bedrock Return-of-Control or AgentCore execution. See the [architecture inventory](docs/BEDROCK_AGENTCORE_ARCHITECTURE.md) and [assurance evidence and gaps](docs/assurance.md).
 
-## 6. Verification and Gates
+No certification, regulatory risk classification or completed AWS review is claimed. Legal references and jurisdiction-specific applicability require separate verification; these source corrections supply no legal verdict.
 
-Hestia is built to enterprise software standards with strict invariant enforcement and 100% test coverage.
+## Verification and testbook
 
-### Running Tests and Gates
-```bash
-# Run pytest with full statement and branch coverage
-python -m pytest --cov=hestia --cov-branch tests/ infra/test_frontend_hosting.py
+<a id="integration-testbook"></a>
 
-# Run ruff linter
-python -m ruff check src tests infra
+The table defines the integrated regression testbook. Commands below run only in CI; their existence is not a passing result. Read the workflow checkout SHA and retained artifacts together. Automated checks do not complete deployed acceptance, legal review or independent human UAT (NOT_RUN).
 
-# Run judge-facing prose gate (zero em dashes, no marketing jargon, no forbidden claims)
-python tools/prose_gate.py
+| Requirement | Targeted regression evidence | Integration receipt |
+|---|---|---|
+| HE5 document bytes and manual correction | `tests/test_ocr.py`; `tests/test_intake.py::test_json_correction_exact_review_commit_and_reload_retain_real_input_provenance`; `frontend/tests/intake.spec.ts` JSON correction/reload journey | Backend JUnit plus browser HTTP state assertions; malformed bytes must fail without a draft |
+| HE6 exact import, partial rows, dedupe and isolation | `tests/test_intake.py` partial-batch, stale/digest/consent, cross-session, concurrent-write and lost-response tests; corresponding `frontend/tests/intake.spec.ts` journeys | Valid rows only after explicit subset consent; one persisted result after retry; no provider call |
+| HE7 separate warranty facts and cautious wording | `tests/test_legal_guards.py` delivery/leap-day, statutory vs commercial, missing/contradictory facts, currency, draft tamper and current redress tests | JUnit proves technical guards, not legal entitlement or a jurisdiction-specific legal opinion |
+| HE8 coherent facts and unknown vs zero | `tests/test_intake.py::test_canonical_metric_projection_ignores_stale_summary_and_uses_inclusive_threshold`; `frontend/tests/display-facts.spec.ts`; `frontend/tests/snapshot-consistency.spec.ts` | Backend record projection plus desktop/mobile presentation fixtures with changed amounts, reload and keyboard navigation; real recovery stays zero |
+| HE9 complete saved case journey | `tests/test_case_api.py`, `tests/test_case_lifecycle.py`, `frontend/tests/case-lifecycle.spec.ts` | Actual CI HTTP journey: review, exact approval, follow-up, partial/rejected/resolved outcome and replay; independent human acceptance remains separate |
+| HE10 truthful detailed claims and read-only console | `tests/test_claims_inventory.py`; `frontend/tests/claims-inventory.spec.ts` | Injected false copy must fail; browser checks every journey, provider limits, unknown metrics and error reporting |
+| HE10 executed synthetic measurement, not financial outcomes | `tests/test_measurement_truthfulness.py`; `tests/test_web.py` | Backend evidence artifact includes CLI measurement/ablation JSON, fixture fingerprints and verification context; altered fixtures and historical overwrite attempts must fail |
+| Preserved P0 authority and deployment contract | Existing `frontend/tests/p0-session.spec.ts`, Python authority/storage tests and `frontend/acceptance/` | Existing negative gates and exact-content acceptance calibration remain required; calibration is not an AWS deployment receipt |
 
-# Run benchmark measurements and ablation
-python tools/measure.py
-python tools/ablate.py
-```
+The HE8 snapshot tests intentionally replace GET responses to test presentation and are not backend-write evidence. Intake and case journeys use the actual CI HTTP API and persisted isolated state; the lost-response journey intentionally aborts only after the server has committed. `display-facts.spec.ts` contains pure-function Playwright cases, not browser journeys. Source/PR checks run on each change and on merges to main. The frontend publication step stays owner-gated.
 
-### Coverage Report
-```
-=============================== tests coverage ================================
-Name                                 Stmts   Miss Branch BrPart  Cover   Missing
---------------------------------------------------------------------------------
-src/hestia/__init__.py                   1      0      0      0   100%
-src/hestia/agents/sentinel.py           48      0     20      0   100%
-src/hestia/agents/tools.py              58      0     34      0   100%
-src/hestia/app/__init__.py               0      0      0      0   100%
-src/hestia/app/web.py                   45      0     12      0   100%
-src/hestia/domain/__init__.py            0      0      0      0   100%
-src/hestia/domain/completeness.py       43      0     10      0   100%
-src/hestia/domain/subscriptions.py      47      0     10      0   100%
-src/hestia/domain/warranties.py         48      0      8      0   100%
---------------------------------------------------------------------------------
-TOTAL                                  290      0     94      0   100%
-37 passed in 0.45s
-```
+| CI scope | Command / workflow | Evidence required before reporting a result |
+|---|---|---|
+| Claims inventory | `python -m pytest tests/test_claims_inventory.py` | Exact SHA, UTC, JUnit and any failures |
+| Browser claims and preserved console | `npm --prefix frontend run test:e2e -- claims-inventory.spec.ts` | Existing CI API/Vite harness, exact SHA, Playwright report and screenshots |
+| Backend regression | `.github/workflows/ci.yml` | Complete result including lint, tests, coverage and runtime packaging |
+| Frontend regression | `.github/workflows/frontend-ci.yml` | Build, existing journeys, new claims checks and acceptance calibration |
+| Independent human UAT | NOT_RUN | Named human protocol and attestation; automated browser work is not a substitute |
 
----
+These commands belong in CI. Source checks cannot verify a deployed service or a real consumer outcome.
 
-## 7. License
+## Approval-only rollout and recovery
 
-Apache 2.0. Open source for household financial resilience.
+1. Review the exact candidate SHA, CI artifacts, IAM diff and stored-state compatibility. A dedicated signing secret is required; provisioning or rotating it needs release authority and its value must not enter source or logs.
+2. Render configuration in CI and inspect the CloudFormation change set before applying it. Retain the state bucket, historical keys and scoped conditional writes. The deployment helper prepares a change set; preparation is not execution.
+3. Backend cutover and frontend publication need separate owner approval. Main CI does not establish deployment. Verify paired frontend/backend identities, narrowed provider permissions, session isolation, changed-draft rejection, replay and reload against the approved revision.
+4. If a cutover fails, retain provider denials and reconcile retained state and release artifacts. Recovery requires a reviewed plan; restoring an unguarded legacy route is not an automatic fallback.
+
+Source verification performs no production migration, secret creation, real send or paid model activation.
+
+## Licensing metadata needs owner resolution
+
+[PRIMARY: repository inspection, 2026-09-12] At baseline `39e148536080e0957cc36dbd3ca8ea6b74785800`, `pyproject.toml` declares MIT while the earlier README asserted Apache-2.0. No LICENSE file is tracked (`git ls-tree -r --name-only 39e148536080e0957cc36dbd3ca8ea6b74785800`; inspect metadata with `git show 39e148536080e0957cc36dbd3ca8ea6b74785800:pyproject.toml`). Public licensing is an unresolved owner decision outside this correction. No license, copyright, ownership or publication change is made here.

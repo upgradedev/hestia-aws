@@ -34,6 +34,7 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
     <div className="space-y-8 animate-fade-in">
       {error && <p role="alert" className="text-rose-300">{error}</p>}
       {message && <p role="status" className="text-amber-300">{message}</p>}
+      <button data-testid="open-intake" onClick={onOpenReceiptModal} className="rounded-lg bg-amber-500 text-slate-950 px-4 py-2 text-sm font-bold">Import documents / View saved intake</button>
       {/* Overview Header */}
       <div className="rounded-2xl bg-[#0e1420] border border-white/10 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -49,7 +50,7 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
             Subscriptions, Stealth Price Hikes & Bank Feeds
           </h2>
           <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
-            Hestia continuously audits recurring card charges for unannounced price creep and flags free trials before auto-renewal lock-ins.
+            Review recorded recurring charges, price changes and trial dates. Account connections and automatic monitoring are unavailable. Synthetic requests do not cancel subscriptions.
           </p>
         </div>
 
@@ -74,6 +75,7 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
             {subscriptions.map((sub) => (
               <div
                 key={sub.id}
+                data-testid={`subscription-${sub.id}`}
                 className={`rounded-xl p-4 border transition-all ${
                   sub.is_trial
                     ? 'bg-purple-950/20 border-purple-500/40'
@@ -119,10 +121,10 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
                     <span className="text-xs text-purple-300">Will charge €{sub.renewal_cost_eur.toFixed(2)}/mo</span>
                     <button
                       onClick={() => { void handleCancel(sub.id); }}
-                      disabled={actionsDisabled || !!pendingId}
+                      disabled={actionsDisabled || !!pendingId || sub.synthetic_requested}
                       className="py-1.5 px-3.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs cursor-pointer shadow transition-all"
                     >
-                      Simulate Cancellation Request
+                      {sub.synthetic_requested ? 'Synthetic Request Saved' : 'Simulate Cancellation Request'}
                     </button>
                   </div>
                 )}
@@ -135,7 +137,7 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-white flex items-center justify-between pb-2 border-b border-white/10">
             <span>Bank Card Transactions ({outflows.length})</span>
-            <span className="text-xs text-slate-400 font-mono">Receipt Anti-Join &gt; €50</span>
+            <span className="text-xs text-slate-400 font-mono">Receipt Review ≥ €50</span>
           </h3>
 
           <div className="space-y-3">
@@ -152,7 +154,7 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
                   <div>
                     <h4 className="text-sm font-medium text-white">{tx.merchant}</h4>
                     <div className="text-xs text-slate-400 font-mono mt-0.5">
-                      {tx.timestamp} &bull; Card ending ••{tx.card_digits}
+                      {tx.timestamp} &bull; Transaction {tx.id}
                     </div>
                   </div>
 

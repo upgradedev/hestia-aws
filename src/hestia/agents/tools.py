@@ -18,9 +18,11 @@ from hestia.domain.subscriptions import (
     detect_duplicates,
 )
 from hestia.domain.warranties import (
+    REDRESS_GUIDANCE,
+    REMEDY_LIMITATIONS,
     ApplianceWarranty,
-    WarrantyStatus,
     evaluate_repair_claim,
+    format_repair_amount,
 )
 
 try:
@@ -39,28 +41,35 @@ def check_appliance_warranty_tool(
     repair_date: date | None = None,
     repair_amount_cents: int = 0,
 ) -> str:
-    """Evaluate warranty validity and repair claim coverage for an appliance."""
-    status, days = warranty.check_status(current_date)
-    expiry = warranty.get_expiry_date()
-
-    if status == WarrantyStatus.EXPIRED:
-        msg = f"{warranty.item_name} warranty EXPIRED on {expiry} ({abs(days)} days ago)."
-    elif status == WarrantyStatus.EXPIRING_SOON:
-        msg = f"{warranty.item_name} warranty EXPIRING SOON on {expiry} ({days} days remaining)."
-    else:
-        msg = f"{warranty.item_name} warranty ACTIVE until {expiry} ({days} days remaining)."
-
-    if repair_date is not None and repair_amount_cents > 0:
-        claim = evaluate_repair_claim(warranty, repair_date, repair_amount_cents)
-        if claim.is_covered:
-            msg += (
-                f"\nREIMBURSABLE: Repair on {repair_date} of €{repair_amount_cents/100:.2f} "
-                f"falls within coverage. Claimable: €{claim.claimable_amount_cents/100:.2f}."
-            )
+    """Show separate recorded timing and missing evidence, never warranty entitlement."""
+    lines = [f"{warranty.item_name}: REVIEW REQUIRED. No legal entitlement determined."]
+    for ground, expiry in (
+        ("Statutory delivery-based screening", warranty.get_statutory_expiry_date()),
+        ("Commercial terms-based screening", warranty.get_commercial_expiry_date()),
+    ):
+        if expiry is None:
+            lines.append(f"{ground}: unknown; start date, period or terms not recorded.")
         else:
-            msg += f"\nNOT COVERED: Repair on {repair_date} is outside warranty window."
-
-    return msg
+            days = (expiry - current_date).days
+            lines.append(f"{ground}: boundary {expiry}, {days} days from review date.")
+    if warranty.purchase_date is not None:
+        lines.append(
+            f"Legacy purchase-based reminder: {warranty.get_expiry_date()}. "
+            "This combined reminder is not a statutory or commercial entitlement."
+        )
+    if repair_amount_cents != 0:
+        claim = evaluate_repair_claim(warranty, repair_date, repair_amount_cents)
+        lines.extend([
+            "Recorded repair cost: "
+            f"{format_repair_amount(repair_amount_cents, warranty.currency)}.",
+            claim.reason,
+            "Missing facts: " + (", ".join(claim.missing_facts) or "none in the timing record"),
+            "Review flags: " + ", ".join(claim.review_reasons),
+        ])
+    elif repair_date is not None:
+        lines.append(f"Recorded repair date: {repair_date}; positive repair amount not provided.")
+    lines.append(REMEDY_LIMITATIONS)
+    return "\n".join(lines)
 
 
 @strands_tool
@@ -123,55 +132,45 @@ def check_completeness_tool(
 
 def draft_statutory_claim_letter(
     warranty: ApplianceWarranty,
-    repair_date: date,
+    repair_date: date | None,
     repair_amount_cents: int,
     issue_description: str,
     homeowner_name: str,
 ) -> str:
-    """Draft a legally grounded reimbursement request under EU Directive 2019/771/EU."""
+    """Prepare an evidence-bound review request; caller must obtain exact-content approval."""
     claim = evaluate_repair_claim(warranty, repair_date, repair_amount_cents)
-    if not claim.is_covered:
-        return (
-            f"Cannot draft reimbursement letter: Repair date {repair_date} "
-            f"falls outside active warranty window (expires {warranty.get_expiry_date()})."
-        )
-
-    amount_fmt = f"€{repair_amount_cents/100:.2f}"
-    expiry_fmt = str(warranty.get_expiry_date())
-    receipt_ref = warranty.receipt_reference or "On File"
-
     lines = [
-        f"Subject: Formal Reimbursement Request: Statutory Guarantee ({warranty.item_name})",
+        f"Subject: Repair evidence review request ({warranty.item_name})",
         "",
         "Dear Customer Relations / Service Department,",
         "",
-        (
-            f"I am writing to formally request reimbursement of repair costs incurred for "
-            f"my {warranty.item_name} (Serial Number: {warranty.serial_number}), "
-            f"purchased on {warranty.purchase_date}."
-        ),
+        f"Please review the available remedy for {warranty.item_name}.",
+        f"Recorded serial number: {warranty.serial_number or 'not provided'}.",
+        f"Recorded purchase date: {warranty.purchase_date or 'not provided'}.",
+        f"Recorded delivery date: {warranty.delivery_date or 'not provided'}.",
+        f"Recorded jurisdiction: {warranty.jurisdiction or 'not provided'} (not verified).",
+        f"Recorded defect date: {warranty.defect_date or 'not provided'}.",
+        f"Recorded repair date: {repair_date or 'not provided'}.",
+        f"Reported issue (household statement, not verified): {issue_description}.",
+        f"Recorded repair cost: {format_repair_amount(repair_amount_cents, warranty.currency)}.",
+        f"Receipt reference: {warranty.receipt_reference or 'not provided'} "
+        "(reference only; attachment and contents not verified).",
         "",
-        (
-            f"On {repair_date}, the unit suffered a non-conformity failure ({issue_description}), "
-            f"requiring repair services totaling {amount_fmt}."
-        ),
+        claim.reason,
+        "Statutory delivery-based screening boundary: "
+        f"{claim.statutory_expiry_date or 'unknown'}; defect timing: {claim.statutory_timing}.",
+        f"Commercial screening boundary: {claim.commercial_expiry_date or 'unknown'}; "
+        f"repair timing: {claim.commercial_timing}.",
+        "Missing facts: " + (", ".join(claim.missing_facts) or "none in the timing record") + ".",
+        "Review flags: " + ", ".join(claim.review_reasons) + ".",
         "",
-        (
-            "Under the mandatory provisions of EU Directive 2019/771/EU (transposed into national "
-            "consumer sales law), consumers are entitled to repair or replacement free of charge "
-            "for lack of conformity appearing within the 2-year statutory period."
-        ),
+        "General reference, subject to applicability: Directive (EU) 2019/771, Articles 10-17. "
+        "Statutory seller liability and commercial guarantor terms require separate review.",
+        REMEDY_LIMITATIONS,
         "",
-        (
-            f"Because this fault manifested within the statutory conformity window (active through "
-            f"{expiry_fmt}), the costs of repair cannot be borne by the consumer."
-        ),
-        "",
-        "Attached:",
-        f"1. Proof of purchase / invoice ({receipt_ref}).",
-        f"2. Itemized repair technician receipt for {amount_fmt}.",
-        "",
-        "Please confirm receipt and arrangement for reimbursement within 14 calendar days.",
+        "Please explain the proposed remedy and any further evidence needed. "
+        "No statutory response deadline is asserted by this draft.",
+        REDRESS_GUIDANCE,
         "",
         "Sincerely,",
         homeowner_name,

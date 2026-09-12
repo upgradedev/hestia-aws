@@ -2,22 +2,22 @@ import React from 'react';
 
 export const GtmInvestorView: React.FC = () => {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="commercial-claims">
       {/* Top Value Prop Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-amber-950/30 to-slate-900 border border-amber-500/30 p-6 lg:p-8 shadow-2xl backdrop-blur-xl">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">
-            INVESTOR & GO-TO-MARKET ARCHITECTURE
+            COMMERCIAL HYPOTHESES & EVIDENCE GAPS
           </span>
           <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-500/30">
-            EUROPEAN REGULATORY MOAT
+            DISCOVERY STAGE
           </span>
         </div>
         <h2 className="text-2xl lg:text-3xl font-black text-white tracking-tight">
-          Commercializing the €38.4B Unclaimed Domestic Wealth Horizon
+          A household review workflow to validate
         </h2>
         <p className="text-xs lg:text-sm text-slate-300 mt-2 max-w-4xl leading-relaxed">
-          While US fintechs focus purely on card subscription cancellations, European households operate under the most powerful consumer protection regime on earth: <strong className="text-white font-semibold">Directive (EU) 2019/771</strong> and the <strong className="text-white font-semibold">Right to Repair Directive (EU) 2024/1799</strong>. Hestia combines deterministic statutory knowledge with Amazon Bedrock to create the first autonomous domestic legal sentinel.
+          The proposed audience is households organising appliance receipts, recurring charges and repair follow-up. The source demonstrates review, explicit simulated approval and case history. Demand, pricing and household outcomes still need evidence; no paid model or bank connection is active.
         </p>
       </div>
 
@@ -25,28 +25,28 @@ export const GtmInvestorView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="glass-panel rounded-2xl p-6 border border-white/10 relative overflow-hidden">
           <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">TOTAL ADDRESSABLE MARKET</div>
-          <div className="text-3xl font-black text-white font-mono mt-1">€38.4B</div>
-          <div className="text-xs font-semibold text-amber-400 mt-1">220M EU Households</div>
+          <div className="text-3xl font-black text-white font-mono mt-1">Unknown</div>
+          <div className="text-xs font-semibold text-amber-400 mt-1">No sourced household cohort</div>
           <p className="text-xs text-slate-400 mt-3 leading-relaxed">
-            Calculated at an average €175 per household annual economic leakage across expired warranties, hidden tier hikes, and unbacked outlays.
+            Market size is unknown. Establish a dated household population, a defined segment and evidence of the problem before estimating spend.
           </p>
         </div>
 
         <div className="glass-panel rounded-2xl p-6 border border-amber-500/30 bg-amber-950/10 relative overflow-hidden">
           <div className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">SERVICEABLE ADDRESSABLE MARKET</div>
-          <div className="text-3xl font-black text-amber-400 font-mono mt-1">€4.2B</div>
-          <div className="text-xs font-semibold text-white mt-1">24M Digital DACH + Western Europe</div>
+          <div className="text-3xl font-black text-amber-400 font-mono mt-1">Unknown</div>
+          <div className="text-xs font-semibold text-white mt-1">Segment hypothesis</div>
           <p className="text-xs text-slate-300 mt-3 leading-relaxed">
-            Tech-forward households utilizing Open Banking, digital neo-banks (N26, Revolut, Bunq), and active high-ticket domestic e-commerce.
+            Start with households managing an appliance repair and scattered proof of purchase. Reach, willingness to try and supported jurisdictions are unverified.
           </p>
         </div>
 
         <div className="glass-panel rounded-2xl p-6 border border-emerald-500/30 bg-emerald-950/10 relative overflow-hidden">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">SERVICEABLE OBTAINABLE MARKET (Y3)</div>
-          <div className="text-3xl font-black text-emerald-400 font-mono mt-1">€84M</div>
-          <div className="text-xs font-semibold text-white mt-1">500,000 Paying Households / B2B2C Seats</div>
+          <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">OBTAINABLE MARKET</div>
+          <div className="text-3xl font-black text-emerald-400 font-mono mt-1">Unknown</div>
+          <div className="text-xs font-semibold text-white mt-1">No acquisition cohort</div>
           <p className="text-xs text-slate-300 mt-3 leading-relaxed">
-            Achieved through dual distribution: Direct consumer subscription (€49/year) plus embedded fintech API white-labeling.
+            There is no acquisition or conversion sample here. A forecast needs observed funnel data, retention and a validated price.
           </p>
         </div>
       </div>
@@ -56,122 +56,122 @@ export const GtmInvestorView: React.FC = () => {
         {/* Stream 1: B2C Consumer SaaS */}
         <div className="glass-panel rounded-2xl p-6 border border-white/10 flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10">
               <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
-                STREAM 01 // B2C FREEMIUM
+                HYPOTHESIS 01 // HOUSEHOLD PLAN
               </span>
               <span className="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
                 Direct to Homeowner
               </span>
             </div>
 
-            <h3 className="text-lg font-bold text-white mt-3">Hestia Consumer Subscription</h3>
+            <h3 className="text-lg font-bold text-white mt-3">Proposed household subscription</h3>
             <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-              Everyday consumers connect their bank feed or upload invoices for immediate detection.
+              A possible plan would help people organise review and follow-up. Bank feeds are not connected and actual receipt OCR is disabled.
             </p>
 
             <div className="mt-4 space-y-2.5">
-              <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 flex items-center justify-between text-xs">
+              <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <div>
-                  <div className="font-bold text-white">Free Sentinel Tier (€0/mo)</div>
-                  <div className="text-slate-400 text-[11px]">Asset catalog, calendar expiry alerts, receipt anti-join scanning</div>
+                  <div className="font-bold text-white">Demo review workflow</div>
+                  <div className="text-slate-400 text-[11px]">Synthetic facts, exact notice review and simulated case history</div>
                 </div>
-                <span className="font-mono text-slate-400">Top-of-Funnel</span>
+                <span className="font-mono text-slate-400">Implemented source</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <div>
-                  <div className="font-bold text-white">Hestia Pro (€4.99/mo or €49/yr)</div>
-                  <div className="text-slate-300 text-[11px]">Autonomous Return-of-Control dispatches, formal legal notices, unlimited OCR</div>
+                  <div className="font-bold text-white">Paid plan: not offered</div>
+                  <div className="text-slate-300 text-[11px]">Price and scope need validation; OCR and provider dispatch are disabled</div>
                 </div>
-                <span className="font-mono text-amber-400 font-bold">8.2x ROI for User</span>
+                <span className="font-mono text-amber-400 font-bold">ROI unmeasured</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-3 border-t border-white/10 text-xs font-mono text-slate-400 flex items-center justify-between">
-            <span>Target CAC: €18.50</span>
-            <span className="text-emerald-400">Projected LTV: €152.00</span>
+          <div className="pt-3 border-t border-white/10 text-xs font-mono text-slate-400 flex flex-wrap items-center justify-between gap-2">
+            <span>Acquisition cost: unknown</span>
+            <span className="text-emerald-400">Lifetime value: unknown</span>
           </div>
         </div>
 
         {/* Stream 2: B2B2C Embedded Neobank API */}
         <div className="glass-panel rounded-2xl p-6 border border-white/10 flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10">
               <span className="text-xs font-mono uppercase tracking-wider text-indigo-400 font-bold">
-                STREAM 02 // B2B2C EMBEDDED API
+                HYPOTHESIS 02 // PARTNER WORKFLOW
               </span>
               <span className="text-xs font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
                 Neobanks & Insurtech
               </span>
             </div>
 
-            <h3 className="text-lg font-bold text-white mt-3">Embedded Return-of-Control SDK</h3>
+            <h3 className="text-lg font-bold text-white mt-3">Proposed embedded review workflow</h3>
             <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-              European neobanks (Revolut, N26, Bunq) white-label Hestia to reduce card churn and boost premium account stickiness.
+              A future partner could expose review and follow-up inside its own product. No partner deployment, agreement or SDK integration is evidenced here.
             </p>
 
             <div className="mt-4 space-y-2.5">
-              <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 flex items-center justify-between text-xs">
+              <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <div>
-                  <div className="font-bold text-white">Per-User License (€1.20 - €1.80/mo)</div>
-                  <div className="text-slate-400 text-[11px]">Embedded directly inside banking app 'Card Perks' or 'Wealth Shield' tab</div>
+                  <div className="font-bold text-white">Per-user pricing: unknown</div>
+                  <div className="text-slate-400 text-[11px]">Requires partner discovery and a reviewed integration contract</div>
                 </div>
-                <span className="font-mono text-indigo-400">Zero CAC</span>
+                <span className="font-mono text-indigo-400">Cost unmeasured</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-between text-xs">
+              <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <div>
-                  <div className="font-bold text-white">Success-Fee Recovery Share (15%)</div>
-                  <div className="text-slate-300 text-[11px]">Revenue split on successful out-of-pocket statutory reimbursements</div>
+                  <div className="font-bold text-white">Outcome-based pricing: unvalidated</div>
+                  <div className="text-slate-300 text-[11px]">Would require independently verified outcomes and legal review</div>
                 </div>
-                <span className="font-mono text-emerald-400 font-bold">Pure Upside</span>
+                <span className="font-mono text-emerald-400 font-bold">No revenue evidence</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-3 border-t border-white/10 text-xs font-mono text-slate-400 flex items-center justify-between">
-            <span>Bank Churn Reduction: -14%</span>
-            <span className="text-indigo-400">High API Margin: ~92%</span>
+          <div className="pt-3 border-t border-white/10 text-xs font-mono text-slate-400 flex flex-wrap items-center justify-between gap-2">
+            <span>Churn effect: unmeasured</span>
+            <span className="text-indigo-400">API margin: unmeasured</span>
           </div>
         </div>
       </div>
 
       {/* Unit Economics & AWS Serverless Margins */}
       <div className="glass-panel rounded-2xl p-6 border border-white/10">
-        <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-white/10 mb-4">
           <h3 className="text-base font-bold text-white">
-            Unit Economics & AWS Serverless Cost Profile
+            Unit economics: evidence still needed
           </h3>
           <span className="text-xs font-mono text-emerald-400 font-bold">
-            Gross Margin: ~88%
+            Gross margin: unmeasured
           </span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5">
-            <div className="text-[10px] font-mono text-slate-400 uppercase">Monthly Price / User</div>
-            <div className="text-lg font-bold text-white font-mono mt-1">€4.99</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">B2C Subscription</div>
+            <div className="text-[10px] font-mono text-slate-400 uppercase">Validated price / user</div>
+            <div className="text-lg font-bold text-white font-mono mt-1">Unknown</div>
+            <div className="text-[10px] text-slate-500 mt-0.5">No pricing study</div>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5">
-            <div className="text-[10px] font-mono text-slate-400 uppercase">AWS Serverless COGS</div>
-            <div className="text-lg font-bold text-emerald-400 font-mono mt-1">&lt;€0.04</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">Bedrock Haiku + Lambda</div>
+            <div className="text-[10px] font-mono text-slate-400 uppercase">Cost per completed case</div>
+            <div className="text-lg font-bold text-emerald-400 font-mono mt-1">Unmeasured</div>
+            <div className="text-[10px] text-slate-500 mt-0.5">No billed workload sample</div>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5">
             <div className="text-[10px] font-mono text-slate-400 uppercase">Blended CAC</div>
-            <div className="text-lg font-bold text-amber-400 font-mono mt-1">€18.50</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">Payback in 3.8 months</div>
+            <div className="text-lg font-bold text-amber-400 font-mono mt-1">Unknown</div>
+            <div className="text-[10px] text-slate-500 mt-0.5">No acquisition cohort</div>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5">
             <div className="text-[10px] font-mono text-slate-400 uppercase">LTV / CAC Ratio</div>
-            <div className="text-lg font-bold text-emerald-400 font-mono mt-1">8.2x</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">Top Decile SaaS</div>
+            <div className="text-lg font-bold text-emerald-400 font-mono mt-1">Unknown</div>
+            <div className="text-[10px] text-slate-500 mt-0.5">No retention cohort</div>
           </div>
         </div>
       </div>
@@ -180,38 +180,38 @@ export const GtmInvestorView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-indigo-500/20 p-6 space-y-3">
           <h3 className="text-sm font-bold text-white uppercase font-mono tracking-wider text-indigo-400">
-            The Statutory Moat: Why US Big Tech Cannot Replicate
+            Legal applicability: review required
           </h3>
           <p className="text-xs text-slate-300 leading-relaxed">
-            US competitors (Mint, Rocket Money, Copilot) are built purely around US card aggregators and voluntary merchant refund APIs. They have no concept of European statutory 24-month liability, reverse burden of proof periods, German Civil Code (BGB) § 437/439 rules, or European Order for Payment (EOP) procedures. Hestia is natively codified for European civil law.
+            A useful review workflow needs the purchase facts, defect history, jurisdiction and available evidence. Deterministic date calculations and generated text do not establish a remedy, legal certification or a defensible market position.
           </p>
           <div className="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/20 text-[11px] font-mono text-indigo-300">
-            &bull; Directive (EU) 2019/771 &bull; Right to Repair (EU) 2024/1799 &bull; BGB § 437
+            Official references and jurisdiction-specific review pending
           </div>
         </div>
 
         <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/30 border border-emerald-500/20 p-6 space-y-3">
           <h3 className="text-sm font-bold text-white uppercase font-mono tracking-wider text-emerald-400">
-            Proprietary Merchant Intelligence Moat
+            Merchant outcomes: no measured cohort
           </h3>
           <p className="text-xs text-slate-300 leading-relaxed">
-            Every sealed claim generates an empirical datapoint on merchant compliance cycles. At 100,000 households, Hestia becomes the proprietary intelligence benchmark for European retailer warranty adherence.
+            Simulated approvals and user-entered outcomes cannot establish merchant settlement rates. A future study needs consent, independently verified replies, sample definitions and observation dates.
           </p>
           <div className="grid grid-cols-3 gap-2 text-[11px] font-mono text-center">
             <div className="p-2 rounded bg-slate-900 border border-white/5">
-              <div className="text-slate-400 text-[10px]">MediaMarkt</div>
-              <div className="text-emerald-400 font-bold">92% Settle</div>
-              <div className="text-slate-500 text-[10px]">8 days avg</div>
+              <div className="text-slate-400 text-[10px]">Settlement</div>
+              <div className="text-emerald-400 font-bold">Unknown</div>
+              <div className="text-slate-500 text-[10px]">No verified cohort</div>
             </div>
             <div className="p-2 rounded bg-slate-900 border border-white/5">
-              <div className="text-slate-400 text-[10px]">Amazon EU</div>
-              <div className="text-emerald-400 font-bold">98% Settle</div>
-              <div className="text-slate-500 text-[10px]">48h avg</div>
+              <div className="text-slate-400 text-[10px]">Duration</div>
+              <div className="text-emerald-400 font-bold">Unmeasured</div>
+              <div className="text-slate-500 text-[10px]">No timed cohort</div>
             </div>
             <div className="p-2 rounded bg-slate-900 border border-white/5">
-              <div className="text-slate-400 text-[10px]">IKEA DE</div>
-              <div className="text-emerald-400 font-bold">95% Settle</div>
-              <div className="text-slate-500 text-[10px]">5 days avg</div>
+              <div className="text-slate-400 text-[10px]">Real recovery</div>
+              <div className="text-emerald-400 font-bold">Unmeasured</div>
+              <div className="text-slate-500 text-[10px]">No receipt cohort</div>
             </div>
           </div>
         </div>
@@ -222,26 +222,27 @@ export const GtmInvestorView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/10">
           <div>
             <span className="text-[10px] font-mono uppercase tracking-widest text-indigo-400 font-bold">
-              B2B2C EMBEDDED INTEGRATION
+              PROPOSED PARTNER CONTRACT
             </span>
             <h3 className="text-base font-bold text-white">
-              Partner API Playground: Ingest PSD2 Card Feeds (Revolut / N26)
+              Partner payload illustration: not connected
             </h3>
           </div>
           <span className="text-xs font-mono px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-            POST /api/v1/partner/ingest_stream
+            No partner endpoint deployed
           </span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs font-mono">
           <div className="p-3.5 rounded-xl bg-[#080b10] border border-white/10 space-y-2">
-            <span className="text-slate-400 uppercase text-[10px]">Inbound Neobank Telemetry (JSON)</span>
+            <span className="text-slate-400 uppercase text-[10px]">Synthetic input sketch; no request sent</span>
             <pre className="text-indigo-300 overflow-x-auto leading-relaxed">
 {`{
-  "partner_id": "revolut-eu-prod",
-  "user_token": "usr_9941a82f",
+  "mode": "synthetic_example",
+  "partner_id": "example-partner",
+  "subject_reference": "fictional-household",
   "outflow": {
-    "merchant": "MediaMarkt Munich",
+    "merchant": "Example appliance shop",
     "amount_cents": 18500,
     "mcc": "5732",
     "currency": "EUR"
@@ -251,14 +252,14 @@ export const GtmInvestorView: React.FC = () => {
           </div>
 
           <div className="p-3.5 rounded-xl bg-[#080b10] border border-emerald-500/30 space-y-2">
-            <span className="text-emerald-400 uppercase text-[10px]">Hestia Return-of-Control Dispatch (Response)</span>
+            <span className="text-emerald-400 uppercase text-[10px]">Proposed response shape; not a runtime result</span>
             <pre className="text-emerald-300 overflow-x-auto leading-relaxed">
 {`{
-  "status": "statutory_warranty_gap_detected",
-  "eligible_directive": "2019/771/EU Article 10",
-  "potential_recovery_eur": 185.00,
-  "action_required": "human_roc_signature_gate",
-  "in_app_card_prompt": "Claim €185 repair refund"
+  "mode": "synthetic_example",
+  "connection": "not_connected",
+  "legal_eligibility": "requires_review",
+  "verified_recovery_eur": null,
+  "next_step": "review_supplied_facts"
 }`}
             </pre>
           </div>

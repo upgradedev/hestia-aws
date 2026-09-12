@@ -14,7 +14,7 @@ import { EmailSyncModal } from './components/EmailSyncModal';
 import { CaseWorkspace } from './components/CaseWorkspace';
 import type { CaseUpdate } from './cases';
 import { api, ApiError } from './api';
-import type { ClaimDraft } from './api';
+import type { ClaimDraft, IntakeRoute } from './api';
 import { EMPTY_SUMMARY, mapState } from './stateMapping';
 import { useDemoSession } from './useDemoSession';
 import type { ActiveTab, Locale } from './types';
@@ -53,7 +53,7 @@ export const App: React.FC = () => {
   const cancelTrial = (id: string) => demo.mutate(async token => {
     const sub = demo.state?.subscriptions.find(s => s.id === id);
     if (!sub) throw new ApiError('Unknown subscription. Refresh session state.');
-    return { state: await api.cancel(token, sub.service_name), value: true };
+    return { state: await api.cancel(token, sub.service_name, sub.id, sub.monthly_cents), value: true };
   });
   const dispute = (provider: string, excessCents: number) => demo.mutate(async token => ({
     state: await api.utility(token, provider, excessCents), value: undefined,
@@ -61,8 +61,13 @@ export const App: React.FC = () => {
   const linkReceipt = (id: string, receiptId: string) => demo.mutate(async token => {
     const outflow = demo.state?.outflows.find(o => o.id === id);
     if (!outflow) throw new ApiError('Unknown outflow. Refresh session state.');
-    return { state: await api.receipt(token, outflow.merchant, outflow.amount_cents, receiptId), value: undefined };
+    return { state: await api.receipt(token, outflow.merchant, outflow.amount_cents, receiptId, outflow.id), value: undefined };
   });
+  const importIntake = (route: IntakeRoute, body: Record<string, unknown>) => demo.mutate(async token => {
+    const result = await api.intake(token, route, body);
+    return { state: result.state, value: result.intake };
+  });
+  const intakeProps = { enabled, stateVersion: demo.state?.version_seq ?? 0, drafts: demo.state?.intakes ?? [], onIntake: importIntake };
   const reset = async () => {
     await demo.mutate(async token => ({ state: await api.reset(token), value: undefined }));
     setSelection(null); setIsUtilityModalOpen(false); setIsReceiptModalOpen(false);
@@ -99,6 +104,7 @@ export const App: React.FC = () => {
         {(activeTab === 'overview' || activeTab === 'cases') && demo.state && <CaseWorkspace key={demo.session?.token ?? 'preview'} state={demo.state} enabled={enabled} onPrepare={openNotice} onUpdate={updateCase} onRefresh={demo.refresh} />}
         {activeTab === 'overview' && view && <ConsumerDashboard summary={view.summary} alerts={view.alerts} dispatchHistory={demo.state?.dispatch_records ?? []}
           householdName={demo.state?.household_name ?? ''} actionsDisabled={!enabled}
+          {...{ snapshotVersion: demo.state?.version_seq, snapshotObservedAt: demo.state?.last_updated }}
           onOpenNoticeModal={openNotice} onCancelTrial={cancelTrial} onOpenReceiptModal={() => setIsReceiptModalOpen(true)}
           onOpenUtilityDisputeModal={() => setIsUtilityModalOpen(true)} onViewAllAssets={() => setActiveTab('vault')} onViewAllSubscriptions={() => setActiveTab('subscriptions')} />}
         {activeTab === 'vault' && view && <AssetVaultView appliances={view.appliances} snapshotDate={demo.state!.last_updated} actionsDisabled={!enabled} onOpenClaimModal={a => openNotice(a.id)} />}
@@ -117,11 +123,11 @@ export const App: React.FC = () => {
       {selection && demo.session && <FormalNoticeModal key={demo.session.token + ':' + selection} appliance={selectedAppliance} isOpen
         token={demo.session.token} enabled={enabled} onClose={() => setSelection(null)} onError={demo.reportError} onDispatch={approve}
         onViewCase={() => { setSelection(null); setActiveTab('cases'); void demo.refresh(); }} />}
-      {isReceiptModalOpen && <ReceiptUploadModal key={demo.session?.token ?? 'preview'} isOpen onClose={() => setIsReceiptModalOpen(false)}
-        outflows={view?.outflows ?? []} enabled={enabled} onReceiptMatched={linkReceipt} />}
-      {isUtilityModalOpen && <UtilityDisputeModal key={demo.session?.token ?? 'preview'} isOpen onClose={() => setIsUtilityModalOpen(false)}
+      {isReceiptModalOpen && <ReceiptUploadModal key={'receipt-' + (demo.session?.token ?? 'preview')} isOpen onClose={() => setIsReceiptModalOpen(false)}
+        outflows={view?.outflows ?? []} enabled={enabled} onReceiptMatched={linkReceipt} intake={intakeProps} />}
+      {isUtilityModalOpen && <UtilityDisputeModal key={'utility-' + (demo.session?.token ?? 'preview')} isOpen onClose={() => setIsUtilityModalOpen(false)}
         bill={utilityBill} homeownerName={demo.state?.homeowner_name ?? ''} enabled={enabled} onDispute={dispute} />}
-      <EmailSyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} />
+      <EmailSyncModal key={'sync-' + (demo.session?.token ?? 'preview')} isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} intake={intakeProps} />
       <footer className="border-t border-white/5 py-4 px-6 text-xs text-slate-500 font-mono flex flex-col sm:flex-row items-center justify-between gap-2 max-w-[1500px] mx-auto w-full">
         <div>Hestia &bull; Household Sentinel &bull; Directive (EU) 2019/771</div>
         <div>Synthetic demo &bull; Explicit approval &bull; Simulated history</div>

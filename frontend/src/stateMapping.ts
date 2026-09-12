@@ -15,7 +15,7 @@ export function mapState(state: BackendState) {
     legal_statutory_months: a.statutory_months, statutory_warranty_months: a.statutory_months,
     commercial_warranty_months: a.commercial_months, status: a.has_repair_claim ? 'defect_reported' : 'active',
     defect_reported_at: a.repair_date, defect_description: a.repair_issue,
-    statutory_basis: 'Directive (EU) 2019/771', repair_amount_cents: a.repair_amount_cents, claim_status: a.claim_status,
+    statutory_basis: 'Directive (EU) 2019/771', repair_amount_cents: a.repair_amount_known === false ? undefined : a.repair_amount_cents, claim_status: a.claim_status,
   }));
   const subscriptions: SubscriptionTracker[] = state.subscriptions.filter(s => s.status !== 'cancelled').map(s => ({
     id: s.id, name: s.service_name,
@@ -24,11 +24,12 @@ export function mapState(state: BackendState) {
     price_creep_pct: s.previous_monthly_cents ? Math.round((s.monthly_cents / s.previous_monthly_cents - 1) * 100) : 0,
     is_trial: s.is_trial, trial_expires_at: s.trial_end_date,
     next_billing_date: s.trial_end_date ?? 'Not provided', renewal_cost_eur: s.monthly_cents / 100,
+    synthetic_requested: s.demo_cancellation_requested === true,
   }));
   const outflows: PaymentOutflow[] = state.outflows.map(o => ({
     id: o.id, timestamp: o.date, merchant: o.merchant, amount_eur: o.amount_cents / 100,
     category: o.category === 'Groceries' ? 'groceries' : o.category === 'Utilities' ? 'utilities' : 'home',
-    card_digits: 'Not provided', has_receipt: o.has_receipt, requires_receipt: o.amount_cents > 5000,
+    card_digits: 'Not provided', has_receipt: o.has_receipt, requires_receipt: o.amount_cents >= 5000,
     flagged_reason: o.status === 'missing_receipt' ? 'Receipt not linked' : undefined,
   }));
   const alerts: SentinelAlert[] = [];
@@ -36,28 +37,30 @@ export function mapState(state: BackendState) {
     if (!a.has_repair_claim || ['reimbursed', 'settled'].includes(a.claim_status)) continue;
     alerts.push({
       id: `warranty-${a.id}`, item_id: a.id, timestamp: a.repair_date ?? state.last_updated, severity: 'critical',
-      category: 'warranty_claim', title: `Claim €${(a.repair_amount_cents / 100).toFixed(2)} Repair Cost from ${a.seller_name}`,
+      category: 'warranty_claim', title: `Review repair evidence for ${a.item_name}`,
       description: `${a.item_name}: ${a.repair_issue ?? 'Repair claim recorded'}. Seller: ${a.seller_name}. Claim status: ${a.claim_status}.`,
-      statutory_basis: 'Directive (EU) 2019/771', potential_savings_eur: a.repair_amount_cents / 100,
-      action_type: 'dispatch_claim', action_label: `Review Legal Notice & Claim €${(a.repair_amount_cents / 100).toFixed(2)}`,
+      statutory_basis: 'Directive (EU) 2019/771', potential_savings_eur: 0,
+      documented_amount_eur: a.repair_amount_known === false ? undefined : a.repair_amount_cents / 100,
+      action_type: 'dispatch_claim', action_label: a.repair_amount_cents > 0 ? 'Review documented repair' : 'Review missing repair amount',
     });
   }
   for (const s of state.subscriptions) {
     if (s.status === 'cancelled' || !(s.is_trial || s.status === 'price_creep')) continue;
     alerts.push({
       id: `subscription-${s.id}`, item_id: s.id, timestamp: s.last_billed, severity: 'warning', category: 'price_creep',
-      title: s.is_trial ? `Cancel ${s.service_name} Trial Before €${(s.monthly_cents / 100).toFixed(2)} Auto-Charge` : `${s.service_name} Monthly Price Change`,
+      title: s.is_trial ? `${s.service_name} Trial Review` : `${s.service_name} Monthly Price Change`,
       description: s.notes ?? `${s.service_name}: ${s.status}`, potential_savings_eur: (s.is_trial ? s.monthly_cents : Math.max(0, s.monthly_cents - (s.previous_monthly_cents ?? s.monthly_cents))) / 100,
       action_type: s.is_trial ? 'cancel_trial' : 'request_receipt', action_label: 'Review subscription',
     });
   }
   for (const o of state.outflows) {
-    if (o.has_receipt || o.amount_cents <= 5000) continue;
+    if (o.has_receipt || o.amount_cents < 5000) continue;
     alerts.push({
       id: `receipt-${o.id}`, item_id: o.id, timestamp: o.date, severity: 'warning', category: 'receipt_gap',
       title: `Upload Receipt for €${(o.amount_cents / 100).toFixed(2)} ${o.merchant} Purchase`,
-      description: `${o.merchant}, ${o.date}: proof of purchase is not linked. Receipt scanning is not enabled in this demo.`,
-      potential_savings_eur: o.amount_cents / 100, action_type: 'request_receipt', action_label: 'Receipt options',
+      description: `${o.merchant}, ${o.date}: proof of purchase is not linked. Manual import is available; OCR is unavailable.`,
+      documented_amount_eur: o.amount_cents / 100,
+      potential_savings_eur: 0, action_type: 'request_receipt', action_label: 'Receipt options',
     });
   }
   for (const bill of state.utility_bills) {
@@ -70,11 +73,12 @@ export function mapState(state: BackendState) {
     });
   }
   const summary: HouseholdSummary = {
-    active_warranties_count: state.summary.protected_items_count, protected_value_eur: state.summary.protected_assets_cents / 100,
+    active_warranties_count: appliances.length, protected_value_eur: appliances.reduce((sum, a) => sum + a.price_eur, 0),
     unclaimed_repairs_count: alerts.filter(a => a.category === 'warranty_claim').length,
-    leakage_detected_monthly_eur: state.summary.monthly_sub_leakage_cents / 100,
-    potential_recovery_eur: state.summary.unclaimed_recovery_cents / 100, active_sentinels: state.summary.active_anomalies_count,
-    missing_receipts_eur: state.summary.missing_receipt_cents / 100,
+    leakage_detected_monthly_eur: subscriptions.reduce((sum, s) => sum + Math.max(0, s.current_monthly_eur - s.initial_monthly_eur), 0),
+    potential_recovery_eur: 0, real_recovered_eur: 0, active_sentinels: alerts.length,
+    documented_repair_cost_eur: state.appliances.some(a => a.has_repair_claim && a.repair_amount_known === false) ? undefined : state.appliances.filter(a => a.has_repair_claim && !['reimbursed', 'settled'].includes(a.claim_status)).reduce((sum, a) => sum + a.repair_amount_cents / 100, 0),
+    missing_receipts_eur: outflows.filter(o => !o.has_receipt && o.requires_receipt).reduce((sum, o) => sum + o.amount_eur, 0),
   };
   return { appliances, subscriptions, outflows, alerts, summary };
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { purchaseTimeline, recordedRepairCost } from '../displayFacts';
 import { ApplianceWarranty } from '../types';
 
 interface AssetVaultViewProps {
@@ -28,7 +29,7 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
             </span>
           </div>
           <h2 className="text-xl font-black text-white">
-            Protected Household Goods & 24-Month Warranty Horizon
+            Recorded Household Goods & Warranty Facts
           </h2>
           <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
             These are the appliance facts from the current server snapshot. A recorded warranty duration is not a determination of legal eligibility; review the evidence before making a claim.
@@ -36,7 +37,7 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
         </div>
 
         <div className="px-4 py-2 rounded-xl bg-slate-900 border border-white/10 text-right shrink-0">
-          <div className="text-[10px] text-slate-400 uppercase font-mono">Protected Capital</div>
+          <div className="text-[10px] text-slate-400 uppercase font-mono">Recorded Purchase Value</div>
           <div className="text-lg font-bold text-emerald-400 font-mono">
             €{appliances.reduce((acc, a) => acc + a.price_eur, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </div>
@@ -47,11 +48,8 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {appliances.map((app) => {
           const isDefective = app.status === 'defect_reported';
-          const purchase = new Date(app.purchase_date);
-          const reference = new Date(app.defect_reported_at ?? snapshotDate);
-          const elapsedMonths = Math.max(0, (reference.getUTCFullYear() - purchase.getUTCFullYear()) * 12 + reference.getUTCMonth() - purchase.getUTCMonth() - (reference.getUTCDate() < purchase.getUTCDate() ? 1 : 0));
           const duration = app.legal_statutory_months;
-          const pct = duration > 0 ? Math.min(100, elapsedMonths / duration * 100) : 0;
+          const timeline = purchaseTimeline(app.purchase_date, app.defect_reported_at ?? snapshotDate, duration);
 
           return (
             <div
@@ -90,18 +88,20 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-400">Recorded Warranty Duration:</span>
                   <span className="text-slate-200 font-mono font-medium">
-                    {elapsedMonths} full months at {isDefective ? 'repair' : 'snapshot'} / {duration} recorded
+                    {timeline ? `${timeline.months} full months at ${isDefective ? 'repair' : 'snapshot'} / ${duration} recorded` : 'Date or duration needs review'}
                   </span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
                   <div
                     className={`h-2 rounded-full ${isDefective ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                    style={{ width: `${pct}%` }}
+                    style={{ width: `${timeline?.percent ?? 0}%` }}
                   ></div>
                 </div>
               </div>
 
               {/* Metadata Details */}
+              <p className="text-xs text-amber-300">Purchase-based illustration, not a statutory deadline. Delivery facts and applicable terms require separate review.</p>
+              {isDefective && <p data-testid={'repair-cost-' + app.id} className="text-sm text-rose-300">{recordedRepairCost(app.repair_amount_cents)}. Not recovered.</p>}
               <div className="grid grid-cols-2 gap-2 text-[11px] font-mono p-3 rounded-xl bg-slate-900/90 border border-white/5 text-slate-300">
                 <div>
                   <span className="text-slate-500 uppercase text-[10px] block">Purchased</span>
@@ -121,11 +121,12 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
                 </div>
               </div>
 
+              {(isDefective && (app.repair_amount_cents ?? 0) <= 0) && <p className="text-xs text-amber-300">A documented positive repair amount is required before preparing a notice.</p>}
               {/* Action Buttons */}
               {isDefective ? (
                 <button
                   onClick={() => onOpenClaimModal(app)}
-                  disabled={actionsDisabled}
+                  disabled={actionsDisabled || (app.repair_amount_cents ?? 0) <= 0}
                   data-testid={'review-appliance-' + app.id}
                   className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs shadow-lg shadow-rose-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
@@ -133,11 +134,11 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
                     <line x1="22" y1="2" x2="11" y2="13" />
                     <polygon points="22 2 15 22 11 13 2 9 22 2" />
                   </svg>
-                  <span>Enforce Free Repair / Reimbursement Notice</span>
+                  <span>Review Repair Facts & Prepare Notice</span>
                 </button>
               ) : (
                 <div className="text-[11px] text-slate-500 font-mono text-center pt-1">
-                  Active monitoring &bull; Invoice #{app.receipt_id} securely vaulted
+                  Recorded reference: {app.receipt_id}. No automatic monitoring or receipt verification.
                 </div>
               )}
             </div>

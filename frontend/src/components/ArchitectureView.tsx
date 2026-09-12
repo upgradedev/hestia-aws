@@ -16,7 +16,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
   const readOnly = activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status';
 
   const handleRunMcts = async () => {
-    setMctsLoading(true); setReadError(null);
+    setMctsLoading(true); setReadError(null); setMctsData(null);
     try { setMctsData(await api.mcts()); }
     catch (error) { setReadError(errorMessage(error)); }
     finally { setMctsLoading(false); }
@@ -38,24 +38,24 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="architecture-claims">
       {/* Topology Header */}
       <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-sky-950/30 to-slate-900 border border-sky-500/30 p-6 lg:p-8 shadow-2xl backdrop-blur-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="text-[10px] font-mono uppercase tracking-widest text-sky-400 font-bold">
-                SYSTEM ARCHITECTURE & AWS BEDROCK SPECIFICATION
+                SYSTEM ARCHITECTURE & MODE INVENTORY
               </span>
               <span className="text-xs px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-mono border border-sky-500/30">
-                100% SERVERLESS // EU-WEST-1
+                SOURCE INVENTORY
               </span>
             </div>
             <h2 className="text-2xl font-black text-white tracking-tight">
-              Deterministic Action Groups + Amazon Bedrock AgentCore
+              Scoped review, simulation and case history
             </h2>
             <p className="text-xs lg:text-sm text-slate-300 mt-2 max-w-4xl leading-relaxed">
-              Architecture illustration. The public demo uses deterministic review templates in an isolated session. Model inference and email transport are disabled; verified invoice sync and receipt scanning are not enabled.
+              The source implements reader/writer scopes, deterministic review templates and saved case timelines. Bedrock and SES are disabled; AgentCore and provider feeds are not connected. This inventory does not verify the deployed revision.
             </p>
           </div>
 
@@ -76,118 +76,118 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
         </div>
       </div>
 
-      {/* Visual Strands Agent Execution Trace */}
+      {/* Source flow and provider boundaries */}
       <div className="glass-panel rounded-2xl p-6 border border-emerald-500/30 bg-[#0a0f18]">
-        <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-              Proposed AWS Pipeline · Architecture Illustration
+              Review Pipeline · Source Illustration
             </h3>
           </div>
           <span className="text-[11px] font-mono text-amber-400">Not a recorded execution trace</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3" data-testid="architecture-pipeline">
           <div className="p-3.5 rounded-xl bg-slate-900 border border-white/10 space-y-1 text-xs font-mono">
-            <div className="text-[10px] text-amber-400 uppercase font-bold">Step 1 // Privacy Gate</div>
-            <div className="text-white font-semibold">sanitize_pii()</div>
-            <p className="text-[11px] text-slate-400">Masks IBANs and payment card numbers before any LLM inference call.</p>
+            <div className="text-[10px] text-amber-400 uppercase font-bold">Step 1 // Supplied facts</div>
+            <div className="text-white font-semibold">Synthetic household records</div>
+            <p className="text-[11px] text-slate-400">Manual references are unverified. Bank and mailbox feeds are not connected; OCR is disabled.</p>
             <div className="text-[10px] text-amber-400 pt-1">&bull; Illustrative stage; no measured latency</div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-900 border border-sky-500/30 space-y-1 text-xs font-mono">
-            <div className="text-[10px] text-sky-400 uppercase font-bold">Step 2 // Deterministic Tool</div>
-            <div className="text-white font-semibold">check_appliance_warranty()</div>
-            <p className="text-[11px] text-slate-400">Python domain model evaluates 24-month horizon under Directive 2019/771.</p>
-            <div className="text-[10px] text-emerald-400 pt-1">&bull; Invariant: Month 22 &lt;= 24</div>
+            <div className="text-[10px] text-sky-400 uppercase font-bold">Step 2 // Rule comparison</div>
+            <div className="text-white font-semibold">Supplied dates and amounts</div>
+            <p className="text-[11px] text-slate-400">Python compares supplied dates and amounts. A date match does not establish legal eligibility.</p>
+            <div className="text-[10px] text-emerald-400 pt-1">&bull; Eligibility: requires review</div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-900 border border-purple-500/30 space-y-1 text-xs font-mono">
-            <div className="text-[10px] text-purple-400 uppercase font-bold">Step 3 // Foundation Model</div>
-            <div className="text-white font-semibold">Bedrock Haiku Converse</div>
-            <p className="text-[11px] text-slate-400">Not enabled in the public demo. Preview uses a deterministic review template.</p>
-            <div className="text-[10px] text-purple-300 pt-1">&bull; eu.anthropic.claude-haiku</div>
+            <div className="text-[10px] text-purple-400 uppercase font-bold">Step 3 // Review template</div>
+            <div className="text-white font-semibold">Deterministic notice draft</div>
+            <p className="text-[11px] text-slate-400">The review template is implemented. Bedrock inference is disabled in the public demo.</p>
+            <div className="text-[10px] text-purple-300 pt-1">&bull; Bedrock: disabled</div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-900 border border-emerald-500/30 space-y-1 text-xs font-mono">
             <div className="text-[10px] text-emerald-400 uppercase font-bold">Step 4 // Conditional Persistence</div>
-            <div className="text-white font-semibold">SHA-256 S3 Audit Seal</div>
+            <div className="text-white font-semibold">Exact approval digest</div>
             <p className="text-[11px] text-slate-400">The exact preview digest and simulated outcome share one versioned, session-scoped state record.</p>
-            <div className="text-[10px] text-emerald-400 pt-1">&bull; Return-of-Control Proof</div>
+            <div className="text-[10px] text-emerald-400 pt-1">&bull; Application approval; not WORM</div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-900 border border-cyan-500/30 space-y-1 text-xs font-mono">
-            <div className="text-[10px] text-cyan-400 uppercase font-bold">Step 5 // SES Outbox</div>
-            <div className="text-white font-semibold">SES Raw Email Dispatch</div>
-            <p className="text-[11px] text-slate-400">SES is disabled in the public demo. Approval records a simulation.</p>
-            <div className="text-[10px] text-amber-400 pt-1">&bull; No email sent; delivery unconfirmed</div>
+            <div className="text-[10px] text-cyan-400 uppercase font-bold">Step 5 // Case follow-up</div>
+            <div className="text-white font-semibold">Manual / synthetic timeline</div>
+            <p className="text-[11px] text-slate-400">Actor, time, evidence reference and attested outcomes are recorded. SES is disabled; no email is sent.</p>
+            <div className="text-[10px] text-amber-400 pt-1">&bull; Merchant confirmation: unknown</div>
           </div>
         </div>
       </div>
 
       {/* 4 Architectural Tiers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="architecture-tiers">
         <div className="glass-panel rounded-xl p-4 border border-white/10">
           <div className="text-[10px] font-mono text-amber-400 font-bold uppercase">TIER 01 // INGESTION</div>
-          <h4 className="text-sm font-bold text-white mt-1">Multi-Channel Feeds</h4>
+          <h4 className="text-sm font-bold text-white mt-1">Inputs and connection status</h4>
           <ul className="text-xs text-slate-400 space-y-1.5 mt-2 font-mono">
-            <li>&bull; PSD2 Open Banking Card Streams</li>
-            <li>&bull; Multimodal Mobile Camera Invoices</li>
-            <li>&bull; Retailer E-Invoice Forwarding</li>
+            <li>&bull; PSD2 bank feeds: not connected</li>
+            <li>&bull; Receipt OCR: disabled</li>
+            <li>&bull; Mailbox / retailer sync: not connected</li>
           </ul>
         </div>
 
         <div className="glass-panel rounded-xl p-4 border border-sky-500/30 bg-sky-950/10">
-          <div className="text-[10px] font-mono text-sky-400 font-bold uppercase">TIER 02 // BEDROCK AGENTCORE</div>
-          <h4 className="text-sm font-bold text-white mt-1">Orchestrator & Guardrails</h4>
+          <div className="text-[10px] font-mono text-sky-400 font-bold uppercase">TIER 02 // MODEL BOUNDARY</div>
+          <h4 className="text-sm font-bold text-white mt-1">Optional providers</h4>
           <ul className="text-xs text-slate-300 space-y-1.5 mt-2 font-mono">
-            <li>&bull; Claude 3.5 Sonnet / Haiku Supervisor</li>
-            <li>&bull; Bedrock Financial Guardrails Filter</li>
-            <li>&bull; Strict JSON Schema Parameter Binding</li>
+            <li>&bull; Bedrock inference: disabled</li>
+            <li>&bull; Managed Guardrails: not connected</li>
+            <li>&bull; AgentCore: not connected</li>
           </ul>
         </div>
 
         <div className="glass-panel rounded-xl p-4 border border-emerald-500/30 bg-emerald-950/10">
-          <div className="text-[10px] font-mono text-emerald-400 font-bold uppercase">TIER 03 // ACTION GROUPS</div>
-          <h4 className="text-sm font-bold text-white mt-1">Deterministic Lambdas</h4>
+          <div className="text-[10px] font-mono text-emerald-400 font-bold uppercase">TIER 03 // PYTHON HANDLERS</div>
+          <h4 className="text-sm font-bold text-white mt-1">Implemented review rules</h4>
           <ul className="text-xs text-slate-300 space-y-1.5 mt-2 font-mono">
-            <li>&bull; warranties.py (Directive 2019/771)</li>
-            <li>&bull; subscriptions.py (Tier Anomaly)</li>
-            <li>&bull; completeness.py (Anti-Join &gt;€50)</li>
+            <li>&bull; Warranty dates: review required</li>
+            <li>&bull; Subscription price comparisons</li>
+            <li>&bull; Receipt / utility fixture comparisons</li>
           </ul>
         </div>
 
         <div className="glass-panel rounded-xl p-4 border border-purple-500/30 bg-purple-950/10">
-          <div className="text-[10px] font-mono text-purple-400 font-bold uppercase">TIER 04 // RETURN-OF-CONTROL</div>
-          <h4 className="text-sm font-bold text-white mt-1">S3 Vault & SES Outbox</h4>
+          <div className="text-[10px] font-mono text-purple-400 font-bold uppercase">TIER 04 // SCOPED PERSISTENCE</div>
+          <h4 className="text-sm font-bold text-white mt-1">Approval and case state</h4>
           <ul className="text-xs text-slate-300 space-y-1.5 mt-2 font-mono">
-            <li>&bull; Human Consent Gate (EU AI Act Art 14)</li>
-            <li>&bull; SHA-256 Dispute Seals on S3</li>
-            <li>&bull; Automated AWS SES Raw Dispatch</li>
-            <li>&bull; Sealed RFC 5322 EML & Receipts</li>
+            <li>&bull; Reader denies writes; scoped writer</li>
+            <li>&bull; Exact approval and conditional writes</li>
+            <li>&bull; SES: disabled; simulation only</li>
+            <li>&bull; Saved case timeline; not WORM</li>
           </ul>
         </div>
       </div>
 
-      {/* JENSEN HUANG & MARTIN FOWLER ARCHITECTURAL ADDITIONS */}
+      {/* Optional illustration and implemented storage boundary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Jensen Huang: Agentic Negotiation Simulation & Rollout Engine */}
+        {/* Explicitly requested toy algorithm */}
         <div className="rounded-2xl p-6 border border-emerald-500/40 bg-[#0a111a] shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
               <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-wider">
-                AGENTIC MULTI-PATH NEGOTIATION SIMULATION (MCTS)
+                OPTIONAL MCTS TOY ILLUSTRATION
               </span>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
-              Test-Time Compute
+              Fixed assumptions
             </span>
           </div>
 
           <p className="text-xs text-slate-300 leading-relaxed">
-            Optional algorithm illustration using synthetic assumptions. It does not run during claim preparation, establish legal eligibility, or predict real settlement rates. Values below are illustrative assumptions only.
+            Toy assumptions only. The optional endpoint uses fixed priors and simulated rollouts, separate from claim preparation. It has no settlement sample or observed duration. Action names are illustrative, not current legal routes or recommendations.
           </p>
 
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
@@ -209,57 +209,57 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
             </button>
             {mctsData && (
               <span className="text-[11px] font-mono text-emerald-400">
-                Illustrative action: {mctsData.optimal_action} ({mctsData.iterations} iterations)
+                Toy calculation returned: {mctsData.iterations} iterations. Empirical success rate: unmeasured.
               </span>
             )}
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2.5" data-testid="mcts-boundary">
             {readError && <p role="alert" className="text-rose-300">{readError}</p>}
-            <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/50 flex items-center justify-between text-xs font-mono">
+            <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/50 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
               <div>
                 <div className="font-bold text-emerald-300 flex items-center gap-1.5">
-                  <span>★ PATH A (SELECTED): DIRECT BGB § 437 DEMAND</span>
+                  <span>TOY SEARCH: FIXED PRIORS</span>
                 </div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Strict statutory lack of conformity with 14-day refund cure</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">Input probabilities are assumptions in the example code.</div>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-emerald-400 font-bold">92% P(Settle)</span>
-                <div className="text-[10px] text-slate-400">8d avg</div>
+                <span className="text-emerald-400 font-bold">No observed rate</span>
+                <div className="text-[10px] text-slate-400">Duration unmeasured</div>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 flex items-center justify-between text-xs font-mono opacity-80">
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs font-mono opacity-80">
               <div>
-                <div className="font-bold text-slate-300">PATH B: EU ODR ESCALATION</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Cross-border mediation submission under Directive 2013/11/EU</div>
+                <div className="font-bold text-slate-300">LEGAL ROUTE: NOT EVALUATED</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">Verify current jurisdiction and facts before choosing any route.</div>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-amber-400 font-bold">68% P(Settle)</span>
-                <div className="text-[10px] text-slate-400">45d avg</div>
+                <span className="text-amber-400 font-bold">Eligibility unknown</span>
+                <div className="text-[10px] text-slate-400">No legal advice</div>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 flex items-center justify-between text-xs font-mono opacity-80">
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs font-mono opacity-80">
               <div>
-                <div className="font-bold text-slate-300">PATH C: AMICABLE VOUCHER COMPROMISE</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Commercial store voucher compromise without legal assertion</div>
+                <div className="font-bold text-slate-300">REAL OUTCOME: NOT OBSERVED</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">A toy reward is not money received or a merchant response.</div>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-rose-400 font-bold">45% P(Settle)</span>
-                <div className="text-[10px] text-slate-400">2d avg</div>
+                <span className="text-rose-400 font-bold">Recovery unmeasured</span>
+                <div className="text-[10px] text-slate-400">No outcome sample</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Martin Fowler: Optimistic Concurrency Control (OCC) & Event Sourcing */}
+        {/* Conditional state persistence */}
         <div className="rounded-2xl p-6 border border-sky-500/40 bg-[#0a111a] shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
               <span className="text-[11px] font-mono text-sky-400 font-bold uppercase tracking-wider">
-                OPTIMISTIC CONCURRENCY & EVENT SOURCING (OCC)
+                CONDITIONAL WRITES & CASE TIMELINE
               </span>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/30">
@@ -272,21 +272,21 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
           </p>
 
           <div className="space-y-2 text-xs font-mono">
-            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex flex-wrap items-center justify-between gap-2">
               <span className="text-slate-400">Concurrency Control Engine:</span>
-              <span className="text-sky-300 font-bold">S3 If-Match / ETag Safe</span>
+              <span className="text-sky-300 font-bold">S3 If-Match / ETag</span>
             </div>
-            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex flex-wrap items-center justify-between gap-2">
               <span className="text-slate-400">State Versioning Sequence:</span>
               <span className="text-emerald-400 font-bold">version_seq = Monotonic INT</span>
             </div>
-            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex flex-wrap items-center justify-between gap-2">
               <span className="text-slate-400">Audit Persistence:</span>
               <span className="text-purple-300 font-bold">Versioned state · not WORM</span>
             </div>
-            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex flex-wrap items-center justify-between gap-2">
               <span className="text-slate-400">Financial Arithmetic Precision:</span>
-              <span className="text-amber-300 font-bold">Integer Cents (Zero Float Drift)</span>
+              <span className="text-amber-300 font-bold">Integer-cent inputs</span>
             </div>
           </div>
         </div>
@@ -335,7 +335,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
             <button
               onClick={() => {
                 setActiveEndpoint('/api/action/utility_dispute');
-                setRequestPayload('{\n  "provider": "Stadtwerke Munich",\n  "excess_cents": 5400,\n  "legal_basis": "AVBWasserV § 18"\n}');
+                setRequestPayload('Use the scoped utility review flow. Sample amounts are synthetic; legal eligibility is unverified.');
               }}
               className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
                 activeEndpoint === '/api/action/utility_dispute'
@@ -374,7 +374,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
             <button
               onClick={() => {
                 setActiveEndpoint('/api/receipt/scan');
-                setRequestPayload('{\n  "filename": "ikea_receipt.jpg",\n  "file_base64": "JVBERi0xLjQK..."\n}');
+                setRequestPayload('Receipt OCR is disabled. A manual reference or adapter preparation is not a document scan.');
               }}
               className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
                 activeEndpoint === '/api/receipt/scan'
@@ -387,7 +387,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
             <button
               onClick={() => {
                 setActiveEndpoint('/api/ingest/sync');
-                setRequestPayload('{\n  "source": "manual_sync",\n  "count": 4\n}');
+                setRequestPayload('Provider sync is not connected. Manual import preparation does not establish a bank or mailbox connection.');
               }}
               className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
                 activeEndpoint === '/api/ingest/sync'
@@ -442,7 +442,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Request Panel */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-slate-400">
               <span>Request Body (JSON)</span>
               <span className="text-amber-400">HTTP API</span>
             </div>
@@ -462,7 +462,7 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
               {isLoading ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Transmitting to AWS API Gateway...</span>
+                  <span>Requesting configured API...</span>
                 </>
               ) : (
                 <>
@@ -473,16 +473,17 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
                 </>
               )}
             </button>
-            {!readOnly && <p className="text-xs text-amber-300">Console writes are disabled. Use the scoped Action Center review flow. Sync and scan remain unavailable.</p>}
+            {!readOnly && <p className="text-xs text-amber-300">Console writes are disabled. Use the scoped Action Center review flow. Provider sync is not connected and actual OCR is disabled.</p>}
             {activeEndpoint === '/api/outbox/status' && !token && <p className="text-xs text-amber-300">Begin an isolated demo session to read its history.</p>}
           </div>
 
           {/* Response Panel */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-              <span>Response Payload</span>
+            {activeEndpoint === '/api/simulation/mcts' && <p data-testid="mcts-response-boundary" className="text-xs text-amber-300">Toy response: probabilities, durations and action names are assumptions, not empirical results or current legal routes.</p>}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-slate-400">
+              <span>Response Payload · one request, not deployment acceptance</span>
               {latencyMs !== null && (
-                <span className="text-emerald-400">Latency: {latencyMs} ms</span>
+                <span className="text-emerald-400">Last browser request: {latencyMs} ms</span>
               )}
             </div>
             <pre className="w-full h-40 p-3 rounded-xl bg-[#080b10] border border-white/10 font-mono text-xs text-emerald-300 overflow-y-auto">
@@ -490,9 +491,9 @@ export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onErr
                 ? JSON.stringify(apiResponse, null, 2)
                 : '// Click "Dispatch Request" above to view live HTTP API response'}
             </pre>
-            <div className="text-[11px] font-mono text-slate-500 flex items-center justify-between">
+            <div className="text-[11px] font-mono text-slate-500 flex flex-wrap items-center justify-between gap-2">
               <span>Status: {apiResponse ? apiResponse.status : 'Awaiting trigger'}</span>
-              <span>Amazon API Gateway (HTTP API)</span>
+              <span>Configured HTTP API</span>
             </div>
           </div>
         </div>

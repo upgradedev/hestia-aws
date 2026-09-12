@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { recordedRepairCost } from '../displayFacts';
 import { ApplianceWarranty, PaymentOutflow, SubscriptionTracker } from '../types';
 
 interface HouseholdInventoryProps {
@@ -52,7 +53,7 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Bank Feeds
+            Recorded Outflows
           </button>
           <button
             onClick={() => setActiveTab('subscriptions')}
@@ -73,8 +74,8 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
         {activeTab === 'appliances' && (
           <>
             <div className="text-[11px] text-slate-400 px-1 pb-1 flex items-center justify-between">
-              <span>Directive (EU) 2019/771 Statutory 2-Year Horizon</span>
-              <span className="text-emerald-400 font-mono">24M Mandated</span>
+              <span>Recorded warranty terms; not a legal determination</span>
+              <span className="text-amber-300 font-mono">Review facts</span>
             </div>
             {appliances.map((app) => {
               const isDefective = app.status === 'defect_reported';
@@ -98,10 +99,10 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
                       <div className="mt-0.5">
                         {isDefective ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
-                            DEFECT IN 24M WINDOW
+                            REPAIR RECORDED
                           </span>
                         ) : (
-                          <span className="text-[10px] text-emerald-400 font-mono">Statutory Active</span>
+                          <span className="text-[10px] text-slate-300 font-mono">Eligibility unconfirmed</span>
                         )}
                       </div>
                     </div>
@@ -118,22 +119,22 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
                     </div>
                     <div>
                       <span className="text-slate-500 text-[10px] block">STORE WARRANTY:</span>
-                      <span className="text-rose-400">{app.commercial_warranty_months} Months (Expired)</span>
+                      <span className="text-slate-300">{app.commercial_warranty_months} months recorded; terms require review</span>
                     </div>
                     <div>
                       <span className="text-slate-500 text-[10px] block">EU STATUTORY:</span>
-                      <span className="text-emerald-400 font-semibold">{app.legal_statutory_months || 24} Months (Active)</span>
+                      <span className="text-slate-300">{app.legal_statutory_months > 0 ? `${app.legal_statutory_months} months recorded` : 'Not recorded'}; eligibility unconfirmed</span>
                     </div>
                   </div>
 
                   {isDefective && (
                     <div className="mt-2 pt-2 border-t border-rose-500/20 flex items-center justify-between">
-                      <span className="text-xs text-rose-300 font-mono">€185.00 repair paid out of pocket</span>
+                      <span className="text-xs text-rose-300 font-mono">{recordedRepairCost(app.repair_amount_cents)}</span>
                       <button
                         onClick={() => onSelectItemForClaim(app)}
                         className="py-1 px-3 rounded-lg bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs cursor-pointer shadow transition-all"
                       >
-                        Enforce Statutory Remedy &rarr;
+                        Review Recorded Facts &rarr;
                       </button>
                     </div>
                   )}
@@ -148,7 +149,7 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
           <>
             <div className="text-[11px] text-slate-400 px-1 pb-1 flex items-center justify-between">
               <span>Card Transactions & Anti-Join Sentinel</span>
-              <span className="text-amber-400 font-mono">&gt; €50 Requires Proof</span>
+              <span className="text-amber-400 font-mono">≥ €50 Reference Review</span>
             </div>
             {outflows.map((tx) => (
               <div
@@ -176,7 +177,7 @@ export const HouseholdInventory: React.FC<HouseholdInventoryProps> = ({
                           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="20 6 9 17 4 12" />
                           </svg>
-                          Receipt Matched
+                          Receipt Reference Linked
                         </span>
                       ) : tx.requires_receipt ? (
                         <span className="text-[10px] text-amber-400 font-semibold flex items-center justify-end gap-1 font-mono">

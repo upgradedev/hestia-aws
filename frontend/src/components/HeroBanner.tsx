@@ -19,7 +19,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
       <div className="mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-900/60 border border-white/5 text-xs text-slate-400">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-          <span>Hestia Sentinel active for Elena Weber (Munich, Germany).</span>
+          <span>Hestia household review. Open your isolated snapshot to inspect recorded facts.</span>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -52,33 +52,33 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             </span>
             <span className="text-xs text-slate-400 font-mono">Everyday Agents Track</span>
             <span className="text-slate-600">&bull;</span>
-            <span className="text-xs text-emerald-400 font-mono">Munich Household Case Study</span>
+            <span className="text-xs text-amber-300 font-mono">Synthetic Household Example</span>
           </div>
 
           <h2 className="text-xl lg:text-2xl font-black tracking-tight text-white mb-2">
             The Autonomous Household Economic Sentinel
           </h2>
           <p className="text-xs lg:text-sm text-slate-300 leading-relaxed">
-            European households lose over <strong className="text-amber-300 font-semibold">€790 every year</strong> to stealth subscription creep, expired commercial retailer guarantees, missing receipt proof, and unclaimed statutory rights under <strong className="text-slate-100 font-semibold">Directive (EU) 2019/771</strong>. Hestia runs an autonomous Amazon Bedrock sentinel that monitors outlays and enforces statutory remedies with strictly bounded human approval.
+            Review household purchase records, subscription changes and missing receipt references in one place. Inspect the exact notice before approving a simulation, then track the case to a documented outcome. Live model inference, provider contact and legal eligibility are not established by this demo.
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/10">
             <div className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5">
               <div className="text-[10px] font-mono text-amber-400 font-bold uppercase">01 // Statutory Law</div>
-              <div className="text-xs font-semibold text-white mt-0.5">24M Warranty Radar</div>
+              <div className="text-xs font-semibold text-white mt-0.5">Warranty Facts Review</div>
               <div className="text-[11px] text-slate-400 mt-0.5">Directive 2019/771/EU</div>
             </div>
 
             <div className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5">
               <div className="text-[10px] font-mono text-purple-400 font-bold uppercase">02 // Sub Defense</div>
               <div className="text-xs font-semibold text-white mt-0.5">Creep & Trial Traps</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">Stealth +40% tier hikes</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Recorded price changes</div>
             </div>
 
             <div className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5">
               <div className="text-[10px] font-mono text-emerald-400 font-bold uppercase">03 // Proof Vault</div>
               <div className="text-xs font-semibold text-white mt-0.5">Receipt Anti-Join</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">&gt;€50 Outlay Matching</div>
+              <div className="text-[11px] text-slate-400 mt-0.5">≥€50 Reference Review</div>
             </div>
 
             <div className="p-2.5 rounded-xl bg-slate-800/50 border border-white/5">

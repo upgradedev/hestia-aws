@@ -1,7 +1,7 @@
-"""Monte Carlo Tree Search (MCTS) legal negotiation simulation engine for Hestia.
+"""Illustrative Monte Carlo search over hypothetical dispute review options.
 
-Evaluates test-time compute decision trees for legal claims under EU Directive 2019/771
-and German BGB § 437 to determine the mathematically optimal settlement trajectory.
+Fixed scenario inputs are not empirical evidence, settlement forecasts or legal advice.
+The search has no jurisdiction/evidence model and cannot authorize or execute redress.
 """
 
 from __future__ import annotations
@@ -12,18 +12,28 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from hestia.domain.warranties import LEGAL_SOURCES_CHECKED_ON, REDRESS_GUIDANCE
+
+ADR_DIRECTORY_URL = (
+    "https://consumer-redress.ec.europa.eu/list-alternative-dispute-resolution-adr-bodies_en"
+)
+
 
 class LegalAction(StrEnum):
-    DIRECT_BGB_437 = "Path A: Direct BGB § 437 Demand"
-    EU_ODR_MEDIATION = "Path B: EU ODR Cross-Border Escalation"
-    AMICABLE_VOUCHER = "Path C: Amicable Store Voucher Compromise"
-    SMALL_CLAIMS_COURT = "Path D: Judicial Small Claims Escalation"
+    SELLER_REVIEW = "Path A: Seller Evidence and Remedy Review"
+    ADR_REVIEW = "Path B: Review Applicable ADR Bodies"
+    AMICABLE_VOUCHER = "Path C: Review Voluntary Store Voucher Offer"
+    SMALL_CLAIMS_COURT = "Path D: Review Small Claims Eligibility"
+    # Import compatibility only; iteration and returned action IDs use current names.
+    DIRECT_BGB_437 = SELLER_REVIEW
+    EU_ODR_MEDIATION = ADR_REVIEW
 
 
-# Statutory empirical priors: (base_settlement_prob, avg_duration_days, recovery_pct, risk_weight)
+# Invented illustration inputs: (scenario_probability, days, payoff_ratio, risk_weight).
+# The historical field names remain for callers; none is a measured recovery or forecast.
 ACTION_PRIORS: dict[LegalAction, tuple[float, int, float, float]] = {
-    LegalAction.DIRECT_BGB_437: (0.92, 8, 1.00, 0.05),
-    LegalAction.EU_ODR_MEDIATION: (0.68, 45, 0.95, 0.15),
+    LegalAction.SELLER_REVIEW: (0.92, 8, 1.00, 0.05),
+    LegalAction.ADR_REVIEW: (0.68, 45, 0.95, 0.15),
     LegalAction.AMICABLE_VOUCHER: (0.45, 2, 0.70, 0.02),
     LegalAction.SMALL_CLAIMS_COURT: (0.82, 120, 1.05, 0.35),
 }
@@ -93,7 +103,7 @@ class LegalNegotiationMCTS:
             action = self.rng.choice(list(LegalAction))
 
         base_p, days, recovery, risk = ACTION_PRIORS[action]
-        # Stochastic fluctuation around empirical prior
+        # Stochastic fluctuation around an invented scenario input.
         sampled_p = max(0.0, min(1.0, self.rng.gauss(base_p, 0.05)))
         success = 1.0 if self.rng.random() < sampled_p else 0.0
 
@@ -112,7 +122,7 @@ class LegalNegotiationMCTS:
             current = current.parent
 
     def search(self, iterations: int = 500) -> dict[str, Any]:
-        """Execute MCTS search iterations and return optimal legal policy with stats."""
+        """Return the most visited illustrative option, never an optimal legal policy."""
         root = MCTSNode()
 
         for _ in range(iterations):
@@ -134,6 +144,10 @@ class LegalNegotiationMCTS:
                 "avg_days": days,
                 "recovery_pct": f"{round(rec_pct * 100)}%",
                 "uct_score": round(child.uct_score(root.visits, self.c), 4),
+                "mode": "illustrative", "empirical": False, "review_required": True,
+                "metrics_basis": "Invented scenario inputs and simulated utility, not forecasts",
+                "guidance_url": (ADR_DIRECTORY_URL if action == LegalAction.ADR_REVIEW
+                                 else "https://consumer-redress.ec.europa.eu/index_en"),
             })
 
         # Sort by visit count (most robust MCTS criterion)
@@ -148,4 +162,16 @@ class LegalNegotiationMCTS:
             "optimal_action_id": best["action_id"] if best else None,
             "actions": results,
             "framework": "Monte Carlo Tree Search (UCT / UCB1)",
+            "mode": "illustrative", "empirical": False, "review_required": True,
+            "entitlement_status": "not_determined",
+            "limitations": (
+                "No jurisdiction or case evidence was evaluated. The legacy optimal_action field "
+                "identifies the most visited simulated option only. Probability, duration, "
+                "recovery and reward fields are illustrative, not measured outcomes or advice. "
+                "Review the seller's response, applicable law and the chosen body's eligibility "
+                "and participation rules before deciding any next step. No external action occurs."
+            ),
+            "redress_guidance": REDRESS_GUIDANCE,
+            "sources": [ADR_DIRECTORY_URL, "https://eur-lex.europa.eu/eli/reg/2024/3228/oj/eng"],
+            "sources_checked_on": LEGAL_SOURCES_CHECKED_ON,
         }

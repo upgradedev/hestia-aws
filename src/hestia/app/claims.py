@@ -13,12 +13,14 @@ import re
 import secrets
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from hestia.adapters.storage import S3HouseholdStore
+from hestia.agents.tools import draft_statutory_claim_letter
 from hestia.app.access import APIError
 from hestia.domain.cases import authorize_case, project_case, review_case
+from hestia.domain.warranties import ApplianceWarranty, evaluate_repair_claim
 
 DRAFT_TTL = 600
 MAX_ACTIONS = 40
@@ -60,6 +62,18 @@ def _digest(value: dict[str, Any]) -> str:
     ).hexdigest()
 
 
+def _recorded_date(item: dict[str, Any], key: str) -> date | None:
+    value = item.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"Invalid recorded {key}.")
+    parsed = date.fromisoformat(value)
+    if parsed.isoformat() != value:
+        raise ValueError(f"Invalid recorded {key}.")
+    return parsed
+
+
 def prepare_claim(
     store: S3HouseholdStore, body: dict[str, Any], session_expiry: int,
 ) -> dict[str, Any]:
@@ -72,6 +86,10 @@ def prepare_claim(
     amount = item.get("repair_amount_cents")
     if not item.get("has_repair_claim") or type(amount) is not int or not 0 < amount <= 10000000:
         raise APIError(422, "No documented positive repair amount is available for this item.")
+    # Existing case/outcome amounts are EUR. Never silently relabel another currency.
+    # An absent key retains the legacy synthetic EUR contract; explicit unknown is rejected.
+    if item.get("currency", "EUR") != "EUR":
+        raise APIError(422, "This demo supports EUR repair records only. Review the currency.")
     charge_action(state)
     if len(state.get("drafts", {})) >= 16:
         raise APIError(429, "Draft limit reached for this isolated demo.")
@@ -82,20 +100,35 @@ def prepare_claim(
     recipient = item["seller_email"]
     if not re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", recipient):
         raise APIError(422, "The stored recipient address requires correction.")
+    try:
+        warranty = ApplianceWarranty(
+            item_name=item["item_name"], serial_number=item.get("serial_number", ""),
+            purchase_date=_recorded_date(item, "purchase_date"),
+            statutory_months=item.get("statutory_months", 24),
+            commercial_months=item.get("commercial_months", 24),
+            receipt_reference=item["receipt_reference"],
+            delivery_date=_recorded_date(item, "delivery_date"),
+            defect_date=_recorded_date(item, "defect_date"),
+            commercial_start_date=_recorded_date(item, "commercial_start_date"),
+            commercial_terms_reference=item.get("commercial_terms_reference", ""),
+            jurisdiction=item.get("jurisdiction"),
+            seller_is_business=item.get("seller_is_business"),
+            consumer_purchase=item.get("consumer_purchase"), currency="EUR",
+        )
+        repair_date = _recorded_date(item, "repair_date")
+        assessment = evaluate_repair_claim(warranty, repair_date, amount).to_public_dict()
+        letter = draft_statutory_claim_letter(
+            warranty, repair_date, amount, item["repair_issue"], homeowner,
+        )
+    except ValueError as exc:
+        raise APIError(422, "The recorded warranty facts require correction.") from exc
+    assessment["currency_source"] = "recorded" if "currency" in item else "legacy_demo_eur"
     draft_id = "draft-" + uuid.uuid4().hex
     notice = (
         f"REVIEW COPY - SYNTHETIC DEMO, NOT SENT\n\n"
         f"From: {homeowner}\nTo: {seller} <{recipient}>\n"
-        f"Subject: Repair review request for {item['item_name']}\n\n"
-        f"Please review the repair record for {item['item_name']} "
-        f"(receipt {item['receipt_reference']}).\n"
-        f"Recorded purchase date: {item['purchase_date']}.\n"
-        f"Recorded repair date: {item.get('repair_date') or 'not provided'}.\n"
-        f"Reported issue: {item['repair_issue']}.\n"
-        f"Recorded repair cost: EUR {amount / 100:.2f}.\n\n"
-        f"I request a review of the available remedy and supporting evidence. "
-        f"This draft does not determine legal eligibility or confirm reimbursement.\n\n"
-        f"{homeowner}"
+        f"{letter}\n\n"
+        f"This draft does not determine legal eligibility or confirm reimbursement."
     )
     draft = {
         "id": draft_id, "item_id": item_id, "subject": f"Repair review: {item['item_name']}",
@@ -107,6 +140,7 @@ def prepare_claim(
         "expires_at": min(int(time.time()) + DRAFT_TTL, session_expiry),
         "model_id": "deterministic-review-template", "mode": "simulated",
         "statutory_basis": "Eligibility requires review; no legal entitlement determined",
+        "legal_assessment": assessment,
     }
     case = review_case(state, item, draft, "household_session:" + store.workspace_id)
     draft["case_id"] = case["id"]
