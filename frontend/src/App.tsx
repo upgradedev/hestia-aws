@@ -123,11 +123,11 @@ export const App: React.FC = () => {
       {selection && demo.session && <FormalNoticeModal key={demo.session.token + ':' + selection} appliance={selectedAppliance} isOpen
         token={demo.session.token} enabled={enabled} onClose={() => setSelection(null)} onError={demo.reportError} onDispatch={approve}
         onViewCase={() => { setSelection(null); setActiveTab('cases'); void demo.refresh(); }} />}
-      {isReceiptModalOpen && <ReceiptUploadModal key={demo.session?.token ?? 'preview'} isOpen onClose={() => setIsReceiptModalOpen(false)}
+      {isReceiptModalOpen && <ReceiptUploadModal key={'receipt-' + (demo.session?.token ?? 'preview')} isOpen onClose={() => setIsReceiptModalOpen(false)}
         outflows={view?.outflows ?? []} enabled={enabled} onReceiptMatched={linkReceipt} intake={intakeProps} />}
-      {isUtilityModalOpen && <UtilityDisputeModal key={demo.session?.token ?? 'preview'} isOpen onClose={() => setIsUtilityModalOpen(false)}
+      {isUtilityModalOpen && <UtilityDisputeModal key={'utility-' + (demo.session?.token ?? 'preview')} isOpen onClose={() => setIsUtilityModalOpen(false)}
         bill={utilityBill} homeownerName={demo.state?.homeowner_name ?? ''} enabled={enabled} onDispute={dispute} />}
-      <EmailSyncModal key={demo.session?.token ?? 'preview'} isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} intake={intakeProps} />
+      <EmailSyncModal key={'sync-' + (demo.session?.token ?? 'preview')} isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} intake={intakeProps} />
       <footer className="border-t border-white/5 py-4 px-6 text-xs text-slate-500 font-mono flex flex-col sm:flex-row items-center justify-between gap-2 max-w-[1500px] mx-auto w-full">
         <div>Hestia &bull; Household Sentinel &bull; Directive (EU) 2019/771</div>
         <div>Synthetic demo &bull; Explicit approval &bull; Simulated history</div>

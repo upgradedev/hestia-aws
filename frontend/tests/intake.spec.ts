@@ -19,6 +19,8 @@ async function open(page: Page) {
   const session = await (await creating).json();
   await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
   await page.getByRole('button', { name: 'Receipt Options (Scanning Unavailable)', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await expect(page.getByTestId('intake-file')).toHaveCount(1);
   return session.token as string;
 }
 async function upload(page: Page, records: IntakeRecord[]) {
@@ -26,6 +28,8 @@ async function upload(page: Page, records: IntakeRecord[]) {
   await page.getByTestId('intake-file').setInputFiles({ name: 'actual-records.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ records })) });
   const result = await pending;
   expect(result.status()).toBe(200);
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await expect(page.getByTestId('intake-file')).toHaveCount(1);
   return (await result.json()).intake as IntakeDraft;
 }
 async function review(page: Page) {
@@ -167,6 +171,7 @@ test('mobile sync import and exact synthetic subscription request persist withou
   await page.setViewportSize({ width: 375, height: 812 });
   const token = await open(page);
   await page.getByRole('button', { name: 'Close receipt options', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByText('About / Advanced', { exact: true }).click();
   await page.getByRole('button', { name: 'Sync Invoices', exact: true }).click();
   const rows = [{ kind: 'subscription', subscription_id: 'imported-sub', service_name: 'My Imported Plan', monthly_cents: 1750, category: 'Productivity', last_billed: '2026-09-12', is_trial: true, trial_end_date: '2026-09-20' }];

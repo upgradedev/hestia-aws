@@ -423,8 +423,15 @@ def test_cancel_utility_and_manual_receipt_are_scoped_and_truthful(sandbox):
     body = {"service_name": "Fitness Stream Pro"}
     code, result = call("/api/action/cancel", body, token)
     assert code == 200 and result["result"]["status"] == "simulated"
-    assert result["state"]["summary"] == initial["summary"]
-    assert call("/api/action/cancel", body, token)[1]["replayed"] is True
+    saved = result["state"]
+    assert saved["version_seq"] == initial["version_seq"] + 1
+    assert saved["summary"] == {
+        **initial["summary"], "state_version": saved["version_seq"],
+        "observed_at": saved["last_updated"],
+    }
+    assert saved["summary"]["real_recovered_cents"] == 0
+    replay = call("/api/action/cancel", body, token)[1]
+    assert replay["replayed"] is True and replay["state"] == saved
     assert call("/api/action/cancel", {"service_name": "unknown"}, token)[0] == 404
     utility = {"provider": "PPC Electricity", "excess_cents": 5800}
     assert call("/api/action/utility_dispute", utility, token)[0] == 200
