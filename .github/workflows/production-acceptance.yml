@@ -1,0 +1,54 @@
+name: AWS P0 acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      approved_sha:
+        description: 'Exact approved and deployed backend revision (also frontend for paired phase)'
+        type: string
+        required: true
+      phase:
+        description: 'Backend first; paired frontend only after publication'
+        type: choice
+        options: [backend, frontend]
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hestia-production-acceptance
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HESTIA_ACCEPTANCE_URL: https://drusjukc9d4oc.cloudfront.net
+      HESTIA_APPROVED_SHA: ${{ inputs.approved_sha }}
+      HESTIA_ACCEPTANCE_PHASE: ${{ inputs.phase }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require matching workflow and deployed revision
+        run: test "$HESTIA_APPROVED_SHA" = "$GITHUB_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+      - name: Install locked browser tooling in CI
+        working-directory: frontend
+        run: |
+          npm install --global npm@11.19.1 --ignore-scripts
+          npm ci
+          npx --no-install playwright install --with-deps chromium
+      - name: Verify isolated synthetic workspaces without provider credentials
+        working-directory: frontend
+        run: npx --no-install playwright test --config playwright.acceptance.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aws-p0-acceptance-${{ inputs.phase }}
+          path: |
+            frontend/acceptance-results/
+            frontend/acceptance-report/
+          if-no-files-found: warn

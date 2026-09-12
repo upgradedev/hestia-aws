@@ -51,9 +51,18 @@ jobs:
           cd build/pkg
           python -S -c "from hestia.app.web import lambda_handler; import json; response=lambda_handler({'rawPath':'/healthz','requestContext':{'http':{'method':'GET'}}},None); health=json.loads(response['body']); assert response['statusCode']==200 and health['live_send'] is False and health['live_model'] is False"
 
+      - name: Render exact-revision deployment configuration in CI
+        run: |
+          python infra/hestia_api_stack.py > build/hestia-api-stack.json
+          cd build
+          sha256sum hestia-api.zip hestia-api-stack.json > SHA256SUMS
+
       - name: Retain candidate runtime artifact
         uses: actions/upload-artifact@v4
         with:
           name: backend-runtime-candidate
-          path: build/hestia-api.zip
+          path: |
+            build/hestia-api.zip
+            build/hestia-api-stack.json
+            build/SHA256SUMS
           if-no-files-found: error
