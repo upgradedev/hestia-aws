@@ -256,6 +256,7 @@ def template():
         "/action/utility_dispute", "/api/action/reset", "/action/reset", "/api/action/receipt",
         "/api/receipt/scan", "/receipt/scan", "/api/ingest/sync", "/ingest/sync",
         "/api/outbox/dispatch", "/outbox/dispatch", "/api/outbox/status", "/outbox/status",
+        "/api/case/update",
     )
     for number, path in enumerate(write_paths):
         resources[f"WriteRoute{number}"] = {

@@ -16,9 +16,11 @@ jobs:
     env:
       AWS_DEFAULT_REGION: eu-west-1
       AWS_EC2_METADATA_DISABLED: 'true'
-      HESTIA_COMMIT_SHA: ${{ github.sha }}
+      HESTIA_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: actions/setup-node@v4
         with:
@@ -62,7 +64,7 @@ jobs:
           curl --fail --retry 30 --retry-connrefused --retry-delay 1 http://127.0.0.1:3000/
           npm --prefix frontend run test:e2e
           cd frontend
-          HESTIA_ACCEPTANCE_URL=http://127.0.0.1:3000 HESTIA_ACCEPTANCE_PHASE=frontend HESTIA_APPROVED_SHA="$GITHUB_SHA" npx --no-install playwright test --config playwright.acceptance.config.ts
+          HESTIA_ACCEPTANCE_URL=http://127.0.0.1:3000 HESTIA_ACCEPTANCE_PHASE=frontend HESTIA_APPROVED_SHA="$HESTIA_COMMIT_SHA" npx --no-install playwright test --config playwright.acceptance.config.ts
 
       - name: Retain browser verification evidence
         if: always()

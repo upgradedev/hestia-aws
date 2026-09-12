@@ -458,6 +458,7 @@ test('unavailable sync/scan and legacy dispatch aliases cannot bypass the approv
   expect(legacy.status()).toBe(400);
   const posts: string[] = [];
   page.on('request', req => { if (req.method() === 'POST') posts.push(req.url()); });
+  await page.getByText('About / Advanced', { exact: true }).click();
   await page.getByRole('button', { name: 'Sync Invoices', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Invoice sync is not enabled');
   await page.getByRole('button', { name: 'Close invoice sync', exact: true }).click();

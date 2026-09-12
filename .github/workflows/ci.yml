@@ -17,6 +17,8 @@ jobs:
       AWS_EC2_METADATA_DISABLED: 'true'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

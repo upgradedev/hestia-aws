@@ -18,6 +18,7 @@ from typing import Any
 
 from hestia.adapters.storage import S3HouseholdStore
 from hestia.app.access import APIError
+from hestia.domain.cases import authorize_case, project_case, review_case
 
 DRAFT_TTL = 600
 MAX_ACTIONS = 40
@@ -33,6 +34,7 @@ def charge_action(state: dict[str, Any]) -> None:
 def public_state(state: dict[str, Any]) -> dict[str, Any]:
     result = copy.deepcopy(state)
     result.pop("drafts", None)
+    result["cases"] = [project_case(case) for case in state.get("cases", [])]
     return result
 
 
@@ -106,6 +108,8 @@ def prepare_claim(
         "model_id": "deterministic-review-template", "mode": "simulated",
         "statutory_basis": "Eligibility requires review; no legal entitlement determined",
     }
+    case = review_case(state, item, draft, "household_session:" + store.workspace_id)
+    draft["case_id"] = case["id"]
     digest = _digest(draft)
     approval = secrets.token_hex(32)
     state.setdefault("drafts", {})[draft_id] = {
@@ -167,6 +171,14 @@ def approve_claim(store: S3HouseholdStore, body: dict[str, Any]) -> dict[str, An
         "model_id": draft["model_id"], "mode": "simulated",
         "source_version": draft["source_version"],
     }
+    case = next((c for c in state.get("cases", []) if c["id"] == draft.get("case_id")), None)
+    if case is None:
+        raise APIError(409, "This older draft has no lifecycle. Review a new notice.")
+    try:
+        authorize_case(case, draft, digest, record["id"], "household_session:" + store.workspace_id)
+    except ValueError as exc:
+        raise APIError(409, str(exc)) from exc
+    record["case_id"] = case["id"]
     # Consumption, exact artifact, audit and outcome share one CAS commit. No external send.
     saved.update(consumed=True, result=copy.deepcopy(record))
     state["dispatch_records"].append(record)
