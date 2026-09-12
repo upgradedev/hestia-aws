@@ -7,7 +7,6 @@ from io import BytesIO
 from urllib.error import HTTPError
 
 import pytest
-
 from infra.check_p0_backend import validate
 from infra.frontend_smoke import smoke_test
 
