@@ -2,13 +2,18 @@
 from __future__ import annotations
 
 import base64
+import copy
 import json
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
+from datetime import date
+from html import escape
+from html.parser import HTMLParser
 
 import pytest
 
 from hestia.adapters.storage import S3HouseholdStore
-from hestia.app import api
+from hestia.app import api, web
 from hestia.app.access import authorize_demo
 from hestia.app.web import build_audit, lambda_handler, read_lambda_handler, render_html
 from tests.fakes import ConditionalS3, service_error
@@ -85,14 +90,121 @@ def test_reader_function_rejects_writes_even_with_a_valid_capability(sandbox):
 
 def test_build_and_static_preview_remain_available(monkeypatch):
     digest, data = build_audit("family_flat")
-    assert digest.total_reimbursable_cents == 18500
+    assert digest.total_reimbursable_cents == 0
+    assert digest.reimbursable_repairs == ()
+    assert len(digest.repairs_requiring_review) == 1
+    review = digest.repairs_requiring_review[0]
+    assert review.repair_amount_cents == 18500 and review.currency == "EUR"
+    assert review.review_required and review.entitlement_status == "not_determined"
+    assert review.statutory_expiry_date is None and review.statutory_timing == "unknown"
+    assert "neither establish nor exclude entitlement" in review.reason
     assert len(data["warranties"]) == 2
     assert "Bosch Series 6" in render_html()
-    import hestia.app.web as web
     scenario = dict(web.SCENARIOS["family_flat"])
     scenario["repairs"] = []
     monkeypatch.setitem(web.SCENARIOS, "no-repair", scenario)
     assert "HESTIA AWS" in render_html("no-repair")
+
+
+def test_root_preview_reports_recorded_costs_and_unknown_rights_without_old_claims():
+    result = lambda_handler({"rawPath": "/", "httpMethod": "GET"}, None)
+    assert result["statusCode"] == 200
+    html = result["body"]
+    assert "Bosch Series 6 Washing Machine" in html
+    assert "Repair record needing review: EUR 185.00" in html
+    assert "Statutory delivery-based screening boundary: unknown" in html
+    assert "Coverage and any reimbursement remain undetermined, not denied" in html
+    assert "4 days from the scenario date" in html
+    assert "3 synthetic transactions; no live feed" in html
+    for unsupported in (
+        "Recoverable Warranty Rights", "Statutory 2-year guarantee ends",
+        "Statutory conformity active", "legally required to reimburse",
+        "proof invalid without invoice", "Zero arithmetic hallucinations",
+        "Zero watch activity", "100% Serverless", "€185.00 Claim",
+        "Unannounced Rate Hike", "Legal Engine:",
+    ):
+        assert unsupported not in html
+
+
+def test_preview_recomputes_amounts_counts_dates_and_utility_change(monkeypatch):
+    scenario = copy.deepcopy(web.SCENARIOS["family_flat"])
+    warranty = replace(scenario["warranties"][0], item_name="Changed fixture washer")
+    scenario.update(
+        title="Changed fixture", current_date=date(2026, 9, 12), warranties=[warranty],
+        repairs=[(warranty, date(2026, 9, 9), 2099)], subscriptions=[], price_histories=[],
+        bank_transactions=[{"merchant": "Changed merchant", "amount_cents": 6001,
+                            "date": date(2026, 8, 17)}],
+        saved_receipts=set(), utility_bills=[("Changed utility", 20000, 24000, date(2026, 9, 8))],
+    )
+    monkeypatch.setitem(web.SCENARIOS, "changed", scenario)
+    html = render_html("changed")
+    assert "Repair record needing review: EUR 20.99" in html
+    assert "EUR 60.01" in html and "1 synthetic transactions" in html
+    assert "Transaction date: 2026-08-17" in html
+    assert "Recorded baseline: EUR 200.00; change: 20.0%" in html
+    assert "Rule flag: no spike flag" in html
+    assert "Subscription review flags\n<strong>0</strong>" in html
+    for stale in ("185.00", "52.7%", "Bosch Series", "Fitness Stream", "Cloud Backup"):
+        assert stale not in html
+
+
+def test_preview_no_records_never_fills_empty_sections_with_demo_claims(monkeypatch):
+    scenario = copy.deepcopy(web.SCENARIOS["family_flat"])
+    scenario.update(warranties=[], repairs=[], subscriptions=[], price_histories=[],
+                    bank_transactions=[], saved_receipts=set(), utility_bills=[])
+    monkeypatch.setitem(web.SCENARIOS, "empty", scenario)
+    html = render_html("empty")
+    assert "No inventory records" in html and "No review flags" in html
+    assert "No repair record available" in html and "0 synthetic transactions" in html
+    assert "Bosch" not in html and "185.00" not in html
+
+
+def test_preview_escapes_every_scenario_text_and_the_complete_draft(monkeypatch):
+    attack = '<script>alert("fixture")</script><img src=x onerror="alert(1)">'
+    scenario = copy.deepcopy(web.SCENARIOS["family_flat"])
+    warranty = replace(
+        scenario["warranties"][0], item_name=attack, serial_number=attack,
+        receipt_reference=attack, jurisdiction=attack,
+    )
+    charge = replace(scenario["subscriptions"][1], service_name=attack, category=attack)
+    scenario.update(
+        title=attack, homeowner_name=attack, repair_issue=attack, warranties=[warranty],
+        repairs=[(warranty, date(2026, 9, 2), 1001)], subscriptions=[charge],
+        price_histories=[(attack, 900, 1000)],
+        bank_transactions=[{"merchant": attack, "amount_cents": 8000,
+                            "date": date(2026, 9, 1)}],
+        utility_bills=[(attack, 10000, 16000, date(2026, 9, 1))],
+    )
+    monkeypatch.setitem(web.SCENARIOS, "escape", scenario)
+    html = render_html("escape", approved_action=attack)
+    assert attack not in html and escape(attack, quote=True) in html
+
+    class Elements(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.tags = []
+            self.attributes = []
+
+        def handle_starttag(self, tag, attrs):
+            self.tags.append(tag)
+            self.attributes.extend(attrs)
+
+    parsed = Elements()
+    parsed.feed(html)
+    assert not {"script", "img", "form", "button", "input"}.intersection(parsed.tags)
+    assert not any(name.startswith("on") for name, _ in parsed.attributes)
+
+
+def test_preview_preserves_currency_uncertainty_and_zero_utility_baseline(monkeypatch):
+    scenario = copy.deepcopy(web.SCENARIOS["family_flat"])
+    warranty = replace(scenario["repairs"][0][0], currency=None)
+    scenario.update(currency=None, repairs=[(warranty, date(2026, 9, 2), 18500)],
+                    utility_bills=[("Unmeasured baseline", 0, 8000, date(2026, 9, 1))])
+    monkeypatch.setitem(web.SCENARIOS, "unknown", scenario)
+    html = render_html("unknown")
+    assert "18500 minor units (currency/scale unverified)" in html
+    assert "unknown (no positive baseline)" in html
+    assert "EUR 185.00" not in html
 
 
 @pytest.mark.parametrize("path", [

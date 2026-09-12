@@ -1,14 +1,10 @@
-"""Zero-dependency modern web application and AWS Lambda HTTP handler for Hestia.
-
-Presents the Unified Household Operations Cockpit:
-- Column 1: Household Inflows & Assets (Appliances, Subscriptions, Bank Transactions)
-- Column 2: AI Sentinel Radar & Anomalies (EU 2019/771/EU Warranty Gaps, Creep, Anti-Join)
-- Column 3: Return-of-Control (ROC) Command Center (Human Approval & Statutory Claim Dispatch)
-"""
+"""Read-only synthetic scenario preview and the existing AWS Lambda API boundary."""
 
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
+from html import escape
 from typing import Any
 
 from hestia.agents.sentinel import (
@@ -20,11 +16,12 @@ from hestia.app.api import handle_api, response
 from hestia.domain.subscriptions import SubscriptionCharge
 from hestia.domain.warranties import ApplianceWarranty
 
-# Preset Demo Scenarios for Judges
+# Explicit synthetic records, independent of any live household or deployed state.
 SCENARIOS: dict[str, dict[str, Any]] = {
     "family_flat": {
         "title": "Athens Apartment 4B (Urban Household)",
         "current_date": date(2026, 9, 10),
+        "currency": "EUR",
         "warranties": [
             ApplianceWarranty(
                 item_name="Bosch Series 6 Washing Machine",
@@ -33,6 +30,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
                 statutory_months=24,
                 commercial_months=24,
                 receipt_reference="REC-2024-BOSCH-88",
+                currency="EUR",
             ),
             ApplianceWarranty(
                 item_name="Sony Bravia 55 OLED TV",
@@ -41,6 +39,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
                 statutory_months=24,
                 commercial_months=12,
                 receipt_reference="REC-2025-SONY-11",
+                currency="EUR",
             ),
         ],
         "repairs": [
@@ -52,6 +51,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
                     statutory_months=24,
                     commercial_months=24,
                     receipt_reference="REC-2024-BOSCH-88",
+                    currency="EUR",
                 ),
                 date(2026, 9, 2),
                 18500,  # €185.00
@@ -89,9 +89,10 @@ SCENARIOS: dict[str, dict[str, Any]] = {
             ("Cloud Backup Vault", 999, 1399),  # 40% creep
         ],
         "bank_transactions": [
-            {"merchant": "Leroy Merlin DIY", "amount_cents": 8550, "date": "2026-09-04"},
-            {"merchant": "Sklavenitis Supermarket", "amount_cents": 14230, "date": "2026-09-06"},
-            {"merchant": "Plaisio Electronics", "amount_cents": 4200, "date": "2026-09-07"},
+            {"merchant": "Leroy Merlin DIY", "amount_cents": 8550, "date": date(2026, 9, 4)},
+            {"merchant": "Sklavenitis Supermarket", "amount_cents": 14230,
+             "date": date(2026, 9, 6)},
+            {"merchant": "Plaisio Electronics", "amount_cents": 4200, "date": date(2026, 9, 7)},
         ],
         "saved_receipts": {"Sklavenitis Supermarket"},
         "utility_bills": [
@@ -118,506 +119,187 @@ def build_audit(scenario_key: str = "family_flat") -> tuple[HouseholdAuditDigest
     return digest, data
 
 
-def render_html(scenario_key: str = "family_flat", approved_action: str | None = None) -> str:
-    digest, data = build_audit(scenario_key)
-    homeowner = data["homeowner_name"]
-    outlays_total = sum(t["amount_cents"] for t in data["bank_transactions"]) / 100
+def _text(value: object) -> str:
+    return escape(str(value), quote=True)
 
-    claim_letter = ""
-    if data["repairs"]:
-        w, r_date, r_cents = data["repairs"][0]
-        claim_letter = draft_statutory_claim_letter(
-            warranty=w,
-            repair_date=r_date,
-            repair_amount_cents=r_cents,
-            issue_description=data["repair_issue"],
-            homeowner_name=homeowner,
-        )
 
-    # A legacy rendering argument is not an authorization or execution receipt.
-    action_banner = (
-        '<div class="banner-success"><strong>Read-only synthetic illustration.</strong> '
-        'No model inference, email, provider action or financial recovery occurs on this page. '
-        '<a href="https://drusjukc9d4oc.cloudfront.net/">Open the Hestia application</a> '
-        'to begin an isolated demo session and review an exact server-prepared notice.</div>'
+def _money(cents: int, currency: str | None) -> str:
+    """Format recorded hundredths without converting or inventing a currency."""
+    if type(cents) is not int:
+        raise ValueError("Scenario amounts must be integer minor units.")
+    if currency not in {"EUR", "USD", "GBP"}:
+        return f"{cents} minor units (currency/scale unverified)"
+    sign = "-" if cents < 0 else ""
+    whole, fraction = divmod(abs(cents), 100)
+    return f"{currency} {sign}{whole}.{fraction:02d}"
+
+
+def _card(title: object, *lines: object) -> str:
+    return (
+        '<article class="item-card"><h3>' + _text(title) + "</h3>"
+        + "".join("<p>" + _text(line) + "</p>" for line in lines) + "</article>"
     )
+
+
+def render_html(scenario_key: str = "family_flat", approved_action: str | None = None) -> str:
+    """Render only recorded synthetic facts; the legacy approval argument grants no authority."""
+    digest, data = build_audit(scenario_key)
+    currency = data.get("currency")
+    current_date = data["current_date"]
+    inventories = []
+    for warranty in data["warranties"]:
+        inventories.append(_card(
+            warranty.item_name,
+            f"Serial: {warranty.serial_number or 'not provided'}",
+            f"Recorded purchase date: {warranty.purchase_date or 'not provided'}",
+            f"Recorded delivery date: {warranty.delivery_date or 'not provided'}",
+            f"Jurisdiction: {warranty.jurisdiction or 'unknown'}; legal review required.",
+            "Statutory delivery-based screening boundary: "
+            f"{warranty.get_statutory_expiry_date() or 'unknown'}",
+            "Commercial terms-based screening boundary: "
+            f"{warranty.get_commercial_expiry_date() or 'unknown'}",
+            "Timing is not a determination of coverage or a deadline for exercising rights.",
+        ))
+    for charge in data["subscriptions"]:
+        lines = [
+            f"Recorded monthly charge: {_money(charge.monthly_cents, currency)}",
+            f"Recorded billing date: {charge.last_billed}; category: {charge.category}",
+        ]
+        if charge.is_trial:
+            lines.append(f"Recorded trial end: {charge.trial_end_date or 'not provided'}")
+            if charge.trial_end_date is not None:
+                days = (charge.trial_end_date - current_date).days
+                lines.append(f"{days} days from the scenario date; renewal terms not verified.")
+        lines.append("Usage and whether the household needs this service have not been assessed.")
+        inventories.append(_card(charge.service_name, *lines))
+    for tx in data["bank_transactions"]:
+        inventories.append(_card(
+            tx["merchant"], f"Recorded outlay: {_money(tx['amount_cents'], currency)}",
+            f"Recorded transaction date: {tx.get('date') or 'not provided'}",
+        ))
+
+    reviews = []
+    for repair in digest.repairs_requiring_review:
+        reviews.append(_card(
+            repair.item_name,
+            f"Repair record needing review: {_money(repair.repair_amount_cents, repair.currency)}",
+            f"Recorded repair date: {repair.repair_date or 'not provided'}",
+            repair.reason,
+            "Missing facts: " + (", ".join(repair.missing_facts) or "none in the timing record"),
+            "Coverage and any reimbursement remain undetermined, not denied.",
+        ))
+    for flag in digest.subscription_anomalies:
+        reviews.append(_card(
+            flag.service_name, f"Rule flag: {flag.anomaly.value}",
+            f"Flagged monthly amount: {_money(flag.monthly_impact_cents, currency)}",
+            "This is a review signal. Category overlap does not establish redundancy; "
+            "a trial fee or price increase is not measured waste or savings.",
+        ))
+    for name, previous, current in data["price_histories"]:
+        reviews.append(_card(
+            name, f"Recorded price comparison: {_money(previous, currency)} "
+            f"to {_money(current, currency)}",
+            f"Monthly difference: {_money(current - previous, currency)}",
+            "Notification, consent and future billing have not been assessed.",
+        ))
+    for gap in digest.missing_receipt_gaps:
+        reviews.append(_card(
+            gap.merchant, f"Unmatched receipt record: {_money(gap.amount_cents, currency)}",
+            f"Transaction date: {gap.date_observed}",
+            "No merchant-name match in the scenario receipt index. This does not determine "
+            "whether other evidence exists or whether insurance or warranty rights are valid.",
+        ))
+    for name, baseline, bill, billed_on in data["utility_bills"]:
+        percentage = (
+            f"{Decimal(bill - baseline) * 100 / Decimal(baseline):.1f}%"
+            if baseline > 0 else "unknown (no positive baseline)"
+        )
+        flagged = any(
+            gap.merchant == name and gap.date_observed == billed_on
+            for gap in digest.utility_spikes
+        )
+        reviews.append(_card(
+            name, f"Recorded bill: {_money(bill, currency)} on {billed_on}",
+            f"Recorded baseline: {_money(baseline, currency)}; change: {percentage}",
+            f"Rule flag: {'review requested' if flagged else 'no spike flag'}",
+            "A comparison does not establish a billing error or its cause.",
+        ))
+
+    letters = []
+    for warranty, repair_date, amount in data["repairs"]:
+        letter = draft_statutory_claim_letter(
+            warranty, repair_date, amount, data["repair_issue"], data["homeowner_name"],
+        )
+        letters.append(
+            '<article class="item-card"><h3>Illustrative evidence review request</h3>'
+            '<p>No approval, delivery or financial outcome is recorded here.</p>'
+            '<pre class="letter-box">' + _text(letter) + "</pre></article>"
+        )
+    outlays = sum(tx["amount_cents"] for tx in data["bank_transactions"])
+    inventory_html = "".join(inventories) or "<p>No inventory records in this scenario.</p>"
+    review_html = "".join(reviews) or "<p>No review flags from the supplied scenario.</p>"
+    letter_html = "".join(letters) or "<p>No repair record available for an illustrative request.</p>"
 
     return f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hestia AWS: Autonomous Household Financial Sentinel</title>
-
+<title>HESTIA AWS: Synthetic household review</title>
 <style>
-:root {{
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface-raised: #21262d;
-  --border: #30363d;
-  --border-focus: #58a6ff;
-  --text: #c9d1d9;
-  --text-heading: #f0f6fc;
-  --text-muted: #8b949e;
-  --accent: #e3b341;
-  --accent-soft: rgba(227, 179, 65, 0.15);
-  --success: #3fb950;
-  --success-soft: rgba(63, 185, 80, 0.15);
-  --danger: #f85149;
-  --danger-soft: rgba(248, 81, 73, 0.15);
-  --warning: #d29922;
-  --warning-soft: rgba(210, 153, 34, 0.15);
-}}
-* {{ box-sizing: border-box; margin: 0; padding: 0; }}
-body {{
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SF Pro Display", sans-serif;
-  line-height: 1.5;
-  padding: 0;
-  margin: 0;
-  min-height: 100vh;
-}}
-header.topbar {{
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 14px 28px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}}
-.brand {{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-decoration: none;
-}}
-.brand-badge {{
-  background: var(--accent);
-  color: #000;
-  font-weight: 800;
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}}
-.brand-title {{
-  color: var(--text-heading);
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}}
-.brand-sub {{
-  color: var(--text-muted);
-  font-size: 13px;
-}}
-.telemetry-pills {{
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  font-size: 12px;
-}}
-.pill {{
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  padding: 4px 10px;
-  border-radius: 20px;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}}
-.pill.active {{
-  border-color: var(--success);
-  color: var(--success);
-}}
-.metrics-strip {{
-  background: rgba(22, 27, 34, 0.8);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  padding: 16px 28px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 18px;
-}}
-.metric-box {{
-  border-left: 3px solid var(--accent);
-  padding-left: 12px;
-}}
-.metric-box.danger {{ border-left-color: var(--danger); }}
-.metric-box.success {{ border-left-color: var(--success); }}
-.metric-label {{
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}}
-.metric-value {{
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-heading);
-  font-variant-numeric: tabular-nums;
-  margin-top: 2px;
-}}
-.metric-desc {{
-  font-size: 11.5px;
-  color: var(--text-muted);
-}}
-.container {{
-  max-width: 1560px;
-  margin: 0 auto;
-  padding: 24px 28px 60px;
-}}
-.banner-success {{
-  background: var(--success-soft);
-  border: 1px solid var(--success);
-  color: var(--text-heading);
-  padding: 14px 18px;
-  border-radius: 8px;
-  margin-bottom: 22px;
-  font-size: 13.5px;
-}}
-.digest-pill {{
-  margin-top: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
-  color: var(--success);
-}}
-.cockpit-grid {{
-  display: grid;
-  grid-template-columns: minmax(300px, 1.1fr) minmax(320px, 1.2fr) minmax(320px, 1.3fr);
-  gap: 20px;
-  align-items: start;
-}}
-@media (max-width: 1100px) {{
-  .cockpit-grid {{ grid-template-columns: 1fr; }}
-}}
-.col-card {{
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
-  min-height: 520px;
-}}
-.col-header {{
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 12px;
-  margin-bottom: 16px;
-}}
-.col-title {{
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
-  color: var(--text-heading);
-}}
-.col-subtitle {{
-  font-size: 11px;
-  color: var(--text-muted);
-}}
-.item-card {{
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 12px 14px;
-  margin-bottom: 12px;
-  transition: border-color 0.15s, transform 0.15s;
-}}
-.item-card:hover {{
-  border-color: var(--border-focus);
-  transform: translateY(-1px);
-}}
-.item-card.alert-warn {{
-  border-left: 3px solid var(--warning);
-  background: var(--warning-soft);
-}}
-.item-card.alert-danger {{
-  border-left: 3px solid var(--danger);
-  background: var(--danger-soft);
-}}
-.item-card.alert-success {{
-  border-left: 3px solid var(--success);
-  background: var(--success-soft);
-}}
-.badge {{
-  display: inline-block;
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 2px 6px;
-  border-radius: 4px;
-}}
-.b-warn {{ background: var(--warning); color: #000; }}
-.b-danger {{ background: var(--danger); color: #fff; }}
-.b-success {{ background: var(--success); color: #000; }}
-.item-title {{
-  font-size: 13.5px;
-  font-weight: 650;
-  color: var(--text-heading);
-  margin: 6px 0 2px;
-}}
-.item-meta {{
-  font-size: 12px;
-  color: var(--text-muted);
-}}
-.item-math {{
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-heading);
-  font-variant-numeric: tabular-nums;
-  margin-top: 4px;
-}}
-.letter-box {{
-  background: #090d13;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 14px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: #adbac7;
-  max-height: 280px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  margin-top: 10px;
-}}
-.btn {{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  color: var(--text-heading);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 9px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: all 0.15s;
-}}
-.btn:hover {{
-  background: #2b313a;
-  border-color: #8b949e;
-}}
-.btn.primary {{
-  background: var(--success);
-  border-color: var(--success);
-  color: #000;
-}}
-.btn.primary:hover {{
-  filter: brightness(1.1);
-}}
-.btn.danger {{
-  background: var(--danger);
-  border-color: var(--danger);
-  color: #fff;
-}}
-.btn.danger:hover {{
-  filter: brightness(1.1);
-}}
-.roc-card {{
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
-}}
-.roc-title {{
-  color: var(--text-heading);
-  font-size: 13.5px;
-}}
-footer.meta-bar {{
-  margin-top: 36px;
-  border-top: 1px solid var(--border);
-  padding-top: 16px;
-  font-size: 12px;
-  color: var(--text-muted);
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}}
+* {{ box-sizing: border-box; }}
+body {{ margin: 0; background: #0d1117; color: #c9d1d9;
+  font: 15px/1.6 system-ui, sans-serif; overflow-wrap: anywhere; }}
+header, main, footer {{ max-width: 1440px; margin: auto; padding: 24px; }}
+h1, h2, h3 {{ color: #f0f6fc; line-height: 1.3; }}
+h1 {{ margin-bottom: 8px; }} h2 {{ font-size: 19px; }} h3 {{ font-size: 16px; }}
+a {{ color: #8ac7ff; }} a:focus-visible {{ outline: 3px solid #e3b341; outline-offset: 4px; }}
+.banner, .metric, .item-card {{ background: #161b22; border: 1px solid #30363d;
+  border-radius: 8px; padding: 16px; margin-bottom: 14px; }}
+.banner {{ border-color: #e3b341; }}
+.metrics {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }}
+.metric strong {{ display: block; font-size: 22px; color: #f0f6fc; }}
+.columns {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }}
+p {{ margin: 8px 0; }} .letter-box {{ white-space: pre-wrap; overflow-wrap: anywhere;
+  font: 12px/1.6 ui-monospace, monospace; }}
+footer {{ border-top: 1px solid #30363d; color: #a0a8b3; }}
+@media (max-width: 1000px) {{ .columns {{ grid-template-columns: 1fr; }} }}
 </style>
 </head>
 <body>
-
-<header class="topbar">
-  <div class="brand">
-    <span class="brand-badge">Everyday Agent</span>
-    <div>
-      <div class="brand-title">HESTIA AWS</div>
-      <div class="brand-sub">Household Financial, Warranty & Subscription Sentinel</div>
-    </div>
-  </div>
-  <div class="telemetry-pills">
-    <span class="pill">Read-only synthetic illustration</span>
-    <span class="pill">Framework: AWS Strands Agents SDK</span>
-    <span class="pill">Legal Engine: Directive 2019/771/EU</span>
-  </div>
+<header>
+<h1>HESTIA AWS</h1>
+<p>Household financial, warranty and subscription review</p>
+<p>{_text(data['title'])} | Scenario date: {_text(current_date)}</p>
+<div class="banner"><strong>Read-only synthetic illustration.</strong>
+<p>This page runs deterministic rules on the scenario below. No account is connected and no
+model inference, email, provider action or financial recovery occurs on this page.</p>
+<a href="https://drusjukc9d4oc.cloudfront.net/">Open the Hestia application</a>
+to begin an isolated demo session and review an exact server-prepared notice.</div>
 </header>
-
-<div class="metrics-strip">
-  <div class="metric-box success">
-    <div class="metric-label">Recoverable Warranty Rights</div>
-    <div class="metric-value">€{digest.total_reimbursable_cents/100:.2f}</div>
-    <div class="metric-desc">Unclaimed statutory repair costs on file</div>
-  </div>
-  <div class="metric-box danger">
-    <div class="metric-label">Identified Monthly Waste</div>
-    <div class="metric-value">€{digest.monthly_subscription_waste_cents/100:.2f}/mo</div>
-    <div class="metric-desc">Zombie subscriptions, price creep & trial traps</div>
-  </div>
-  <div class="metric-box">
-    <div class="metric-label">Monitored Household Outlays</div>
-    <div class="metric-value">€{outlays_total:.2f}</div>
-    <div class="metric-desc">3 transactions scanned for anti-join completeness</div>
-  </div>
-  <div class="metric-box">
-    <div class="metric-label">Return-of-Control Gate</div>
-    <div class="metric-value">2 Decisions</div>
-    <div class="metric-desc">Human sign-off required prior to dispatch</div>
-  </div>
+<main>
+<div class="metrics">
+<div class="metric">Repair records needing review
+<strong>{len(digest.repairs_requiring_review)}</strong>
+Amounts are recorded costs, not entitlements.</div>
+<div class="metric">Subscription review flags
+<strong>{len(digest.subscription_anomalies)}</strong>
+Signals may overlap; no savings total is inferred.</div>
+<div class="metric">Recorded household outlays
+<strong>{_text(_money(outlays, currency))}</strong>
+{len(data['bank_transactions'])} synthetic transactions; no live feed.</div>
+<div class="metric">Coverage and reimbursement
+<strong>Undetermined</strong>Missing facts require review; rights have not been denied.</div>
 </div>
-
-<div class="container">
-  {action_banner}
-
-  <div class="cockpit-grid">
-    <!-- COLUMN 1: HOUSEHOLD INVENTORY & INPUT FEEDS -->
-    <div class="col-card">
-      <div class="col-header">
-        <div>
-          <div class="col-title">1. Household Inflows & Feeds</div>
-          <div class="col-subtitle">Monitored assets, cards & recurring billing</div>
-        </div>
-      </div>
-
-      <div class="item-card">
-        <span class="badge b-warn">23 Mos Elapsed</span>
-        <div class="item-title">Bosch Series 6 Washing Machine</div>
-        <div class="item-meta">SN: WAU28T64GB/01 · Bought 2024-10-15</div>
-        <div class="item-meta">Statutory 2-year guarantee ends 2026-10-15</div>
-      </div>
-
-      <div class="item-card">
-        <span class="badge b-success">Protected</span>
-        <div class="item-title">Sony Bravia 55 OLED TV</div>
-        <div class="item-meta">SN: XR-55A80K-902 · Bought 2025-03-20</div>
-        <div class="item-meta">Statutory conformity active (186 days left)</div>
-      </div>
-
-      <div class="item-card">
-        <span class="badge b-danger">Active Creep</span>
-        <div class="item-title">Cloud Backup Vault</div>
-        <div class="item-meta">Billed €13.99 on 2026-09-01 (Stepped from €9.99)</div>
-      </div>
-
-      <div class="item-card">
-        <span class="badge b-warn">Expiring Trial</span>
-        <div class="item-title">Fitness Stream Pro</div>
-        <div class="item-meta">Free trial expires 2026-09-14 (€19.99 auto-charge)</div>
-      </div>
-
-      <div class="item-card">
-        <span class="badge b-danger">Duplicate Service</span>
-        <div class="item-title">Music Streaming (Family & Individual)</div>
-        <div class="item-meta">Overlapping category charges: €14.99 + €9.99</div>
-      </div>
-    </div>
-
-    <!-- COLUMN 2: AI SENTINEL RADAR & ANOMALY DETECTION -->
-    <div class="col-card">
-      <div class="col-header">
-        <div>
-          <div class="col-title">2. AI Sentinel Radar</div>
-          <div class="col-subtitle">Autonomous statutory & financial gap audits</div>
-        </div>
-      </div>
-
-      <div class="item-card alert-danger">
-        <span class="badge b-danger">Statutory Claim Open</span>
-        <div class="item-title">EU 2019/771/EU Conformity Breach</div>
-        <div class="item-meta">Bosch Washing Machine suffered bearing seizure on 2026-09-02.</div>
-        <div class="item-math">Repair cost €185.00 paid out-of-pocket during guarantee window.</div>
-        <div class="item-meta" style="margin-top:6px; color:var(--text-heading);">'
-        'Action: Retailer legally required to reimburse full amount.</div>
-      </div>
-
-      <div class="item-card alert-warn">
-        <span class="badge b-warn">Price Creep (+40%)</span>
-        <div class="item-title">Unannounced Rate Hike</div>
-        <div class="item-meta">Cloud Backup Vault increased charge from €9.99 to €13.99.</div>
-        <div class="item-math">Annualized silent leakage: €48.00 / year.</div>
-      </div>
-
-      <div class="item-card alert-warn">
-        <span class="badge b-warn">Missing Receipt Anti-Join</span>
-        <div class="item-title">Outflow >€50 Without Tax Proof</div>
-        <div class="item-meta">€85.50 outflow at Leroy Merlin has no linked receipt on file.</div>
-        <div class="item-meta" style="margin-top:4px;">'
-        'Risk: Home insurance and warranty proof invalid without invoice.</div>
-      </div>
-
-      <div class="item-card alert-danger">
-        <span class="badge b-danger">Utility Surge (+52%)</span>
-        <div class="item-title">Electricity Outlay Surge</div>
-        <div class="item-meta">PPC Electricity billed €168.00 against €110 baseline (+52.7%).</div>
-        <div class="item-meta" style="margin-top:4px;">'
-        'Action: Check meter malfunction or thermal insulation loss.</div>
-      </div>
-    </div>
-
-    <!-- COLUMN 3: RETURN-OF-CONTROL COMMAND CENTER -->
-    <div class="col-card">
-      <div class="col-header">
-        <div>
-          <div class="col-title">3. Return-of-Control (ROC)</div>
-          <div class="col-subtitle">Human authorization before external dispatch</div>
-        </div>
-      </div>
-
-      <div class="roc-card" style="margin-bottom:18px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong class="roc-title">Statutory Claim Dispatch (#1)</strong>
-          <span class="badge b-success">€185.00 Claim</span>
-        </div>
-        <p style="font-size:12px; color:var(--text-muted); margin:8px 0;">
-          This is an illustrative template, not an approved notice or a delivery receipt.
-          Open the application to prepare and review an exact simulated notice:
-        </p>
-
-        <div class="letter-box">{claim_letter}</div>
-
-        <p style="margin-top:14px;">
-          Approval and dispatch are unavailable on this read-only page.
-        </p>
-      </div>
-
-      <div class="roc-card">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong class="roc-title">Trial Expiry Intervention (#2)</strong>
-          <span class="badge b-danger">Auto-bill in 3 Days</span>
-        </div>
-        <p style="font-size:12px; color:var(--text-muted); margin:8px 0;">
-          Fitness Stream Pro free trial expires 2026-09-14. Zero watch activity observed in 10 days.
-        </p>
-        <p>Illustrative alert only. No subscription is cancelled and no savings are recorded.</p>
-      </div>
-    </div>
-  </div>
-
-  <footer class="meta-bar">
-    <div>Hestia AWS · Everyday Agents Track · 100% Serverless on AWS Lambda</div>
-    <div>Zero arithmetic hallucinations · Integer-precision math · Strands Agents SDK</div>
-  </footer>
+<div class="columns">
+<section><h2>1. Recorded household facts</h2>{inventory_html}</section>
+<section><h2>2. Deterministic review signals</h2>{review_html}</section>
+<section><h2>3. Illustrative review requests</h2>
+<p>Approval and dispatch are unavailable on this read-only page.</p>{letter_html}</section>
 </div>
-
+</main>
+<footer>Hestia AWS | Synthetic fixture only. Legal eligibility, real outcomes,
+model accuracy and time savings are not measured by this preview.</footer>
 </body>
 </html>
 """
