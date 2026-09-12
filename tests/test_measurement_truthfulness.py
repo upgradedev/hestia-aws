@@ -8,7 +8,6 @@ from datetime import date
 from unittest.mock import Mock
 
 import pytest
-
 from tools import ablate, measure
 
 
@@ -187,7 +186,9 @@ def test_cli_returns_failure_with_observed_regression_in_json(tool, monkeypatch,
 
 @pytest.mark.parametrize("tool", [measure, ablate])
 def test_execution_exception_never_creates_a_success_artifact(tool, tmp_path, monkeypatch, capsys):
-    monkeypatch.setattr(measure, "audit_price_creep", Mock(side_effect=ValueError("broken fixture")))
+    monkeypatch.setattr(
+        measure, "audit_price_creep", Mock(side_effect=ValueError("broken fixture")),
+    )
     target = tmp_path / "unexecuted-report.json"
     with pytest.raises(ValueError, match="broken fixture"):
         tool.main(["--output", str(target)])

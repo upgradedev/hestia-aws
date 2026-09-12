@@ -238,7 +238,9 @@ def render_html(scenario_key: str = "family_flat", approved_action: str | None =
     outlays = sum(tx["amount_cents"] for tx in data["bank_transactions"])
     inventory_html = "".join(inventories) or "<p>No inventory records in this scenario.</p>"
     review_html = "".join(reviews) or "<p>No review flags from the supplied scenario.</p>"
-    letter_html = "".join(letters) or "<p>No repair record available for an illustrative request.</p>"
+    letter_html = "".join(letters) or (
+        "<p>No repair record available for an illustrative request.</p>"
+    )
 
     return f"""<!doctype html>
 <html lang="en">
@@ -257,7 +259,8 @@ a {{ color: #8ac7ff; }} a:focus-visible {{ outline: 3px solid #e3b341; outline-o
 .banner, .metric, .item-card {{ background: #161b22; border: 1px solid #30363d;
   border-radius: 8px; padding: 16px; margin-bottom: 14px; }}
 .banner {{ border-color: #e3b341; }}
-.metrics {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }}
+.metrics {{ display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }}
 .metric strong {{ display: block; font-size: 22px; color: #f0f6fc; }}
 .columns {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }}
 p {{ margin: 8px 0; }} .letter-box {{ white-space: pre-wrap; overflow-wrap: anywhere;

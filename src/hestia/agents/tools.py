@@ -60,7 +60,8 @@ def check_appliance_warranty_tool(
     if repair_amount_cents != 0:
         claim = evaluate_repair_claim(warranty, repair_date, repair_amount_cents)
         lines.extend([
-            f"Recorded repair cost: {format_repair_amount(repair_amount_cents, warranty.currency)}.",
+            "Recorded repair cost: "
+            f"{format_repair_amount(repair_amount_cents, warranty.currency)}.",
             claim.reason,
             "Missing facts: " + (", ".join(claim.missing_facts) or "none in the timing record"),
             "Review flags: " + ", ".join(claim.review_reasons),

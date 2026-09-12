@@ -111,7 +111,8 @@ def prepare_claim(
             defect_date=_recorded_date(item, "defect_date"),
             commercial_start_date=_recorded_date(item, "commercial_start_date"),
             commercial_terms_reference=item.get("commercial_terms_reference", ""),
-            jurisdiction=item.get("jurisdiction"), seller_is_business=item.get("seller_is_business"),
+            jurisdiction=item.get("jurisdiction"),
+            seller_is_business=item.get("seller_is_business"),
             consumer_purchase=item.get("consumer_purchase"), currency="EUR",
         )
         repair_date = _recorded_date(item, "repair_date")

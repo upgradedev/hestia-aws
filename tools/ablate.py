@@ -71,7 +71,9 @@ def run_ablation(fixture: dict[str, Any] | None = None) -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=pathlib.Path, help="Create a new JSON report; never overwrite")
+    parser.add_argument(
+        "--output", type=pathlib.Path, help="Create a new JSON report; never overwrite",
+    )
     args = parser.parse_args(argv)
     data = run_ablation()
     emit_report(data, args.output)

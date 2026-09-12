@@ -99,7 +99,9 @@ class ApplianceWarranty:
             value = getattr(self, name)
             if value is not None and (not isinstance(value, str) or not value.strip()):
                 raise ValueError(f"{name} must be nonempty text or None.")
-        for name in ("item_name", "serial_number", "receipt_reference", "commercial_terms_reference"):
+        for name in (
+            "item_name", "serial_number", "receipt_reference", "commercial_terms_reference",
+        ):
             if not isinstance(getattr(self, name), str):
                 raise ValueError(f"{name} must be text.")
 
@@ -237,7 +239,8 @@ def evaluate_repair_claim(
         item_name=warranty.item_name, repair_date=repair_date,
         repair_amount_cents=repair_amount_cents, is_covered=False, claimable_amount_cents=0,
         reason=("Review required. Statutory and commercial grounds are separate. Recorded dates "
-                "neither establish nor exclude entitlement; no reimbursement amount is determined."),
+                "neither establish nor exclude entitlement; "
+                "no reimbursement amount is determined."),
         statutory_expiry_date=statutory_end, commercial_expiry_date=commercial_end,
         statutory_timing=_timing(warranty.defect_date, warranty.delivery_date, statutory_end),
         commercial_timing=_timing(repair_date, warranty.commercial_start_date, commercial_end),

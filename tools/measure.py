@@ -165,7 +165,8 @@ def run_benchmark(fixture: dict[str, Any] | None = None) -> dict[str, Any]:
             "Only the named detector outputs are checked against this fixed fixture. "
             "Repair costs, monthly differences, scheduled fees and unmatched outlays have distinct "
             "meanings and are not summed. A flag is not entitlement, waste, savings or recovery. "
-            "No live household, provider, model, legal outcome or elapsed-time benefit is evaluated."
+            "No live household, provider, model, legal outcome "
+            "or elapsed-time benefit is evaluated."
         ),
     }
 
@@ -186,7 +187,9 @@ def emit_report(data: dict[str, Any], output: pathlib.Path | None = None) -> Non
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=pathlib.Path, help="Create a new JSON report; never overwrite")
+    parser.add_argument(
+        "--output", type=pathlib.Path, help="Create a new JSON report; never overwrite",
+    )
     args = parser.parse_args(argv)
     data = run_benchmark()
     emit_report(data, args.output)
