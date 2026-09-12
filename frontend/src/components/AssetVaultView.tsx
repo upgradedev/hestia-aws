@@ -3,11 +3,15 @@ import { ApplianceWarranty } from '../types';
 
 interface AssetVaultViewProps {
   appliances: ApplianceWarranty[];
+  actionsDisabled: boolean;
+  snapshotDate: string;
   onOpenClaimModal: (app: ApplianceWarranty) => void;
 }
 
 export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
   appliances,
+  actionsDisabled,
+  snapshotDate,
   onOpenClaimModal,
 }) => {
   return (
@@ -27,7 +31,7 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
             Protected Household Goods & 24-Month Warranty Horizon
           </h2>
           <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
-            In the European Union, sellers are legally bound for 2 years from delivery. Even if the store warranty expires at 12 months, statutory consumer rights remain 100% enforceable.
+            These are the appliance facts from the current server snapshot. A recorded warranty duration is not a determination of legal eligibility; review the evidence before making a claim.
           </p>
         </div>
 
@@ -43,9 +47,11 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {appliances.map((app) => {
           const isDefective = app.status === 'defect_reported';
-          // Calculate elapsed months roughly
-          const elapsedMonths = isDefective ? 22 : 21;
-          const pct = Math.min(100, (elapsedMonths / 24) * 100);
+          const purchase = new Date(app.purchase_date);
+          const reference = new Date(app.defect_reported_at ?? snapshotDate);
+          const elapsedMonths = Math.max(0, (reference.getUTCFullYear() - purchase.getUTCFullYear()) * 12 + reference.getUTCMonth() - purchase.getUTCMonth() - (reference.getUTCDate() < purchase.getUTCDate() ? 1 : 0));
+          const duration = app.legal_statutory_months;
+          const pct = duration > 0 ? Math.min(100, elapsedMonths / duration * 100) : 0;
 
           return (
             <div
@@ -69,11 +75,11 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
                   <div className="text-base font-black text-white font-mono">€{app.price_eur.toFixed(2)}</div>
                   {isDefective ? (
                     <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                      DEFECT IN 24M WINDOW
+                      REPAIR RECORDED
                     </span>
                   ) : (
                     <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                      COVERED
+                      PURCHASE RECORDED
                     </span>
                   )}
                 </div>
@@ -82,9 +88,9 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
               {/* Progress Bar of 24-Month Statutory Horizon */}
               <div className="space-y-1.5 pt-2 border-t border-white/5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Statutory 2-Year Horizon:</span>
+                  <span className="text-slate-400">Recorded Warranty Duration:</span>
                   <span className="text-slate-200 font-mono font-medium">
-                    Month {elapsedMonths} of 24 ({24 - elapsedMonths} months left)
+                    {elapsedMonths} full months at {isDefective ? 'repair' : 'snapshot'} / {duration} recorded
                   </span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
@@ -107,11 +113,11 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
                 </div>
                 <div>
                   <span className="text-slate-500 uppercase text-[10px] block">Store Guarantee</span>
-                  <span className="text-rose-400">{app.commercial_warranty_months}m (Expired)</span>
+                  <span className="text-slate-300">{app.commercial_warranty_months} months recorded</span>
                 </div>
                 <div>
                   <span className="text-slate-500 uppercase text-[10px] block">EU Statutory Law</span>
-                  <span className="text-emerald-400 font-bold">24 Months (Active)</span>
+                  <span className="text-slate-300">{duration} months; eligibility requires review</span>
                 </div>
               </div>
 
@@ -119,6 +125,8 @@ export const AssetVaultView: React.FC<AssetVaultViewProps> = ({
               {isDefective ? (
                 <button
                   onClick={() => onOpenClaimModal(app)}
+                  disabled={actionsDisabled}
+                  data-testid={'review-appliance-' + app.id}
                   className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold text-xs shadow-lg shadow-rose-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

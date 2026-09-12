@@ -59,8 +59,8 @@ def template():
         "Statement": [
             {
                 "Effect": "Allow",
-                "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
-                "Resource": [attr("State", "Arn"), sub("${State.Arn}/*")],
+                "Action": ["s3:GetObject", "s3:PutObject"],
+                "Resource": sub("${State.Arn}/demo/workspaces/*"),
             },
             {
                 "Effect": "Allow",
@@ -71,22 +71,8 @@ def template():
                 ),
             },
             {
-                "Effect": "Allow",
-                "Action": [
-                    "bedrock:InvokeModel",
-                    "bedrock:InvokeModelWithResponseStream",
-                ],
-                "Resource": "*",
-            },
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "ses:SendRawEmail",
-                    "ses:SendEmail",
-                    "ses:GetSendQuota",
-                    "ses:GetIdentityVerificationAttributes",
-                    "ses:ListIdentities",
-                ],
+                "Effect": "Deny",
+                "Action": ["bedrock:*", "ses:*", "s3:DeleteObject", "s3:DeleteObjectVersion"],
                 "Resource": "*",
             },
         ],
@@ -101,12 +87,15 @@ def template():
         "Code": {"S3Bucket": ref("CodeBucket"), "S3Key": ref("CodeKey")},
         "Timeout": 28,
         "MemorySize": 512,
-        "ReservedConcurrentExecutions": 10,
+        "ReservedConcurrentExecutions": 2,
         "Environment": {"Variables": {
             "HESTIA_STATE_BUCKET": ref("State"),
             "HESTIA_STATE_PREFIX": "audit/",
             "HESTIA_COMMIT_SHA": ref("CommitSha"),
             "HESTIA_SES_REGION": "eu-west-1",
+            "HESTIA_DEMO_SECRET": sub(
+                "{{resolve:secretsmanager:${DemoSecretArn}:SecretString}}"
+            ),
         }},
         "Tags": [{"Key": "project", "Value": "hestia-agentsforhumans"}],
     }
@@ -114,7 +103,7 @@ def template():
     api_props = {
         "Name": "hestia-afh-api",
         "ProtocolType": "HTTP",
-        "Description": "Anonymous household sentinel operations cockpit and ROC actions.",
+        "Description": "Read-only preview and capability-scoped synthetic demo actions.",
     }
 
     integration_props = {
@@ -134,7 +123,7 @@ def template():
         ),
     }
 
-    return {
+    result = {
         "AWSTemplateFormatVersion": "2010-09-09",
         "Description": "Hestia Agents for Humans household sentinel API and operations cockpit.",
         "Parameters": {
@@ -144,6 +133,13 @@ def template():
             },
             "CodeKey": {"Type": "String", "AllowedPattern": "releases/[0-9a-f]{40}/hestia-api.zip"},
             "CommitSha": {"Type": "String", "AllowedPattern": "[0-9a-f]{40}"},
+            "DemoSecretArn": {
+                "Type": "String",
+                "Description": "Dedicated demo-signing secret ARN; value at least 32 bytes.",
+                "AllowedPattern": (
+                    "arn:aws:secretsmanager:eu-west-1:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+"
+                ),
+            },
         },
         "Resources": {
             "State": {
@@ -195,7 +191,7 @@ def template():
                 "Type": "AWS::ApiGatewayV2::Stage",
                 "Properties": {
                     "ApiId": ref("Api"), "StageName": "$default", "AutoDeploy": True,
-                    "DefaultRouteSettings": {"ThrottlingRateLimit": 20, "ThrottlingBurstLimit": 40},
+                    "DefaultRouteSettings": {"ThrottlingRateLimit": 2, "ThrottlingBurstLimit": 4},
                 },
             },
             "Permission": {"Type": "AWS::Lambda::Permission", "Properties": permission_props},
@@ -208,6 +204,67 @@ def template():
             "DeployedSha": {"Value": ref("CommitSha")},
         },
     }
+    # The public reader carries no write credential. Mutations have a separate
+    # function/role and still enforce the capability + exact-approval boundary.
+    resources = result["Resources"]
+    reader_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {"Effect": "Allow", "Action": ["s3:GetObject"],
+             "Resource": sub("${State.Arn}/demo/workspaces/*")},
+            {"Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+             "Resource": sub(
+                 "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:"
+                 "log-group:/aws/lambda/hestia-afh-reader:*"
+             )},
+            {"Effect": "Deny", "Action": ["s3:PutObject", "s3:DeleteObject",
+                                          "s3:DeleteObjectVersion", "ses:*", "bedrock:*"],
+             "Resource": "*"},
+        ],
+    }
+    resources["ReaderRole"] = {
+        "Type": "AWS::IAM::Role",
+        "Properties": {
+            "RoleName": "hestia-afh-reader-runtime",
+            "AssumeRolePolicyDocument": resources["Role"]["Properties"]["AssumeRolePolicyDocument"],
+            "Policies": [{"PolicyName": "scoped-read-only", "PolicyDocument": reader_policy}],
+        },
+    }
+    resources["ReaderLogs"] = {
+        "Type": "AWS::Logs::LogGroup",
+        "Properties": {"LogGroupName": "/aws/lambda/hestia-afh-reader", "RetentionInDays": 14},
+    }
+    resources["ReaderFunction"] = {
+        "Type": "AWS::Lambda::Function", "DependsOn": "ReaderLogs",
+        "Properties": {**fn_props, "FunctionName": "hestia-afh-reader",
+                       "Handler": "hestia.app.web.read_lambda_handler",
+                       "Role": attr("ReaderRole", "Arn")},
+    }
+    resources["ReaderIntegration"] = {
+        "Type": "AWS::ApiGatewayV2::Integration",
+        "Properties": {**integration_props, "IntegrationUri": attr("ReaderFunction", "Arn")},
+    }
+    resources["ReaderPermission"] = {
+        "Type": "AWS::Lambda::Permission",
+        "Properties": {**permission_props, "FunctionName": attr("ReaderFunction", "Arn")},
+    }
+    resources["Route"]["Properties"]["Target"] = sub("integrations/${ReaderIntegration}")
+    # Explicit methods, including historical aliases, avoid a default writer route.
+    write_paths = (
+        "/api/demo/session", "/api/action/claim/prepare", "/api/action/claim", "/action/claim",
+        "/api/action/cancel", "/action/cancel_trial", "/api/action/utility_dispute",
+        "/action/utility_dispute", "/api/action/reset", "/action/reset", "/api/action/receipt",
+        "/api/receipt/scan", "/receipt/scan", "/api/ingest/sync", "/ingest/sync",
+        "/api/outbox/dispatch", "/outbox/dispatch", "/api/outbox/status", "/outbox/status",
+    )
+    for number, path in enumerate(write_paths):
+        resources[f"WriteRoute{number}"] = {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {"ApiId": ref("Api"), "RouteKey": f"POST {path}",
+                           "Target": sub("integrations/${Integration}")},
+        }
+    result["Outputs"]["ReaderFunctionName"] = {"Value": ref("ReaderFunction")}
+    return result
 
 
 if __name__ == "__main__":

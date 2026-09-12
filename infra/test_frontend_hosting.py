@@ -69,6 +69,37 @@ class FrontendHostingTests(unittest.TestCase):
         sub_claim = trust["token.actions.githubusercontent.com:sub"]["Fn::Sub"]
         self.assertIn("ref:refs/heads/main", sub_claim)
 
+    def test_public_demo_has_no_provider_or_legacy_state_authority(self):
+        tmpl = api_tmpl()
+        resources = tmpl["Resources"]
+        statements = resources["Role"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
+        object_policy = statements[0]
+        self.assertEqual(object_policy["Action"], ["s3:GetObject", "s3:PutObject"])
+        self.assertEqual(object_policy["Resource"], {"Fn::Sub": "${State.Arn}/demo/workspaces/*"})
+        deny = next(s for s in statements if s["Effect"] == "Deny")
+        self.assertIn("ses:*", deny["Action"])
+        self.assertIn("bedrock:*", deny["Action"])
+        self.assertIn("s3:DeleteObject", deny["Action"])
+        env = resources["Function"]["Properties"]["Environment"]["Variables"]
+        self.assertIn("resolve:secretsmanager", env["HESTIA_DEMO_SECRET"]["Fn::Sub"])
+        self.assertNotIn("Default", tmpl["Parameters"]["DemoSecretArn"])
+        self.assertEqual(resources["Function"]["Properties"]["ReservedConcurrentExecutions"], 2)
+        reader = resources["ReaderRole"]["Properties"]["Policies"][0]["PolicyDocument"]
+        reader_deny = next(s for s in reader["Statement"] if s["Effect"] == "Deny")
+        self.assertIn("s3:PutObject", reader_deny["Action"])
+        self.assertEqual(resources["Route"]["Properties"]["Target"],
+                         {"Fn::Sub": "integrations/${ReaderIntegration}"})
+        writes = [r["Properties"] for name, r in resources.items() if name.startswith("WriteRoute")]
+        self.assertTrue(all(r["RouteKey"].startswith("POST ") for r in writes))
+        self.assertTrue(any(r["RouteKey"] == "POST /action/claim" for r in writes))
+
+    def test_conditional_write_sdk_contract(self):
+        from botocore.session import get_session
+
+        operation = get_session().get_service_model("s3").operation_model("PutObject")
+        self.assertIn("IfMatch", operation.input_shape.members)
+        self.assertIn("IfNoneMatch", operation.input_shape.members)
+
     def test_hestia_api_template_structure(self):
         tmpl = api_tmpl()
         resources = tmpl["Resources"]

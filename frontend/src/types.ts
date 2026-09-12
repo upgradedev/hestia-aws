@@ -18,6 +18,8 @@ export interface ApplianceWarranty {
   defect_reported_at?: string;
   defect_description?: string;
   statutory_basis: string;
+  repair_amount_cents?: number;
+  claim_status?: string;
 }
 
 export interface PaymentOutflow {
@@ -63,7 +65,10 @@ export interface SentinelAlert {
 export interface DispatchRecord {
   id: string;
   item_id: string;
-  status: 'drafted' | 'approved' | 'dispatched' | 'acknowledged';
+  status: 'simulated' | 'accepted' | 'failed' | 'unknown';
+  historical_status?: string;
+  draft_id?: string;
+  digest?: string;
   delivery_status?: string;
   ses_message_id?: string;
   timestamp: string;
@@ -80,6 +85,7 @@ export interface HouseholdSummary {
   leakage_detected_monthly_eur: number;
   potential_recovery_eur: number;
   active_sentinels: number;
+  missing_receipts_eur?: number;
 }
 
 export type ActiveTab = 'landing' | 'overview' | 'vault' | 'subscriptions' | 'journeys' | 'gtm' | 'architecture';

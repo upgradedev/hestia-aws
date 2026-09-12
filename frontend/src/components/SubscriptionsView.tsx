@@ -1,9 +1,11 @@
 import React from 'react';
 import { SubscriptionTracker, PaymentOutflow } from '../types';
+import { errorMessage } from '../api';
 
 interface SubscriptionsViewProps {
   subscriptions: SubscriptionTracker[];
   outflows: PaymentOutflow[];
+  actionsDisabled: boolean;
   onCancelTrial: (subId: string) => Promise<boolean>;
   onOpenReceiptModal: () => void;
 }
@@ -11,11 +13,27 @@ interface SubscriptionsViewProps {
 export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
   subscriptions,
   outflows,
+  actionsDisabled,
   onCancelTrial,
   onOpenReceiptModal,
 }) => {
+  const [pendingId, setPendingId] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [message, setMessage] = React.useState<string | null>(null);
+  const handleCancel = async (id: string) => {
+    if (pendingId || actionsDisabled) return;
+    setPendingId(id); setError(null); setMessage(null);
+    try {
+      const confirmed = await onCancelTrial(id);
+      if (!confirmed) throw new Error('The server did not confirm the request.');
+      setMessage('Simulated cancellation request recorded. No provider subscription was cancelled; monthly risk is unchanged.');
+    } catch (error) { setError(errorMessage(error)); }
+    finally { setPendingId(null); }
+  };
   return (
     <div className="space-y-8 animate-fade-in">
+      {error && <p role="alert" className="text-rose-300">{error}</p>}
+      {message && <p role="status" className="text-amber-300">{message}</p>}
       {/* Overview Header */}
       <div className="rounded-2xl bg-[#0e1420] border border-white/10 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -100,10 +118,11 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({
                   <div className="mt-3 pt-3 border-t border-purple-500/20 flex items-center justify-between">
                     <span className="text-xs text-purple-300">Will charge €{sub.renewal_cost_eur.toFixed(2)}/mo</span>
                     <button
-                      onClick={() => onCancelTrial(sub.id)}
+                      onClick={() => { void handleCancel(sub.id); }}
+                      disabled={actionsDisabled || !!pendingId}
                       className="py-1.5 px-3.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs cursor-pointer shadow transition-all"
                     >
-                      1-Click Cancel Trial
+                      Simulate Cancellation Request
                     </button>
                   </div>
                 )}

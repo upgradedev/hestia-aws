@@ -7,7 +7,9 @@ import urllib.error
 import urllib.request
 
 
-def smoke_test(url: str, expected_sha: str | None = None) -> dict:
+def smoke_test(
+    url: str, expected_sha: str | None = None, expected_backend_sha: str | None = None,
+) -> dict:
     base = url.rstrip("/")
     # 1. Root page
     req = urllib.request.Request(f"{base}/", headers={"User-Agent": "HestiaSmoke/1.0"})
@@ -38,33 +40,37 @@ def smoke_test(url: str, expected_sha: str | None = None) -> dict:
         assert data.get("ok") is True or data.get("status") == "ok", f"Healthz failed: {data}"
         assert data.get("service") == "hestia-aws", f"Unexpected service: {data}"
 
-    # 3. Action endpoint (POST /action/claim)
-    claim_payload = b"scenario=family_flat"
+        assert data.get("live_send") is False and data.get("live_model") is False, (
+            "Refuse action probes against a legacy or provider-enabled backend"
+        )
+        if expected_backend_sha:
+            assert data.get("commit") == expected_backend_sha, "Backend changed during release"
+
+    # 3. Negative authorization probe; no credentials or approval are supplied.
+    claim_payload = b"{}"
     req_claim = urllib.request.Request(
         f"{base}/action/claim",
         data=claim_payload,
         headers={
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/json",
             "User-Agent": "HestiaSmoke/1.0",
         },
         method="POST",
     )
-    with urllib.request.urlopen(req_claim, timeout=15) as resp:
-        assert resp.status == 200, f"Action claim returned status {resp.status}"
-        claim_body = resp.read().decode("utf-8")
-        assert "Return-of-Control Executed" in claim_body, (
-            "Action claim did not execute Return-of-Control banner"
-        )
-        assert "Directive 2019/771/EU" in claim_body, (
-            "Claim letter missing statutory Directive citation"
-        )
+    try:
+        with urllib.request.urlopen(req_claim, timeout=15):
+            raise AssertionError("Anonymous claim must not succeed")
+    except urllib.error.HTTPError as exc:
+        assert exc.code == 401, f"Expected authorization rejection, got {exc.code}"
+        assert json.load(exc).get("status") == "error"
 
     return {
         "status": "PASS",
         "url": base,
         "commit": expected_sha,
         "healthz": data,
-        "action_claim": "Return-of-Control Executed",
+        "action_claim": "anonymous write rejected",
+        "backend_commit": data.get("commit"),
     }
 
 
@@ -72,5 +78,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", required=True)
     parser.add_argument("--sha", default=None)
+    parser.add_argument("--backend-sha", default=None)
     args = parser.parse_args()
-    print(json.dumps(smoke_test(args.url, args.sha), indent=2))
+    print(json.dumps(smoke_test(args.url, args.sha, args.backend_sha), indent=2))

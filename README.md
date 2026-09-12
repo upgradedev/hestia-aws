@@ -1,5 +1,53 @@
 # Hestia AWS: Autonomous Household Financial and Warranty Sentinel
 
+## P0 candidate: isolated demo and exact approval
+
+This revision changes the demo contract. It must not be deployed over an older backend
+without a coordinated, owner-approved cutover. Source/CI validation is not proof of
+the current CloudFront or Lambda revision; check the release receipt.
+
+| Boundary | Behavior in this revision |
+|---|---|
+| Public access | Read-only synthetic preview. Explicit demo start issues an expiring capability for one isolated workspace. |
+| Approval | The server prepares the exact recipient, subject, text, amount and source revision before sign-off. Changed or expired evidence is rejected. |
+| Outcome | Approval records a SIMULATED artifact. It does not send mail, cancel a provider subscription or recover money. |
+| Persistence | S3 creation uses If-None-Match; updates use If-Match. Failed or uncertain writes never become successful in-memory fallbacks. |
+| Provider access | Separate reader and demo-writer functions. Reader IAM denies writes; both deny SES and Bedrock. Request flags cannot enable providers. |
+| Verification | Unit/API tests and Playwright run in GitHub Actions only. Automated tests are not independent human UAT. |
+
+Current provider ingestion and receipt OCR are explicitly unavailable in this safe demo;
+the older capability descriptions below are product intent, not proof of active integrations.
+The narrower public mode is a security boundary, not an AI-quality result.
+
+### Approval-only rollout and recovery
+
+1. Review the exact candidate SHA, CI artifacts, IAM diff and stored-state compatibility.
+   Provision a dedicated Secrets Manager signing secret (at least 32 random bytes) only
+   after owner authorization; never place its value in source, logs or frontend assets.
+2. Render the API template and inspect a CloudFormation change set before applying it.
+   Its new required DemoSecretArn parameter is an ARN, not a secret value. Retain the
+   existing state bucket and historical keys. Only new demo/workspaces/ keys are writable.
+   Fresh sessions reserve a new scope with a conditional PutObject before any read;
+   this does not need ListBucket or reinterpret AccessDenied as an empty household.
+   Confirm the packaged boto3/botocore support both PutObject conditional parameters.
+   The legacy deployment entry point now requires CI, --approved-commit and
+   --demo-secret-arn; it bundles the tested storage SDK and creates a change set
+   with --no-execute-changeset. Running it does not apply that change set.
+3. The backend IAM/config/code cutover and frontend publication require separate release
+   authority. Main merges still run CI but no longer publish this incompatible frontend
+   automatically. The manual frontend workflow requires the already-approved backend SHA
+   and checks its live capabilities before obtaining release credentials.
+4. Verify exact frontend/backend SHAs, anonymous-write denial and one approved isolated
+   synthetic session, including changed-draft rejection, replay, reload and state isolation.
+   Do not test by sending real email or modifying historical household records.
+5. On failure, keep writes disabled and serve read-only preview while reconciling receipts.
+   Do not automatically restore permissive SES/model IAM or the old unguarded action routes.
+   Preserved release artifacts and S3 versions support an explicitly reviewed paired rollback;
+   capability-key rotation revokes demo sessions and requires owner approval.
+
+No production migration, secret creation, real send or paid model activation is performed
+by the source verification workflows.
+
 [![ci](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml/badge.svg)](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml)
 [![frontend-ci](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml)
 [![licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)

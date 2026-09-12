@@ -1,91 +1,40 @@
 import React, { useState } from 'react';
+import { api, ApiError, errorMessage } from '../api';
 
-export const ArchitectureView: React.FC = () => {
+interface ArchitectureViewProps { token: string; onError: (error: unknown) => void }
+export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ token, onError }) => {
   const [activeEndpoint, setActiveEndpoint] = useState<
     '/healthz' | '/api/action/claim' | '/api/action/utility_dispute' | '/api/action/cancel' | '/api/action/reset' | '/api/simulation/mcts' | '/api/receipt/scan' | '/api/ingest/sync' | '/api/outbox/status' | '/api/outbox/dispatch'
   >('/healthz');
-  const [requestPayload, setRequestPayload] = useState<string>('{\n  "item_id": "app-001"\n}');
-  const [apiResponse, setApiResponse] = useState<any>(null);
+  const [requestPayload, setRequestPayload] = useState('');
+  const [apiResponse, setApiResponse] = useState<{ status: string; data?: unknown; error?: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
-  const [resetMessage, setResetMessage] = useState<string | null>(null);
-  const [mctsData, setMctsData] = useState<any>(null);
+  const [mctsData, setMctsData] = useState<Awaited<ReturnType<typeof api.mcts>> | null>(null);
   const [mctsLoading, setMctsLoading] = useState(false);
-
-  const handleResetDemoState = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/action/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{}',
-      });
-      if (res.ok) {
-        setResetMessage('Household state successfully reset to baseline in Amazon S3!');
-        setTimeout(() => setResetMessage(null), 3500);
-      }
-    } catch {
-      setResetMessage('Reset executed in offline simulation mode.');
-      setTimeout(() => setResetMessage(null), 3500);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [readError, setReadError] = useState<string | null>(null);
+  const readOnly = activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status';
 
   const handleRunMcts = async () => {
-    setMctsLoading(true);
-    try {
-      const res = await fetch('/api/simulation/mcts');
-      if (res.ok) {
-        const data = await res.json();
-        setMctsData(data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setMctsLoading(false);
-    }
+    setMctsLoading(true); setReadError(null);
+    try { setMctsData(await api.mcts()); }
+    catch (error) { setReadError(errorMessage(error)); }
+    finally { setMctsLoading(false); }
   };
 
   const handleTestApi = async () => {
-    setIsLoading(true);
-    setApiResponse(null);
+    if (!readOnly || isLoading) return;
+    setIsLoading(true); setApiResponse(null);
     const start = performance.now();
-
     try {
-      let res;
-      if (activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status') {
-        res = await fetch(activeEndpoint);
-      } else {
-        res = await fetch(activeEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: requestPayload || '{}',
-        });
-      }
-
-      const duration = Math.round(performance.now() - start);
-      setLatencyMs(duration);
-
-      if (res.ok) {
-        const data = await res.json();
-        setApiResponse({ status: res.status, data });
-      } else {
-        setApiResponse({ status: res.status, error: 'Non-200 response' });
-      }
-    } catch (err: any) {
-      const duration = Math.round(performance.now() - start);
-      setLatencyMs(duration);
-      setApiResponse({
-        status: 200,
-        simulated: true,
-        note: 'Live AWS endpoint answered or simulated via client fallback',
-        payload_sent: (activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status') ? undefined : JSON.parse(requestPayload || '{}'),
-        timestamp: new Date().toISOString(),
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      const data = activeEndpoint === '/healthz' ? await api.health()
+        : activeEndpoint === '/api/simulation/mcts' ? await api.mcts()
+        : await api.outbox(token);
+      setApiResponse({ status: 'Validated response', data });
+    } catch (error) {
+      setApiResponse({ status: error instanceof ApiError && error.status ? 'HTTP ' + error.status : 'Unconfirmed', error: errorMessage(error) });
+      onError(error);
+    } finally { setLatencyMs(Math.round(performance.now() - start)); setIsLoading(false); }
   };
 
   return (
@@ -106,15 +55,14 @@ export const ArchitectureView: React.FC = () => {
               Deterministic Action Groups + Amazon Bedrock AgentCore
             </h2>
             <p className="text-xs lg:text-sm text-slate-300 mt-2 max-w-4xl leading-relaxed">
-              Hestia employs an architecture-first design pattern: traditional, highly deterministic Python 3.11 rules calculate math and dates with 100% precision, while Amazon Bedrock is deployed strictly for multimodal OCR extraction and formal legal drafting under strict Bedrock Guardrails.
+              Architecture illustration. The public demo uses deterministic review templates in an isolated session. Model inference and email transport are disabled; verified invoice sync and receipt scanning are not enabled.
             </p>
           </div>
 
           {/* Reset Demo State Trigger */}
           <div className="shrink-0 flex flex-col items-start sm:items-end gap-2">
             <button
-              onClick={handleResetDemoState}
-              disabled={isLoading}
+              disabled
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -123,11 +71,7 @@ export const ArchitectureView: React.FC = () => {
               </svg>
               <span>Reset Demo State (Amazon S3)</span>
             </button>
-            {resetMessage && (
-              <span className="text-[11px] font-mono text-emerald-400 animate-fade-in">
-                {resetMessage}
-              </span>
-            )}
+            <span className="text-[11px] font-mono text-amber-300">Use the scoped Reset Demo control in the header.</span>
           </div>
         </div>
       </div>
@@ -138,10 +82,10 @@ export const ArchitectureView: React.FC = () => {
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-              AWS Strands Agent Execution Pipeline Trace
+              Proposed AWS Pipeline · Architecture Illustration
             </h3>
           </div>
-          <span className="text-[11px] font-mono text-emerald-400">Directive (EU) 2019/771 Enforced</span>
+          <span className="text-[11px] font-mono text-amber-400">Not a recorded execution trace</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -149,7 +93,7 @@ export const ArchitectureView: React.FC = () => {
             <div className="text-[10px] text-amber-400 uppercase font-bold">Step 1 // Privacy Gate</div>
             <div className="text-white font-semibold">sanitize_pii()</div>
             <p className="text-[11px] text-slate-400">Masks IBANs and payment card numbers before any LLM inference call.</p>
-            <div className="text-[10px] text-emerald-400 pt-1">&bull; Latency: ~1 ms</div>
+            <div className="text-[10px] text-amber-400 pt-1">&bull; Illustrative stage; no measured latency</div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-900 border border-sky-500/30 space-y-1 text-xs font-mono">
@@ -162,22 +106,22 @@ export const ArchitectureView: React.FC = () => {
           <div className="p-3.5 rounded-xl bg-slate-900 border border-purple-500/30 space-y-1 text-xs font-mono">
             <div className="text-[10px] text-purple-400 uppercase font-bold">Step 3 // Foundation Model</div>
             <div className="text-white font-semibold">Bedrock Haiku Converse</div>
-            <p className="text-[11px] text-slate-400">Claude 3.5 Haiku formats formal statutory claim notice without hallucinations.</p>
+            <p className="text-[11px] text-slate-400">Not enabled in the public demo. Preview uses a deterministic review template.</p>
             <div className="text-[10px] text-purple-300 pt-1">&bull; eu.anthropic.claude-haiku</div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-900 border border-emerald-500/30 space-y-1 text-xs font-mono">
-            <div className="text-[10px] text-emerald-400 uppercase font-bold">Step 4 // Immutability</div>
+            <div className="text-[10px] text-emerald-400 uppercase font-bold">Step 4 // Conditional Persistence</div>
             <div className="text-white font-semibold">SHA-256 S3 Audit Seal</div>
-            <p className="text-[11px] text-slate-400">Cryptographic digest sealed to s3://hestia-afh-state-.../audit/ prefix.</p>
+            <p className="text-[11px] text-slate-400">The exact preview digest and simulated outcome share one versioned, session-scoped state record.</p>
             <div className="text-[10px] text-emerald-400 pt-1">&bull; Return-of-Control Proof</div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-900 border border-cyan-500/30 space-y-1 text-xs font-mono">
             <div className="text-[10px] text-cyan-400 uppercase font-bold">Step 5 // SES Outbox</div>
             <div className="text-white font-semibold">SES Raw Email Dispatch</div>
-            <p className="text-[11px] text-slate-400">Raw RFC 5322 MIME sent via SES with delivery receipt sealed to outbox/ prefix.</p>
-            <div className="text-[10px] text-cyan-400 pt-1">&bull; Status: 250 OK Delivered</div>
+            <p className="text-[11px] text-slate-400">SES is disabled in the public demo. Approval records a simulation.</p>
+            <div className="text-[10px] text-amber-400 pt-1">&bull; No email sent; delivery unconfirmed</div>
           </div>
         </div>
       </div>
@@ -243,7 +187,7 @@ export const ArchitectureView: React.FC = () => {
           </div>
 
           <p className="text-xs text-slate-300 leading-relaxed">
-            Prior to notice generation, Amazon Bedrock AgentCore simulates legal negotiation paths using Monte Carlo Tree Search (UCB1) against German retailer settlement distributions to maximize expected financial utility:
+            Optional algorithm illustration using synthetic assumptions. It does not run during claim preparation, establish legal eligibility, or predict real settlement rates. Values below are illustrative assumptions only.
           </p>
 
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
@@ -255,22 +199,23 @@ export const ArchitectureView: React.FC = () => {
               {mctsLoading ? (
                 <>
                   <div className="w-3 h-3 border-2 border-emerald-300 border-t-transparent rounded-full animate-spin"></div>
-                  <span>Running MCTS (500 rollouts)...</span>
+                  <span>Running illustration...</span>
                 </>
               ) : (
                 <>
-                  <span>▶ Run Live MCTS Engine (500 rollouts)</span>
+                  <span>▶ Run MCTS Illustration</span>
                 </>
               )}
             </button>
             {mctsData && (
               <span className="text-[11px] font-mono text-emerald-400">
-                Optimal Action: {mctsData.selected_action} (Exp: €{(mctsData.expected_utility_cents / 100).toFixed(2)})
+                Illustrative action: {mctsData.optimal_action} ({mctsData.iterations} iterations)
               </span>
             )}
           </div>
 
           <div className="space-y-2.5">
+            {readError && <p role="alert" className="text-rose-300">{readError}</p>}
             <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/50 flex items-center justify-between text-xs font-mono">
               <div>
                 <div className="font-bold text-emerald-300 flex items-center gap-1.5">
@@ -323,7 +268,7 @@ export const ArchitectureView: React.FC = () => {
           </div>
 
           <p className="text-xs text-slate-300 leading-relaxed">
-            Eliminating race conditions in multi-evaluator and concurrent household environments. State mutations are sequenced monotonically with cryptographically signed append-only S3 event streams:
+            Concurrent updates use S3 conditional writes. Approval consumption, its outcome and audit entry commit together in one scoped state object. Conflicting updates are rejected. A SHA-256 digest binds the preview; it is not a digital signature or proof of WORM storage.
           </p>
 
           <div className="space-y-2 text-xs font-mono">
@@ -336,8 +281,8 @@ export const ArchitectureView: React.FC = () => {
               <span className="text-emerald-400 font-bold">version_seq = Monotonic INT</span>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
-              <span className="text-slate-400">Audit Stream Immutability:</span>
-              <span className="text-purple-300 font-bold">SHA-256 S3 Prefix Sealed</span>
+              <span className="text-slate-400">Audit Persistence:</span>
+              <span className="text-purple-300 font-bold">Versioned state · not WORM</span>
             </div>
             <div className="p-2.5 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-between">
               <span className="text-slate-400">Financial Arithmetic Precision:</span>
@@ -352,10 +297,10 @@ export const ArchitectureView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10 mb-4">
           <div>
             <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
-              LIVE VERIFICATION // INTERACTIVE API CONSOLE
+              READ-ONLY VERIFICATION // API CONSOLE
             </span>
             <h3 className="text-base font-bold text-white">
-              Execute Live Calls to AWS API Gateway
+              Inspect Transport & Scoped Simulation History
             </h3>
           </div>
 
@@ -377,7 +322,7 @@ export const ArchitectureView: React.FC = () => {
             <button
               onClick={() => {
                 setActiveEndpoint('/api/action/claim');
-                setRequestPayload('{\n  "item_id": "app-001"\n}');
+                setRequestPayload('Use Action Center to prepare and approve the exact server notice.');
               }}
               className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
                 activeEndpoint === '/api/action/claim'
@@ -468,7 +413,7 @@ export const ArchitectureView: React.FC = () => {
             <button
               onClick={() => {
                 setActiveEndpoint('/api/outbox/dispatch');
-                setRequestPayload('{\n  "dispatch_id": "disp-manual-001",\n  "to_addr": "claims@mediamarkt.example.de",\n  "letter": "Formal statutory claim notice under Directive 2019/771."\n}');
+                setRequestPayload('Direct outbox dispatch is disabled. Use the exact server preview approval flow.');
               }}
               className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
                 activeEndpoint === '/api/outbox/dispatch'
@@ -503,14 +448,15 @@ export const ArchitectureView: React.FC = () => {
             </div>
             <textarea
               value={requestPayload}
-              onChange={(e) => setRequestPayload(e.target.value)}
-              disabled={activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status'}
+              readOnly
+              aria-label="Endpoint documentation"
               className="w-full h-40 p-3 rounded-xl bg-[#080b10] border border-white/10 font-mono text-xs text-slate-200 focus:border-amber-400/60 focus:outline-none resize-none disabled:opacity-50"
               placeholder={activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status' ? 'No request body needed for this endpoint' : '{\n  "key": "value"\n}'}
             />
             <button
               onClick={handleTestApi}
-              disabled={isLoading}
+              disabled={isLoading || !readOnly || (activeEndpoint === '/api/outbox/status' && !token)}
+              data-testid="console-request"
               className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
             >
               {isLoading ? (
@@ -527,6 +473,8 @@ export const ArchitectureView: React.FC = () => {
                 </>
               )}
             </button>
+            {!readOnly && <p className="text-xs text-amber-300">Console writes are disabled. Use the scoped Action Center review flow. Sync and scan remain unavailable.</p>}
+            {activeEndpoint === '/api/outbox/status' && !token && <p className="text-xs text-amber-300">Begin an isolated demo session to read its history.</p>}
           </div>
 
           {/* Response Panel */}
@@ -543,7 +491,7 @@ export const ArchitectureView: React.FC = () => {
                 : '// Click "Dispatch Request" above to view live HTTP API response'}
             </pre>
             <div className="text-[11px] font-mono text-slate-500 flex items-center justify-between">
-              <span>Status: {apiResponse ? `${apiResponse.status} OK` : 'Awaiting trigger'}</span>
+              <span>Status: {apiResponse ? apiResponse.status : 'Awaiting trigger'}</span>
               <span>Amazon API Gateway (HTTP API)</span>
             </div>
           </div>

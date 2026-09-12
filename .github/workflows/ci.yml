@@ -6,9 +6,15 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AWS_EC2_METADATA_DISABLED: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,8 +28,41 @@ jobs:
 
       - name: ruff check
         run: |
-          python -m ruff check src tests
+          python -m ruff check src tests infra scripts/ci_api_server.py scripts/deploy_api.py
 
       - name: run test suite with coverage
         run: |
-          python -m pytest --cov=hestia --cov-report=term-missing tests/
+          python -m compileall -q src tests
+          python -m pytest --cov=hestia --cov-branch --cov-fail-under=85 --cov-report=term-missing --cov-report=xml --junitxml=pytest-results.xml tests/ infra/
+
+      - name: Retain exact-revision test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-p0-evidence
+          path: |
+            coverage.xml
+            pytest-results.xml
+          if-no-files-found: warn
+
+      - name: Package isolated demo runtime without AWS access
+        run: |
+          python -c "from scripts.deploy_api import package; package()"
+          cd build/pkg
+          python -S -c "from hestia.app.web import lambda_handler; import json; response=lambda_handler({'rawPath':'/healthz','requestContext':{'http':{'method':'GET'}}},None); health=json.loads(response['body']); assert response['statusCode']==200 and health['live_send'] is False and health['live_model'] is False"
+
+      - name: Render exact-revision deployment configuration in CI
+        run: |
+          python infra/hestia_api_stack.py > build/hestia-api-stack.json
+          cd build
+          sha256sum hestia-api.zip hestia-api-stack.json > SHA256SUMS
+
+      - name: Retain candidate runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-runtime-candidate
+          path: |
+            build/hestia-api.zip
+            build/hestia-api-stack.json
+            build/SHA256SUMS
+          if-no-files-found: error

@@ -8,20 +8,15 @@ Presents the Unified Household Operations Cockpit:
 
 from __future__ import annotations
 
-import hashlib
-import json
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any
 
-from hestia.adapters.storage import S3HouseholdStore
 from hestia.agents.sentinel import (
     HouseholdAuditDigest,
-    draft_bedrock_claim_notice,
     run_household_audit,
 )
 from hestia.agents.tools import draft_statutory_claim_letter
-from hestia.domain.mcts import LegalNegotiationMCTS
-from hestia.domain.ocr import extract_receipt_metadata
+from hestia.app.api import handle_api, response
 from hestia.domain.subscriptions import SubscriptionCharge
 from hestia.domain.warranties import ApplianceWarranty
 
@@ -125,16 +120,8 @@ def build_audit(scenario_key: str = "family_flat") -> tuple[HouseholdAuditDigest
 
 def render_html(scenario_key: str = "family_flat", approved_action: str | None = None) -> str:
     digest, data = build_audit(scenario_key)
-    current_date = data["current_date"]
     homeowner = data["homeowner_name"]
     outlays_total = sum(t["amount_cents"] for t in data["bank_transactions"]) / 100
-
-    # Compute digest fingerprint
-    payload_str = (
-        f"{current_date}:{digest.total_reimbursable_cents}:"
-        f"{digest.monthly_subscription_waste_cents}"
-    )
-    sha = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
 
     claim_letter = ""
     if data["repairs"]:
@@ -147,21 +134,12 @@ def render_html(scenario_key: str = "family_flat", approved_action: str | None =
             homeowner_name=homeowner,
         )
 
-    action_banner = ""
-    if approved_action == "claim_letter":
-        action_banner = (
-        '<div class="banner-success">'
-        '<strong>✓ Return-of-Control Executed:</strong> Statutory claim letter signed and '
-        'queued for registered postal/email dispatch to retailer under EU Directive 2019/771/EU.'
-        f'<div class="digest-pill">Merkle Proof: {sha[:24]}...</div>'
-        '</div>'
-    )
-    elif approved_action == "cancel_sub":
-        action_banner = (
-        '<div class="banner-success">'
-        '<strong>✓ Return-of-Control Executed:</strong> Trial cancellation webhook triggered for '
-        'Fitness Stream Pro prior to auto-billing. Monthly recurring €19.99 saved.'
-        '</div>'
+    # A legacy rendering argument is not an authorization or execution receipt.
+    action_banner = (
+        '<div class="banner-success"><strong>Read-only synthetic illustration.</strong> '
+        'No model inference, email, provider action or financial recovery occurs on this page. '
+        '<a href="https://drusjukc9d4oc.cloudfront.net/">Open the Hestia application</a> '
+        'to begin an isolated demo session and review an exact server-prepared notice.</div>'
     )
 
     return f"""<!doctype html>
@@ -478,7 +456,7 @@ footer.meta-bar {{
     </div>
   </div>
   <div class="telemetry-pills">
-    <span class="pill active">● Sentinel Active</span>
+    <span class="pill">Read-only synthetic illustration</span>
     <span class="pill">Framework: AWS Strands Agents SDK</span>
     <span class="pill">Legal Engine: Directive 2019/771/EU</span>
   </div>
@@ -610,18 +588,15 @@ footer.meta-bar {{
           <span class="badge b-success">€185.00 Claim</span>
         </div>
         <p style="font-size:12px; color:var(--text-muted); margin:8px 0;">
-          The agent has drafted a formal statutory demand letter under EU Directive 2019/771/EU.'
-          ' Review text below and click approve to send to retailer:
+          This is an illustrative template, not an approved notice or a delivery receipt.
+          Open the application to prepare and review an exact simulated notice:
         </p>
 
         <div class="letter-box">{claim_letter}</div>
 
-        <form method="POST" action="/action/claim" style="margin-top:14px;">
-          <input type="hidden" name="scenario" value="{scenario_key}">
-          <button type="submit" class="btn primary" style="width:100%;">
-            ✓ Approve & Authorize Legal Claim Dispatch
-          </button>
-        </form>
+        <p style="margin-top:14px;">
+          Approval and dispatch are unavailable on this read-only page.
+        </p>
       </div>
 
       <div class="roc-card">
@@ -632,12 +607,7 @@ footer.meta-bar {{
         <p style="font-size:12px; color:var(--text-muted); margin:8px 0;">
           Fitness Stream Pro free trial expires 2026-09-14. Zero watch activity observed in 10 days.
         </p>
-        <form method="POST" action="/action/cancel_trial">
-          <input type="hidden" name="scenario" value="{scenario_key}">
-          <button type="submit" class="btn danger" style="width:100%;">
-            ✕ Cancel Free Trial (Save €19.99/mo)
-          </button>
-        </form>
+        <p>Illustrative alert only. No subscription is cancelled and no savings are recorded.</p>
       </div>
     </div>
   </div>
@@ -653,344 +623,25 @@ footer.meta-bar {{
 """
 
 
+def read_lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+    """Reader Lambda cannot execute mutations even through an unexpected route."""
+    method = (event.get("requestContext", {}).get("http", {}).get("method")
+              or event.get("httpMethod") or "GET").upper()
+    if method not in ("GET", "OPTIONS"):
+        return response(405, {"status": "error", "message": "This endpoint is read-only."})
+    return lambda_handler(event, context)
+
+
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    """AWS Lambda Function URL / API Gateway HTTP handler."""
+    """Public HTML is read-only; every API and legacy mutation uses one boundary."""
     path = event.get("rawPath") or event.get("path") or "/"
-    http_ctx = event.get("requestContext", {}).get("http", {})
-    method = (http_ctx.get("method") or event.get("httpMethod") or "GET").upper()
-
-    cors_headers = {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    }
-
-    if method == "OPTIONS":
-        return {"statusCode": 200, "headers": cors_headers, "body": "{}"}
-
-    if path == "/healthz":
+    method = (event.get("requestContext", {}).get("http", {}).get("method")
+              or event.get("httpMethod") or "GET").upper()
+    if path == "/" and method == "GET":
         return {
             "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps({
-                "status": "ok",
-                "service": "hestia-aws",
-                "version": "0.2.0",
-                "track": "Everyday Agents Track",
-                "directive": "EU Directive 2019/771/EU",
-                "agent_framework": "AWS Strands Agents SDK",
-                "bedrock_model": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
-                "storage_backend": "Amazon S3",
-            }),
+            "headers": {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"},
+            "body": render_html(scenario_key="family_flat"),
         }
-
-    if path == "/api/state":
-        store = S3HouseholdStore()
-        state = store.load_state()
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps(state),
-        }
-
-    if path in ("/action/claim", "/api/action/claim") and method == "POST":
-        content_type = (event.get("headers") or {}).get("content-type", "")
-        body_data: dict[str, Any] = {}
-        raw_body = event.get("body")
-        if raw_body:
-            try:
-                body_data = json.loads(raw_body)
-            except Exception:
-                body_data = {}
-
-        if "application/json" in content_type or path == "/api/action/claim" or bool(body_data):
-            store = S3HouseholdStore()
-            state = store.load_state()
-            item_id = body_data.get("item_id", "app-001")
-
-            # Find matching item
-            matched_item = None
-            for app in state.get("appliances", []):
-                if app.get("id") == item_id:
-                    matched_item = app
-                    break
-            if matched_item is None and state.get("appliances"):
-                matched_item = state["appliances"][0]
-
-            if matched_item is None:
-                return {
-                    "statusCode": 404,
-                    "headers": cors_headers,
-                    "body": json.dumps({"status": "error", "message": "No appliance found"}),
-                }
-
-            p_parts = [int(p) for p in matched_item["purchase_date"].split("-")]
-            warranty = ApplianceWarranty(
-                item_name=matched_item["item_name"],
-                serial_number=matched_item["serial_number"],
-                purchase_date=date(p_parts[0], p_parts[1], p_parts[2]),
-                statutory_months=matched_item.get("statutory_months", 24),
-                commercial_months=matched_item.get("commercial_months", 24),
-                receipt_reference=matched_item.get("receipt_reference"),
-            )
-            r_str = matched_item.get("repair_date") or "2026-09-02"
-            r_parts = [int(p) for p in r_str.split("-")]
-            repair_date = date(r_parts[0], r_parts[1], r_parts[2])
-
-            draft = draft_bedrock_claim_notice(
-                warranty=warranty,
-                repair_date=repair_date,
-                repair_amount_cents=matched_item.get("repair_amount_cents", 18500),
-                issue_description=matched_item.get("repair_issue") or "Drum bearing seizure",
-                homeowner_name=state.get("homeowner_name", "Elena Georgiou"),
-                seller_name=matched_item.get("seller_name", "Kotsovolos Megastore"),
-                seller_email=matched_item.get("seller_email", "support@kotsovolos.example.gr"),
-            )
-
-            record = store.record_claim_dispatch(
-                item_id=matched_item["id"],
-                seller=draft["seller"],
-                seller_email=draft["seller_email"],
-                letter=draft["notice"],
-                statutory_basis=draft["statutory_basis"],
-                model_id=draft["model_id"],
-            )
-
-            trace = [
-                {
-                    "step": 1,
-                    "name": "PII Sanitization Gate",
-                    "mechanism": "sanitize_pii()",
-                    "status": "completed",
-                    "duration_ms": 1,
-                },
-                {
-                    "step": 2,
-                    "name": "Statutory Eligibility Verification",
-                    "mechanism": "check_appliance_warranty_tool (Directive 2019/771/EU Art. 10)",
-                    "status": "completed",
-                    "duration_ms": 3,
-                },
-                {
-                    "step": 3,
-                    "name": "Amazon Bedrock Statutory Notice Drafting",
-                    "mechanism": f"Bedrock Converse / {draft['model_id']}",
-                    "status": "completed",
-                    "duration_ms": 1420,
-                },
-                {
-                    "step": 4,
-                    "name": "Cryptographic S3 Audit Sealing",
-                    "mechanism": "append_audit_event (SHA-256)",
-                    "status": "completed",
-                    "seal": record["cryptographic_seal"],
-                },
-                {
-                    "step": 5,
-                    "name": "Automated AWS SES Dispatch",
-                    "mechanism": "SES Raw Dispatch (DELIVERED_VIA_SES)",
-                    "status": "completed",
-                    "ses_message_id": record.get("ses_message_id"),
-                    "duration_ms": 120,
-                },
-            ]
-
-            return {
-                "statusCode": 200,
-                "headers": cors_headers,
-                "body": json.dumps({
-                    "status": "success",
-                    "dispatch_record": record,
-                    "execution_trace": trace,
-                    "state": store.load_state(),
-                }),
-            }
-
-        html = render_html(scenario_key="family_flat", approved_action="claim_letter")
-        return {
-            "statusCode": 200,
-            "headers": {"Content-Type": "text/html; charset=utf-8"},
-            "body": html,
-        }
-
-    if path in ("/action/cancel_trial", "/api/action/cancel") and method == "POST":
-        content_type = (event.get("headers") or {}).get("content-type", "")
-        body_data = {}
-        raw_body = event.get("body")
-        if raw_body:
-            try:
-                body_data = json.loads(raw_body)
-            except Exception:
-                body_data = {}
-
-        if "application/json" in content_type or path == "/api/action/cancel" or bool(body_data):
-            store = S3HouseholdStore()
-            service_name = body_data.get("service_name", "Fitness Stream Pro")
-            res = store.record_subscription_cancellation(service_name)
-            return {
-                "statusCode": 200,
-                "headers": cors_headers,
-                "body": json.dumps({
-                    "status": "success",
-                    "result": res,
-                    "state": store.load_state(),
-                }),
-            }
-
-        html = render_html(scenario_key="family_flat", approved_action="cancel_sub")
-        return {
-            "statusCode": 200,
-            "headers": {"Content-Type": "text/html; charset=utf-8"},
-            "body": html,
-        }
-
-    if path in ("/api/action/utility_dispute", "/action/utility_dispute") and method == "POST":
-        body_data = {}
-        raw_body = event.get("body")
-        if raw_body:
-            try:
-                body_data = json.loads(raw_body)
-            except Exception:
-                body_data = {}
-
-        store = S3HouseholdStore()
-        provider = body_data.get("provider", "Stadtwerke Munich")
-        excess_cents = body_data.get("excess_cents", 5400)
-        legal_basis = body_data.get("legal_basis", "AVBWasserV § 18")
-        res = store.record_utility_dispute(provider, excess_cents, legal_basis)
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps({
-                "status": "success",
-                "result": res,
-                "state": store.load_state(),
-            }),
-        }
-
-    if path in ("/api/action/reset", "/action/reset") and method == "POST":
-        store = S3HouseholdStore()
-        fresh_state = store.reset_state()
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps({
-                "status": "success",
-                "message": "Household state reset to baseline",
-                "state": fresh_state,
-            }),
-        }
-
-    if path == "/api/action/receipt" and method == "POST":
-        body_data = {}
-        raw_body = event.get("body")
-        if raw_body:
-            try:
-                body_data = json.loads(raw_body)
-            except Exception:
-                body_data = {}
-
-        store = S3HouseholdStore()
-        merchant = body_data.get("merchant", "Leroy Merlin DIY")
-        amount_cents = body_data.get("amount_cents", 8550)
-        receipt_id = body_data.get("receipt_id", "REC-2026-LEROY-0911")
-        res = store.record_receipt_upload(merchant, amount_cents, receipt_id)
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps({
-                "status": "success",
-                "result": res,
-                "state": store.load_state(),
-            }),
-        }
-
-    if path in ("/api/receipt/scan", "/receipt/scan") and method == "POST":
-        body_data = {}
-        raw_body = event.get("body") or ""
-        if raw_body:
-            try:
-                body_data = json.loads(raw_body)
-            except Exception:
-                body_data = {"raw": raw_body}
-
-        img_b64 = body_data.get("image_base64") or body_data.get("file_data")
-        mime = body_data.get("mime_type", "image/png")
-        metadata = extract_receipt_metadata(image_base64=img_b64, mime_type=mime)
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps({"status": "success", "extraction": metadata}),
-        }
-
-    if path in ("/api/ingest/sync", "/ingest/sync") and method == "POST":
-        store = S3HouseholdStore()
-        inflow_count = 14
-        res = store.record_ingest_batch(inflow_count)
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps({
-                "status": "success",
-                "message": f"Successfully ingested {inflow_count} e-invoices",
-                "ingest_result": res,
-                "state": store.load_state(),
-            }),
-        }
-
-    if path in ("/api/simulation/mcts", "/simulation/mcts") and method in ("GET", "POST"):
-        mcts = LegalNegotiationMCTS()
-        sim_result = mcts.search(iterations=500)
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps(sim_result),
-        }
-
-    if path in ("/api/outbox/status", "/outbox/status") and method in ("GET", "POST"):
-        store = S3HouseholdStore()
-        status_info = store.get_outbox_status()
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps({"status": "success", "outbox": status_info}),
-        }
-
-    if path in ("/api/outbox/dispatch", "/outbox/dispatch") and method == "POST":
-        body_data = {}
-        raw_body = event.get("body") or ""
-        if raw_body:
-            try:
-                body_data = json.loads(raw_body)
-            except Exception:
-                body_data = {}
-
-        disp_id = body_data.get("dispatch_id") or f"disp-{int(datetime.now(UTC).timestamp())}"
-        to_addr = body_data.get("to_addr") or "claims@retailer.example.de"
-        letter = body_data.get("letter") or "Formal statutory claim notice under EU law."
-        statutory_basis = body_data.get("statutory_basis") or "Directive (EU) 2019/771"
-
-        store = S3HouseholdStore()
-        res = store.save_outbox_email(
-            disp_id=disp_id,
-            to_addr=to_addr,
-            subject=f"Notice of Lack of Conformity: {disp_id}",
-            letter=letter,
-            statutory_basis=statutory_basis,
-            merkle_seal=hashlib.sha256(disp_id.encode()).hexdigest(),
-        )
-        return {
-            "statusCode": 200,
-            "headers": cors_headers,
-            "body": json.dumps({"status": "success", "dispatch_result": res}),
-        }
-
-    # Default GET /
-    html = render_html(scenario_key="family_flat")
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "text/html; charset=utf-8"},
-        "body": html,
-    }
+    return handle_api(event)
 
