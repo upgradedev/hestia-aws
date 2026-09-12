@@ -116,10 +116,12 @@ def test_run_household_audit_comprehensive() -> None:
     assert len(digest.warranties_expiring_soon) == 1
     assert digest.warranties_expiring_soon[0].item_name == "Bosch Dishwasher"
 
-    # Check reimbursable repair
-    assert len(digest.reimbursable_repairs) == 1
-    assert digest.reimbursable_repairs[0].claimable_amount_cents == 15000
-    assert digest.total_reimbursable_cents == 15000
+    # Neither timing-only invoice is automatically reimbursable or rejected.
+    assert digest.reimbursable_repairs == ()
+    assert len(digest.repairs_requiring_review) == 2
+    assert digest.repairs_requiring_review[0].repair_amount_cents == 15000
+    assert all(r.review_required for r in digest.repairs_requiring_review)
+    assert digest.total_reimbursable_cents == 0
 
     # Check subscriptions: trial expiry, duplicates (streaming), price creep
     # trial (1) + duplicate StreamB (1) + price creep (1) = 3 anomalies
@@ -219,13 +221,13 @@ def test_draft_bedrock_claim_notice_with_agent_mock() -> None:
         agent_override=mock_agent,
     )
 
-    assert "AI Generated Demand Letter" in res["notice"]
-    assert res["model_id"] == "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
-    assert res["framework"] == "AWS Strands Agents SDK"
-    assert mock_agent.called
-    # Ensure PII was masked before sending to agent
-    called_prompt = mock_agent.call_args[0][0]
-    assert "[REDACTED_CARD]" in called_prompt
+    assert "AI Generated Demand Letter" not in res["notice"]
+    assert res["model_id"] == "deterministic-review-template"
+    assert res["framework"] == "Deterministic review template"
+    mock_agent.assert_not_called()
+    assert "[REDACTED_CARD]" in res["notice"]
+    assert res["legal_assessment"]["entitlement_status"] == "not_determined"
+    assert res["approval_required"] is True
 
 
 def test_draft_bedrock_claim_notice_fallback_on_exception() -> None:
@@ -250,8 +252,9 @@ def test_draft_bedrock_claim_notice_fallback_on_exception() -> None:
         agent_override=mock_agent,
     )
 
-    assert "Formal Reimbursement Request: Statutory Guarantee" in res["notice"]
-    assert "deterministic fallback" in res["model_id"]
+    assert "Repair evidence review request" in res["notice"]
+    assert res["model_id"] == "deterministic-review-template"
+    mock_agent.assert_not_called()
 
 
 def test_draft_bedrock_claim_notice_no_agent_direct_bedrock(monkeypatch) -> None:
@@ -283,8 +286,9 @@ def test_draft_bedrock_claim_notice_no_agent_direct_bedrock(monkeypatch) -> None
         issue_description="Drum bearing failure",
         homeowner_name="Elena Georgiou",
     )
-    assert res["framework"] == "Amazon Bedrock AgentCore"
-    assert "Boto3 Direct Bedrock Claim Notice" in res["notice"]
+    assert res["framework"] == "Deterministic review template"
+    assert "Boto3 Direct Bedrock Claim Notice" not in res["notice"]
+    mock_bedrock.converse.assert_not_called()
 
 
 def test_draft_bedrock_claim_notice_no_agent_exception(monkeypatch) -> None:
@@ -314,7 +318,8 @@ def test_draft_bedrock_claim_notice_no_agent_exception(monkeypatch) -> None:
         issue_description="Drum bearing failure",
         homeowner_name="Elena Georgiou",
     )
-    assert "Formal Reimbursement Request: Statutory Guarantee" in res["notice"]
-    assert "deterministic fallback" in res["model_id"]
+    assert "Repair evidence review request" in res["notice"]
+    assert res["model_id"] == "deterministic-review-template"
+    mock_bedrock.converse.assert_not_called()
 
 

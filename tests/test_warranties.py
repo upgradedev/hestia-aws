@@ -1,4 +1,4 @@
-"""Tests for Hestia warranty verification and statutory reimbursement."""
+"""Warranty reminder compatibility and evidence review guards."""
 
 from datetime import date
 
@@ -57,7 +57,7 @@ def test_warranty_status_expired():
     assert days < 0
 
 
-def test_evaluate_repair_claim_covered():
+def test_evaluate_repair_claim_date_does_not_establish_coverage():
     w = ApplianceWarranty(
         item_name="Samsung Refrigerator",
         serial_number="SAM-REF-01",
@@ -70,12 +70,17 @@ def test_evaluate_repair_claim_covered():
         repair_date=date(2026, 2, 10),
         repair_amount_cents=18500,  # 185.00 EUR
     )
-    assert claim.is_covered is True
-    assert claim.claimable_amount_cents == 18500
-    assert "Reimbursable under statutory conformity guarantee" in claim.reason
+    assert claim.is_covered is False
+    assert claim.claimable_amount_cents == 0
+    assert claim.review_required is True
+    assert claim.entitlement_status == "not_determined"
+    assert "delivery_date" in claim.missing_facts
+    assert "jurisdiction" in claim.missing_facts
+    assert claim.statutory_expiry_date is None
+    assert "Review required" in claim.reason
 
 
-def test_evaluate_repair_claim_not_covered_after_expiry():
+def test_evaluate_repair_claim_does_not_deny_rights_after_legacy_reminder():
     w = ApplianceWarranty(
         item_name="DeLonghi Coffee Maker",
         serial_number="DL-77",
@@ -89,7 +94,8 @@ def test_evaluate_repair_claim_not_covered_after_expiry():
     )
     assert claim.is_covered is False
     assert claim.claimable_amount_cents == 0
-    assert "occurred after warranty expired" in claim.reason
+    assert claim.review_required is True
+    assert "neither establish nor exclude entitlement" in claim.reason
 
 
 def test_warranty_expiry_month_rollover():
