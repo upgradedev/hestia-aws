@@ -36,6 +36,11 @@ async function review(page: Page) {
   await expect(page.getByTestId('intake-consent')).toBeEnabled();
   return (await response.json()).intake as IntakeDraft;
 }
+async function advanced(page: Page) {
+  const details = page.getByTestId('intake-advanced');
+  if (await details.getAttribute('open') === null) await details.locator('summary').click();
+  await expect(page.getByTestId('intake-records')).toBeVisible();
+}
 async function confirm(page: Page) {
   await page.getByTestId('intake-consent').check();
   const pending = page.waitForResponse(r => r.url().endsWith(route));
@@ -51,6 +56,7 @@ test('real JSON bytes, correction, exact review, commit and reload retain receip
   const draft = await upload(page, [{ ...receipt, amount_cents: 123 }]);
   await expect(page.getByTestId('intake-provenance')).toContainText(draft.input_sha256);
   expect((await state(request, token)).outflows[0].has_receipt).toBe(false);
+  await advanced(page);
   await page.getByTestId('intake-records').fill(JSON.stringify([receipt]));
   const reviewed = await review(page);
   expect(reviewed.review?.original_records[0].amount_cents).toBe(123);
@@ -75,6 +81,7 @@ test('material edits invalidate consent and stale review cannot commit after ano
   const token = await open(page);
   await upload(page, [receipt]);
   const reviewed = await review(page);
+  await advanced(page);
   for (const changed of [
     { ...receipt, receipt_id: 'NEW-ID' }, { ...receipt, transaction_id: 'out-003' },
     { ...receipt, amount_cents: 0 }, { ...receipt, merchant: 'Other merchant' },
@@ -190,4 +197,56 @@ test('mobile sync import and exact synthetic subscription request persist withou
   expect(saved.summary.monthly_recurring_cents).toBe(before.summary.monthly_recurring_cents);
   expect(saved.summary.real_recovered_cents).toBe(0);
   await test.info().attach('mobile-intake-synthetic-request', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
+});
+
+test('simple form converts exact EUR cents, distinguishes missing and zero, and persists only freshly reviewed corrections', async ({ page, request }) => {
+  const token = await open(page);
+  const form = page.getByTestId('intake-simple-form');
+  await expect(form).toBeVisible();
+  await expect(page.getByTestId('intake-records')).toBeHidden();
+  await form.getByLabel('What are you adding?', { exact: true }).selectOption('transaction');
+  await form.getByLabel('Transaction ID', { exact: true }).fill('simple-form-tx');
+  await form.getByLabel('Merchant name', { exact: true }).fill('Simple Form Store');
+  await form.getByLabel('Transaction date', { exact: true }).fill('2026-09-12');
+  await form.getByLabel('Category', { exact: true }).fill('Home');
+  const mutations: unknown[] = [];
+  page.on('request', r => { if (r.url().endsWith(route) && r.method() === 'POST') mutations.push(r.postDataJSON()); });
+  await page.getByTestId('intake-review').click();
+  await expect(page.getByRole('dialog')).toContainText('Amount is not provided');
+  await form.getByLabel('Amount (EUR)', { exact: true }).fill('0');
+  await page.getByTestId('intake-review').click();
+  await expect(page.getByRole('dialog')).toContainText('The entered amount is EUR 0.00');
+  await form.getByLabel('Amount (EUR)', { exact: true }).fill('50.005');
+  await page.getByTestId('intake-review').click();
+  await expect(page.getByRole('dialog')).toContainText('Amounts are never rounded');
+  expect(mutations).toEqual([]);
+  await form.getByLabel('Amount (EUR)', { exact: true }).fill('50,25');
+  const staging = page.waitForResponse(r => r.url().endsWith(route));
+  await page.getByTestId('intake-review').click();
+  const stageResponse = await staging;
+  expect(stageResponse.status()).toBe(200);
+  const draft = (await stageResponse.json()).intake as IntakeDraft;
+  expect(draft.records[0].amount_cents).toBe(5025);
+  expect(mutations[0]).toMatchObject({ operation: 'stage', records: [{ kind: 'transaction', transaction_id: 'simple-form-tx', merchant: 'Simple Form Store', date: '2026-09-12', amount_cents: 5025, category: 'Home' }] });
+  await review(page);
+  await page.getByTestId('intake-consent').check();
+  await form.getByLabel('Amount (EUR)', { exact: true }).fill('73.91');
+  await expect(page.getByTestId('intake-consent')).not.toBeChecked();
+  await expect(page.getByTestId('intake-commit')).toBeDisabled();
+  expect((await state(request, token)).outflows.some(o => o.id === 'simple-form-tx')).toBe(false);
+  const corrected = await review(page);
+  expect(corrected.review?.original_records[0].amount_cents).toBe(5025);
+  expect(corrected.review?.corrected_records[0].amount_cents).toBe(7391);
+  await confirm(page);
+  await page.reload();
+  await page.getByRole('button', { name: 'Subscriptions', exact: true }).click();
+  await page.getByTestId('open-intake').click();
+  await page.getByTestId('intake-history').selectOption(draft.id);
+  await expect(page.getByTestId('intake-result')).toContainText('Saved: 1 changes');
+  await expect(page.getByTestId('intake-simple-form').getByLabel('Amount (EUR)', { exact: true })).toHaveValue('73.91');
+  await expect(page.getByTestId('intake-records')).toBeHidden();
+  const saved = await state(request, token);
+  expect(saved.outflows.filter(o => o.id === 'simple-form-tx')).toEqual([expect.objectContaining({ merchant: 'Simple Form Store', amount_cents: 7391, date: '2026-09-12', has_receipt: false })]);
+  expect(saved.summary.real_recovered_cents).toBe(0);
+  await test.info().attach('simple-form-reviewed-import', { body: await page.getByRole('dialog').screenshot(), contentType: 'image/png' });
 });
