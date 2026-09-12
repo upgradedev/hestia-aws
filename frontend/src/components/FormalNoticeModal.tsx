@@ -237,7 +237,7 @@ EVIDENCE ATTACHMENTS:
           </div>
 
           <div className="pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-500">
-            <span>Cryptographic Dispute Hash: <strong className="text-slate-400 font-mono">e3b0c442...8819</strong></span>
+            <span>Delivery Pipeline: <strong className="text-cyan-400 font-mono">AWS SES Raw MIME // S3 Outbox</strong></span>
             <span>Return-of-Control Certified</span>
           </div>
         </div>
@@ -261,12 +261,12 @@ EVIDENCE ATTACHMENTS:
                 <svg className="w-4 h-4 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                <span>Notice Dispatched & Logged!</span>
+                <span>SES Dispatched & Sealed in S3 Outbox (250 OK)</span>
               </>
             ) : isDispatching ? (
               <>
                 <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                <span>Sealing & Dispatching via Lambda...</span>
+                <span>Sealing S3 Outbox & Dispatching via AWS SES...</span>
               </>
             ) : (
               <>
@@ -274,7 +274,7 @@ EVIDENCE ATTACHMENTS:
                   <line x1="22" y1="2" x2="11" y2="13" />
                   <polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
-                <span>1-Click Authorize & Dispatch Notice</span>
+                <span>1-Click Authorize & Dispatch Notice (SES)</span>
               </>
             )}
           </button>

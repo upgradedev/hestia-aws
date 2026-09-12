@@ -64,6 +64,8 @@ export interface DispatchRecord {
   id: string;
   item_id: string;
   status: 'drafted' | 'approved' | 'dispatched' | 'acknowledged';
+  delivery_status?: string;
+  ses_message_id?: string;
   timestamp: string;
   seller: string;
   seller_email: string;

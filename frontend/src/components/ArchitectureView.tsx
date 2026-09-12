@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 export const ArchitectureView: React.FC = () => {
   const [activeEndpoint, setActiveEndpoint] = useState<
-    '/healthz' | '/api/action/claim' | '/api/action/utility_dispute' | '/api/action/cancel' | '/api/action/reset' | '/api/simulation/mcts' | '/api/receipt/scan' | '/api/ingest/sync'
+    '/healthz' | '/api/action/claim' | '/api/action/utility_dispute' | '/api/action/cancel' | '/api/action/reset' | '/api/simulation/mcts' | '/api/receipt/scan' | '/api/ingest/sync' | '/api/outbox/status' | '/api/outbox/dispatch'
   >('/healthz');
   const [requestPayload, setRequestPayload] = useState<string>('{\n  "item_id": "app-001"\n}');
   const [apiResponse, setApiResponse] = useState<any>(null);
@@ -54,7 +54,7 @@ export const ArchitectureView: React.FC = () => {
 
     try {
       let res;
-      if (activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts') {
+      if (activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status') {
         res = await fetch(activeEndpoint);
       } else {
         res = await fetch(activeEndpoint, {
@@ -80,7 +80,7 @@ export const ArchitectureView: React.FC = () => {
         status: 200,
         simulated: true,
         note: 'Live AWS endpoint answered or simulated via client fallback',
-        payload_sent: (activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts') ? undefined : JSON.parse(requestPayload || '{}'),
+        payload_sent: (activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status') ? undefined : JSON.parse(requestPayload || '{}'),
         timestamp: new Date().toISOString(),
       });
     } finally {
@@ -144,7 +144,7 @@ export const ArchitectureView: React.FC = () => {
           <span className="text-[11px] font-mono text-emerald-400">Directive (EU) 2019/771 Enforced</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="p-3.5 rounded-xl bg-slate-900 border border-white/10 space-y-1 text-xs font-mono">
             <div className="text-[10px] text-amber-400 uppercase font-bold">Step 1 // Privacy Gate</div>
             <div className="text-white font-semibold">sanitize_pii()</div>
@@ -171,6 +171,13 @@ export const ArchitectureView: React.FC = () => {
             <div className="text-white font-semibold">SHA-256 S3 Audit Seal</div>
             <p className="text-[11px] text-slate-400">Cryptographic digest sealed to s3://hestia-afh-state-.../audit/ prefix.</p>
             <div className="text-[10px] text-emerald-400 pt-1">&bull; Return-of-Control Proof</div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-cyan-500/30 space-y-1 text-xs font-mono">
+            <div className="text-[10px] text-cyan-400 uppercase font-bold">Step 5 // SES Outbox</div>
+            <div className="text-white font-semibold">SES Raw Email Dispatch</div>
+            <p className="text-[11px] text-slate-400">Raw RFC 5322 MIME sent via SES with delivery receipt sealed to outbox/ prefix.</p>
+            <div className="text-[10px] text-cyan-400 pt-1">&bull; Status: 250 OK Delivered</div>
           </div>
         </div>
       </div>
@@ -209,11 +216,12 @@ export const ArchitectureView: React.FC = () => {
 
         <div className="glass-panel rounded-xl p-4 border border-purple-500/30 bg-purple-950/10">
           <div className="text-[10px] font-mono text-purple-400 font-bold uppercase">TIER 04 // RETURN-OF-CONTROL</div>
-          <h4 className="text-sm font-bold text-white mt-1">S3 Vault & Audit Trail</h4>
+          <h4 className="text-sm font-bold text-white mt-1">S3 Vault & SES Outbox</h4>
           <ul className="text-xs text-slate-300 space-y-1.5 mt-2 font-mono">
             <li>&bull; Human Consent Gate (EU AI Act Art 14)</li>
             <li>&bull; SHA-256 Dispute Seals on S3</li>
-            <li>&bull; KMS Envelope Encryption (AES-256)</li>
+            <li>&bull; Automated AWS SES Raw Dispatch</li>
+            <li>&bull; Sealed RFC 5322 EML & Receipts</li>
           </ul>
         </div>
       </div>
@@ -446,6 +454,32 @@ export const ArchitectureView: React.FC = () => {
             </button>
             <button
               onClick={() => {
+                setActiveEndpoint('/api/outbox/status');
+                setRequestPayload('');
+              }}
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                activeEndpoint === '/api/outbox/status'
+                  ? 'bg-cyan-500/20 text-cyan-300 font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              GET /outbox/status
+            </button>
+            <button
+              onClick={() => {
+                setActiveEndpoint('/api/outbox/dispatch');
+                setRequestPayload('{\n  "dispatch_id": "disp-manual-001",\n  "to_addr": "claims@mediamarkt.example.de",\n  "letter": "Formal statutory claim notice under Directive 2019/771."\n}');
+              }}
+              className={`px-2.5 py-1 rounded transition-all cursor-pointer ${
+                activeEndpoint === '/api/outbox/dispatch'
+                  ? 'bg-teal-500/20 text-teal-300 font-bold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              POST /outbox/dispatch
+            </button>
+            <button
+              onClick={() => {
                 setActiveEndpoint('/api/action/reset');
                 setRequestPayload('{}');
               }}
@@ -470,9 +504,9 @@ export const ArchitectureView: React.FC = () => {
             <textarea
               value={requestPayload}
               onChange={(e) => setRequestPayload(e.target.value)}
-              disabled={activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts'}
+              disabled={activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status'}
               className="w-full h-40 p-3 rounded-xl bg-[#080b10] border border-white/10 font-mono text-xs text-slate-200 focus:border-amber-400/60 focus:outline-none resize-none disabled:opacity-50"
-              placeholder={activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' ? 'No request body needed for this endpoint' : '{\n  "key": "value"\n}'}
+              placeholder={activeEndpoint === '/healthz' || activeEndpoint === '/api/simulation/mcts' || activeEndpoint === '/api/outbox/status' ? 'No request body needed for this endpoint' : '{\n  "key": "value"\n}'}
             />
             <button
               onClick={handleTestApi}

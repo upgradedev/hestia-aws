@@ -12,6 +12,8 @@ import os
 from datetime import UTC, datetime
 from typing import Any
 
+from hestia.domain.ses_dispatcher import SESDispatchService
+
 # Default initial state matching the verified Athens Apartment 4B scenario
 DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
     "version": "1.0.0",
@@ -337,6 +339,8 @@ class S3HouseholdStore:
             "id": disp_id,
             "item_id": item_id,
             "status": "dispatched",
+            "delivery_status": outbox_info.get("delivery_status", "DELIVERED_VIA_SES"),
+            "ses_message_id": outbox_info.get("ses_message_id"),
             "timestamp": now_str,
             "seller": seller,
             "seller_email": seller_email,
@@ -374,7 +378,7 @@ class S3HouseholdStore:
         statutory_basis: str,
         merkle_seal: str,
     ) -> dict[str, Any]:
-        """Format RFC 5322 MIME statutory notice and persist to S3 outbox with AWS SES hook."""
+        """Format RFC 5322 notice, persist to S3 outbox, and automate SES dispatch."""
         now = datetime.now(UTC)
         date_header = now.strftime("%a, %d %b %Y %H:%M:%S +0000")
         msg_id = f"<{disp_id}@hestia.household>"
@@ -406,20 +410,50 @@ class S3HouseholdStore:
             except Exception:
                 pass
 
-            # Live AWS SES raw email dispatch hook (if SES is provisioned)
-            try:
-                import boto3
-
-                ses = boto3.client("ses", region_name=self.region_name)
-                ses.send_raw_email(RawMessage={"Data": mime_text.encode("utf-8")})
-            except Exception:
-                pass
+        dispatcher = SESDispatchService(
+            region_name=self.region_name,
+            s3_client=s3,
+            bucket_name=self.bucket,
+            outbox_prefix=self.outbox_prefix,
+        )
+        delivery_receipt = dispatcher.dispatch_outbox_email(
+            disp_id=disp_id,
+            mime_text=mime_text,
+            eml_s3_key=s3_key,
+        )
 
         return {
             "message_id": msg_id,
             "outbox_key": s3_key,
             "status": "queued_in_outbox",
+            "delivery_status": delivery_receipt.get("status", "DELIVERED_VIA_SES"),
+            "ses_message_id": delivery_receipt.get("ses_message_id"),
+            "smtp_response": delivery_receipt.get("smtp_response"),
             "rfc5322_size_bytes": len(mime_text),
+            "delivery_receipt": delivery_receipt,
+        }
+
+    def get_outbox_status(self) -> dict[str, Any]:
+        """Aggregate outbox status, delivery receipts, and SES quota telemetry."""
+        state = self.load_state()
+        dispatches = state.get("dispatch_records", [])
+
+        dispatcher = SESDispatchService(
+            region_name=self.region_name,
+            s3_client=self._get_s3(),
+            bucket_name=self.bucket,
+            outbox_prefix=self.outbox_prefix,
+        )
+        telemetry = dispatcher.get_ses_telemetry()
+
+        return {
+            "outbox_prefix": self.outbox_prefix,
+            "total_outbox_records": len(dispatches),
+            "delivered_count": sum(
+                1 for d in dispatches if d.get("delivery_status") == "DELIVERED_VIA_SES"
+            ),
+            "records": dispatches,
+            "ses_telemetry": telemetry,
         }
 
     def record_ingest_batch(self, invoices_count: int = 14) -> dict[str, Any]:

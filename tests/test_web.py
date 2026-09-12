@@ -340,4 +340,36 @@ def test_lambda_handler_api_simulation_mcts():
     assert res["optimal_action"] is not None
 
 
+def test_lambda_handler_api_outbox_status():
+    event = {
+        "rawPath": "/api/outbox/status",
+        "requestContext": {"http": {"method": "GET"}},
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+    assert "outbox" in res
+    assert "ses_telemetry" in res["outbox"]
+
+
+def test_lambda_handler_api_outbox_dispatch():
+    event = {
+        "rawPath": "/api/outbox/dispatch",
+        "requestContext": {"http": {"method": "POST"}},
+        "body": json.dumps({
+            "dispatch_id": "disp-test-manual",
+            "to_addr": "claims@mediamarkt.example.de",
+            "letter": "Notice under BGB 437",
+        }),
+    }
+    resp = lambda_handler(event, None)
+    assert resp["statusCode"] == 200
+    res = json.loads(resp["body"])
+    assert res["status"] == "success"
+    assert "dispatch_result" in res
+    assert res["dispatch_result"]["message_id"] == "<disp-test-manual@hestia.household>"
+
+
+
 

@@ -79,8 +79,14 @@ def template():
                 "Resource": "*",
             },
             {
-                "Effect": "Deny",
-                "Action": ["ses:*"],
+                "Effect": "Allow",
+                "Action": [
+                    "ses:SendRawEmail",
+                    "ses:SendEmail",
+                    "ses:GetSendQuota",
+                    "ses:GetIdentityVerificationAttributes",
+                    "ses:ListIdentities",
+                ],
                 "Resource": "*",
             },
         ],
@@ -100,6 +106,7 @@ def template():
             "HESTIA_STATE_BUCKET": ref("State"),
             "HESTIA_STATE_PREFIX": "audit/",
             "HESTIA_COMMIT_SHA": ref("CommitSha"),
+            "HESTIA_SES_REGION": "eu-west-1",
         }},
         "Tags": [{"Key": "project", "Value": "hestia-agentsforhumans"}],
     }

@@ -260,4 +260,13 @@ def test_record_ingest_batch():
     assert len(res["cryptographic_seal"]) == 64
 
 
+def test_get_outbox_status():
+    store = S3HouseholdStore(bucket_name="")
+    outbox_status = store.get_outbox_status()
+    assert outbox_status["outbox_prefix"] == "outbox/"
+    assert "ses_telemetry" in outbox_status
+    assert "total_outbox_records" in outbox_status
+
+
+
 

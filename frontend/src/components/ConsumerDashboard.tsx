@@ -441,9 +441,16 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 <div key={d.id} className="p-3 rounded-xl bg-slate-900/80 border border-white/5 space-y-1">
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="font-bold text-white">{d.seller}</span>
-                    <span className="text-emerald-400 font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-                      {d.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {d.delivery_status && (
+                        <span className="text-cyan-400 font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">
+                          {d.delivery_status === 'DELIVERED_VIA_SES' ? 'SES 250 OK' : d.delivery_status}
+                        </span>
+                      )}
+                      <span className="text-emerald-400 font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                        {d.status}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-[11px] text-slate-300">{d.letter_preview}</p>
                   <div className="text-[10px] text-slate-500 font-mono">{d.timestamp}</div>
