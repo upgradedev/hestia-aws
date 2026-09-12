@@ -3,6 +3,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      approved_backend_sha:
+        description: 'Exact already-approved P0 backend SHA; does not deploy the backend'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -18,7 +23,7 @@ jobs:
 
   release:
     needs: verify
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,6 +38,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Require compatible approved backend before frontend cutover
+        env:
+          HESTIA_APPROVED_BACKEND_SHA: ${{ inputs.approved_backend_sha }}
+        run: python infra/check_p0_backend.py --url https://drusjukc9d4oc.cloudfront.net
 
       - name: Build Verified Revision
         working-directory: frontend
