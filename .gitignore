@@ -9,6 +9,9 @@ dist/
 build/
 node_modules/
 frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+frontend/tsconfig.tsbuildinfo
 .venv/
 .env
 *.mp3

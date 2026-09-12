@@ -4,6 +4,8 @@ import { HouseholdSummary, ActiveTab, Locale } from '../types';
 interface HeaderProps {
   summary: HouseholdSummary;
   liveApiOnline: boolean;
+  householdName: string;
+  resetDisabled: boolean;
   activeTab: ActiveTab;
   pendingActionsCount: number;
   locale: Locale;
@@ -16,6 +18,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   summary,
   liveApiOnline,
+  householdName,
+  resetDisabled,
   activeTab,
   pendingActionsCount,
   locale,
@@ -56,11 +60,11 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${liveApiOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
-                {liveApiOnline ? 'AWS Strands + Bedrock Live' : 'Offline Simulation'}
+                {liveApiOnline ? 'Server preview · Simulation' : 'Preview unavailable'}
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Elena Weber &bull; Munich, Germany
+              {householdName}
             </p>
           </div>
         </div>
@@ -170,7 +174,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenSyncModal}
               className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 text-[11px] font-mono border border-amber-500/30 flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Simulate 1-Click Ingest of Invoices & Telemetry"
+              title="Invoice sync is not enabled in this demo"
             >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -184,14 +188,16 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Quick Reset Demo Button */}
           <button
             onClick={onResetDemo}
+            disabled={resetDisabled}
+            data-testid="reset-demo"
             className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 text-[11px] font-mono border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Reset Household State in Amazon S3 to Baseline"
+            title="Reset this isolated demo; audit history is retained"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
               <path d="M3 3v5h5" />
             </svg>
-            <span className="hidden sm:inline">Reset S3</span>
+            <span className="hidden sm:inline">Reset Demo</span>
           </button>
 
           {/* Locale Toggle */}

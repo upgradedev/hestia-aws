@@ -1,286 +1,148 @@
-import React from 'react';
-import { ApplianceWarranty } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { api, ApiError, errorMessage, expiryMillis } from '../api';
+import type { ClaimDraft } from '../api';
+import type { ApplianceWarranty, DispatchRecord } from '../types';
 
 interface FormalNoticeModalProps {
   appliance: ApplianceWarranty | null;
   isOpen: boolean;
+  token: string;
+  enabled: boolean;
   onClose: () => void;
-  onDispatch: (itemId: string) => Promise<any>;
+  onError: (error: unknown) => void;
+  onDispatch: (draft: ClaimDraft) => Promise<DispatchRecord>;
 }
 
 export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
-  appliance,
-  isOpen,
-  onClose,
-  onDispatch,
+  appliance, isOpen, token, enabled, onClose, onError, onDispatch,
 }) => {
-  if (!isOpen || !appliance) return null;
+  const [draft, setDraft] = useState<ClaimDraft | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [record, setRecord] = useState<DispatchRecord | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [expired, setExpired] = useState(false);
+  const submitting = useRef(false);
+  const dialog = useRef<HTMLDivElement>(null);
+  const prepared = useRef<{ key: string; promise: Promise<ClaimDraft> } | null>(null);
+  const itemId = appliance?.id;
 
-  const [isDispatching, setIsDispatching] = React.useState(false);
-  const [dispatched, setDispatched] = React.useState(false);
+  useEffect(() => {
+    let current = true;
+    setDraft(null); setRecord(null); setError(null); setCopyError(null); setCopied(false); setExpired(false); setLoading(true);
+    if (!isOpen || !itemId || !token) { setLoading(false); return; }
+    // Deduplicate StrictMode setup. Preparing persists a draft; never replay it in effect cleanup.
+    const key = token + ':' + itemId;
+    if (prepared.current?.key !== key) prepared.current = { key, promise: api.prepare(token, itemId) };
+    prepared.current.promise.then(next => {
+      if (!current) return;
+      if (next.item_id !== itemId) throw new ApiError('This preview belongs to another item. Refresh state and reopen the notice.');
+      setDraft(next);
+      setExpired(expiryMillis(next.expires_at) <= Date.now());
+    }).catch(error => {
+      if (!current) return;
+      setError(errorMessage(error)); onError(error);
+    }).finally(() => { if (current) setLoading(false); });
+    return () => { current = false; };
+  }, [isOpen, itemId, token, onError]);
+
+  useEffect(() => {
+    if (!draft) return;
+    const timer = window.setTimeout(() => setExpired(true), Math.min(2147483647, Math.max(0, expiryMillis(draft.expires_at) - Date.now())));
+    return () => window.clearTimeout(timer);
+  }, [draft]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.activeElement;
+    dialog.current?.focus();
+    return () => { if (previous instanceof HTMLElement) previous.focus(); };
+  }, [isOpen]);
+
+  // All hooks precede conditional returns. App remounts on close, selection, or session change.
+  if (!isOpen || !appliance) return null;
+  const unavailable = loading || !draft || !!error || expired || isDispatching || !!record || !enabled;
 
   const handleSend = async () => {
+    if (unavailable || !draft || submitting.current) return;
+    if (expiryMillis(draft.expires_at) <= Date.now()) { setExpired(true); return; }
+    submitting.current = true;
     setIsDispatching(true);
     try {
-      await onDispatch(appliance.id);
-      setDispatched(true);
-      setTimeout(() => {
-        setIsDispatching(false);
-        onClose();
-      }, 1400);
-    } catch {
-      setIsDispatching(false);
-    }
+      const result = await onDispatch(draft);
+      if (result.status !== 'simulated') throw new ApiError('Simulation was not confirmed.');
+      setRecord(result);
+    } catch (error) { setError(errorMessage(error)); }
+    finally { submitting.current = false; setIsDispatching(false); }
   };
-
-  const [copied, setCopied] = React.useState(false);
-
-  const getFullNoticeText = () => {
-    return `FORMAL STATUTORY NOTICE OF LACK OF CONFORMITY
-Pursuant to Directive (EU) 2019/771 & German Civil Code (BGB) § 437
-
-CLAIMANT (CONSUMER):
-Elena Weber, Sendlinger Str. 42, 80331 München
-
-SELLER (COMMERCIAL RESPONDENT):
-${appliance.seller_name} (${appliance.seller_email})
-
-SUBJECT: Statutory Warranty Reimbursement Claim: ${appliance.brand} ${appliance.name} (Invoice #${appliance.receipt_id})
-LEGAL GROUNDS: Directive (EU) 2019/771, Article 10(1) & Article 13; German Civil Code BGB § 437 Nr. 1, § 439
-CLAIM SUM: €185.00 EUR (Statutory Repair Cost Recovery)
-
-Dear Customer Relations Team,
-
-I am writing regarding the ${appliance.brand} ${appliance.name} (Model: ${appliance.model}, Serial: ${appliance.serial_number || 'N/A'}), purchased from your store on ${appliance.purchase_date} under Invoice #${appliance.receipt_id} for €${appliance.price_eur.toFixed(2)}.
-
-The appliance suffered a mechanical failure: "${appliance.defect_description || 'Bearing failure under ordinary domestic operation'}". When reported, store staff stated that the 1-year commercial guarantee had lapsed.
-
-STATUTORY NOTICE: Commercial seller guarantees cannot restrict or waive statutory conformity rights. Under Directive (EU) 2019/771 Article 10(1) and BGB § 438 Abs. 1 Nr. 3, the seller is strictly liable for lack of conformity for a period of 24 months from delivery. The defect occurred within month 22.
-
-Pursuant to Article 13 of Directive 2019/771/EU and BGB § 439 Abs. 2, all costs incurred in bringing the goods into conformity, including diagnostic charges and labor, must be borne free of charge by the seller.
-
-Enclosed is the repair receipt of €185.00 paid under protest to restore basic domestic function. I formally request reimbursement of €185.00 EUR to my IBAN within 14 calendar days.
-
-Sincerely,
-Elena Weber`;
+  const handleCopy = async () => {
+    if (!draft || loading || error) return;
+    try { await navigator.clipboard.writeText(draft.notice); setCopied(true); setCopyError(null); }
+    catch { setCopyError('Clipboard unavailable. Export the exact notice as a text file.'); }
   };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(getFullNoticeText());
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handleDownload = () => {
-    const element = document.createElement('a');
-    const file = new Blob([getFullNoticeText()], { type: 'text/plain;charset=utf-8' });
-    element.href = URL.createObjectURL(file);
-    element.download = `Hestia-Statutory-Notice-${appliance.brand}-${appliance.receipt_id}.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
-
-  const handleDownloadOdr = () => {
-    const odrText = `EU ONLINE DISPUTE RESOLUTION (ODR) / CONCILIATION DOSSIER
-Pursuant to Directive 2013/11/EU & German VSBG (Verbraucherstreitbeilegungsgesetz)
-
-COMPLAINANT: Elena Weber, Sendlinger Str. 42, 80331 München
-RESPONDENT: ${appliance.seller_name} (${appliance.seller_email})
-PURCHASE REF: ${appliance.brand} ${appliance.name} (Invoice #${appliance.receipt_id})
-CONTESTED AMOUNT: €185.00 EUR (Unreimbursed Statutory Warranty Repair)
-
-SUMMARY OF DISPUTE:
-The consumer purchased the appliance on ${appliance.purchase_date}. A mechanical defect occurred within month 22.
-Under Directive 2019/771 Article 10(1) and BGB § 437, the statutory period of liability is 24 months.
-Store staff wrongfully refused coverage under the pretext of an expired 1-year commercial guarantee.
-The claimant incurred €185.00 in necessary repair expenses and requests conciliation via the German Universal Conciliation Body (Universalschlichtungsstelle des Bundes).
-
-EVIDENCE ATTACHMENTS:
-1. Proof of purchase: #${appliance.receipt_id}
-2. Repair receipt: €185.00 paid on 2026-09-02
-3. Cryptographic Hestia Audit Seal: sealed on Amazon S3`;
-
-    const element = document.createElement('a');
-    const file = new Blob([odrText], { type: 'text/plain;charset=utf-8' });
-    element.href = URL.createObjectURL(file);
-    element.download = `Hestia-EU-ODR-Escalation-Dossier-${appliance.brand}.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+    if (!draft || loading || error) return;
+    const url = URL.createObjectURL(new Blob([draft.notice], { type: 'text/plain;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = 'Hestia-Statutory-Notice.txt';
+    document.body.appendChild(link); link.click(); link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="max-w-2xl w-full bg-[#0d121c] border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-6 py-4 bg-slate-900 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">
-                Formal Statutory Notice of Lack of Conformity
-              </h3>
-              <p className="text-[11px] font-mono text-slate-400">
-                Muster-Mängelanzeige gem. Richtlinie (EU) 2019/771 & BGB § 437
-              </p>
-            </div>
+      <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="formal-notice-title" tabIndex={-1}
+        onKeyDown={event => {
+          if (event.key === 'Escape' && !isDispatching) onClose();
+          if (event.key === 'Tab') {
+            const buttons = Array.from(dialog.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []);
+            const first = buttons[0]; const last = buttons[buttons.length - 1];
+            if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+          }
+        }}
+        className="max-w-2xl w-full bg-[#0d121c] border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 py-4 bg-slate-900 border-b border-white/10 flex items-center justify-between gap-3">
+          <div>
+            <h3 id="formal-notice-title" className="text-sm font-bold text-white">Formal Statutory Notice of Lack of Conformity</h3>
+            <p className="text-[11px] font-mono text-slate-400">Server preview · isolated simulation · no email will be sent</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleCopy}
-              className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg hover:bg-white/5 cursor-pointer text-xs flex items-center gap-1 border border-white/10"
-              title="Copy to clipboard"
-            >
-              {copied ? (
-                <>
-                  <svg className="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span className="text-emerald-400 font-sans text-[11px]">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                  <span className="font-sans text-[11px]">Copy Text</span>
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleDownload}
-              className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg hover:bg-white/5 cursor-pointer text-xs flex items-center gap-1 border border-white/10"
-              title="Download notice as text"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span className="font-sans text-[11px]">Export .txt</span>
-            </button>
-            <button
-              onClick={handleDownloadOdr}
-              className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg hover:bg-white/5 cursor-pointer text-xs flex items-center gap-1 border border-amber-500/30 bg-amber-500/10"
-              title="Download EU Online Dispute Resolution mediation packet"
-            >
-              <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <span className="font-sans text-[11px] text-amber-300">ODR Pack</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 cursor-pointer text-lg leading-none ml-2"
-            >
-              &times;
-            </button>
+            <button onClick={handleCopy} disabled={!draft || loading || !!error} title="Copy to clipboard" className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg text-xs border border-white/10 disabled:opacity-50">{copied ? 'Copied!' : 'Copy Text'}</button>
+            <button onClick={handleDownload} disabled={!draft || loading || !!error} title="Download notice as text" className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg text-xs border border-white/10 disabled:opacity-50">Export .txt</button>
+            <button onClick={onClose} disabled={isDispatching} aria-label="Close notice" className="text-slate-400 hover:text-white p-1 text-lg">&times;</button>
           </div>
         </div>
-
-        {/* Realistic Legal Letter Document Body */}
         <div className="p-6 overflow-y-auto space-y-4 text-xs font-mono text-slate-300 leading-relaxed bg-[#080b10]">
-          {/* Metadata Card */}
-          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-white/10 grid grid-cols-2 gap-3 text-[11px]">
-            <div>
-              <span className="text-slate-500 uppercase text-[10px] block">Claimant (Consumer)</span>
-              <span className="font-semibold text-slate-200">Elena Weber</span>
-              <div className="text-slate-400 text-[10px]">Sendlinger Str. 42, 80331 München</div>
+          <p>{appliance.name}</p>
+          {loading && <p role="status">Preparing the server notice...</p>}
+          {error && <p role="alert" className="p-3 rounded-xl border border-rose-500/40 text-rose-300">{error} Close this preview, refresh state, and review a new draft before another approval.</p>}
+          {expired && !record && <p role="alert" className="text-amber-300">Draft expired. Close and reopen to explicitly request a new preview.</p>}
+          {!enabled && !record && <p className="text-amber-300">Approval unavailable while session state needs recovery or another action is pending.</p>}
+          {copyError && <p role="alert">{copyError}</p>}
+          {draft && <>
+            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-white/10 grid grid-cols-2 gap-3 text-[11px]">
+              <div><span className="text-slate-500 uppercase block">Claimant (Consumer)</span><span data-testid="notice-claimant">{draft.homeowner_name}</span></div>
+              <div><span className="text-slate-500 uppercase block">Seller (Commercial Respondent)</span><span>{draft.seller}</span><div data-testid="notice-recipient">{draft.seller_email}</div></div>
             </div>
-            <div>
-              <span className="text-slate-500 uppercase text-[10px] block">Seller (Commercial Respondent)</span>
-              <span className="font-semibold text-slate-200">{appliance.seller_name}</span>
-              <div className="text-slate-400 text-[10px]">{appliance.seller_email}</div>
+            <div className="border-t border-b border-white/10 py-2.5">
+              <div><strong>SUBJECT:</strong> <span data-testid="notice-subject">{draft.subject}</span></div>
+              <div><strong>CLAIM SUM:</strong> <span data-testid="notice-amount">{(draft.amount_cents / 100).toFixed(2)} {draft.currency}</span></div>
             </div>
-          </div>
-
-          <div className="border-t border-b border-white/10 py-2.5 text-slate-300">
-            <div><strong>SUBJECT:</strong> Statutory Warranty Reimbursement Claim: {appliance.brand} {appliance.name} (Invoice #{appliance.receipt_id})</div>
-            <div><strong>LEGAL GROUNDS:</strong> Directive (EU) 2019/771, Article 10(1) & Article 13; German Civil Code BGB § 437 Nr. 1, § 439</div>
-            <div><strong>CLAIM SUM:</strong> €185.00 EUR (Statutory Repair Cost Recovery)</div>
-          </div>
-
-          <div className="space-y-2 text-slate-300">
-            <p>Dear Customer Relations Team,</p>
-            <p>
-              I am writing regarding the <strong>{appliance.brand} {appliance.name}</strong> (Model: {appliance.model}, Serial: {appliance.serial_number}), purchased from your store on <strong>{appliance.purchase_date}</strong> under Invoice #{appliance.receipt_id} for €{appliance.price_eur.toFixed(2)}.
-            </p>
-            <p>
-              The appliance suffered a mechanical failure: <em>"{appliance.defect_description || 'Bearing failure under ordinary domestic operation'}"</em>. When reported, store staff stated that the 1-year commercial guarantee had lapsed.
-            </p>
-            <p className="bg-amber-500/10 p-2.5 rounded border border-amber-500/20 text-amber-200">
-              <strong>STATUTORY NOTICE:</strong> Commercial seller guarantees cannot restrict or waive statutory conformity rights. Under <strong>Directive (EU) 2019/771 Article 10(1)</strong> and <strong>BGB § 438 Abs. 1 Nr. 3</strong>, the seller is strictly liable for lack of conformity for a period of <strong>24 months from delivery</strong>. The defect occurred within month 22.
-            </p>
-            <p>
-              Pursuant to <strong>Article 13 of Directive 2019/771/EU</strong> and <strong>BGB § 439 Abs. 2</strong>, all costs incurred in bringing the goods into conformity, including diagnostic charges and labor, must be borne free of charge by the seller.
-            </p>
-            <p>
-              Enclosed is the repair receipt of €185.00 paid under protest to restore basic domestic function. I formally request reimbursement of <strong>€185.00 EUR</strong> to my IBAN within 14 calendar days.
-            </p>
-          </div>
-
-          {/* Statutory Self-Help Disclaimer */}
-          <div className="p-2.5 rounded-lg bg-slate-950 border border-white/5 text-[10px] text-slate-400">
-            <strong>EU Self-Help Standardization Disclaimer:</strong> Notice generated as standardized legal formatting pursuant to Directive 2019/771/EU Article 10. Claimant maintains sole discretion, approval, and agency over dispatch.
-          </div>
-
-          <div className="pt-3 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-500">
-            <span>Delivery Pipeline: <strong className="text-cyan-400 font-mono">AWS SES Raw MIME // S3 Outbox</strong></span>
-            <span>Return-of-Control Certified</span>
-          </div>
+            <pre data-testid="server-notice" className="whitespace-pre-wrap break-words font-mono text-xs">{draft.notice}</pre>
+            <div className="pt-3 border-t border-white/10 text-[10px] text-slate-500 break-all">Preview digest: {draft.digest}<br />Expires: {new Date(expiryMillis(draft.expires_at)).toISOString()}<br />Mode: {draft.mode} · Generator: {draft.model_id}</div>
+          </>}
+          {record && <div role="status" data-testid="claim-result" className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200">Simulated approval recorded. No email sent and no reimbursement recorded. Record: {record.id}</div>}
         </div>
-
-        {/* Footer Actions */}
-        <div className="px-6 py-4 bg-slate-900 border-t border-white/10 flex items-center justify-between">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer"
-          >
-            Cancel / Edit Later
-          </button>
-
-          <button
-            onClick={handleSend}
-            disabled={isDispatching || dispatched}
-            className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all"
-          >
-            {dispatched ? (
-              <>
-                <svg className="w-4 h-4 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>SES Dispatched & Sealed in S3 Outbox (250 OK)</span>
-              </>
-            ) : isDispatching ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                <span>Sealing S3 Outbox & Dispatching via AWS SES...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-                <span>1-Click Authorize & Dispatch Notice (SES)</span>
-              </>
-            )}
+        <div className="px-6 py-4 bg-slate-900 border-t border-white/10 flex items-center justify-between gap-3">
+          <button onClick={onClose} disabled={isDispatching} className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">{record ? 'Close' : 'Cancel / Edit Later'}</button>
+          <button onClick={handleSend} disabled={unavailable} data-testid="approve-claim" className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-lg disabled:opacity-50">
+            {record ? 'Simulated approval recorded' : isDispatching ? 'Recording simulated approval...' : 'Approve Simulated Notice'}
           </button>
         </div>
       </div>
     </div>
   );
 };
-

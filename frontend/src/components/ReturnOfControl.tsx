@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { SentinelAlert, ApplianceWarranty, DispatchRecord } from '../types';
+import { errorMessage } from '../api';
 
 interface ReturnOfControlProps {
   selectedAlert: SentinelAlert | null;
   selectedAppliance: ApplianceWarranty | null;
   dispatchHistory: DispatchRecord[];
-  onDispatchClaim: (itemId: string) => Promise<DispatchRecord | null>;
   onCancelTrial: (subId: string) => Promise<boolean>;
   onInspectDocument?: () => void;
 }
@@ -14,12 +14,12 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
   selectedAlert,
   selectedAppliance,
   dispatchHistory,
-  onDispatchClaim,
   onCancelTrial,
   onInspectDocument,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const activeItem = selectedAppliance;
   const isWarrantyClaim = selectedAlert?.category === 'warranty_claim' || !!selectedAppliance;
@@ -27,22 +27,21 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
   const handleApproveAction = async () => {
     setIsSubmitting(true);
     setSuccessMessage(null);
+    setError(null);
     try {
       if (isWarrantyClaim) {
-        const itemId = activeItem?.id || selectedAlert?.item_id || 'app-001';
-        const res = await onDispatchClaim(itemId);
-        if (res) {
-          setSuccessMessage(`Formal statutory claim successfully dispatched to ${res.seller_email}!`);
-        }
+        if (!onInspectDocument) throw new Error('Open Action Center to review the exact server notice.');
+        onInspectDocument();
       } else if (selectedAlert?.action_type === 'cancel_trial') {
-        const subId = selectedAlert?.item_id || 'sub-001';
+        const subId = selectedAlert.item_id;
+        if (!subId) throw new Error('Select a subscription from the current server state.');
         const ok = await onCancelTrial(subId);
         if (ok) {
-          setSuccessMessage('Subscription trial successfully cancelled. Zero renewal charges.');
-        }
+          setSuccessMessage('Simulated request recorded. No provider subscription was cancelled.');
+        } else throw new Error('The request was not confirmed.');
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch (error) {
+      setError(errorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -50,6 +49,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
 
   return (
     <div className="glass-panel rounded-2xl p-5 flex flex-col h-full border border-white/10 shadow-xl shadow-black/40">
+      {error && <p role="alert" className="text-xs text-rose-300">{error}</p>}
       {/* Column Header */}
       <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
         <div>
@@ -84,7 +84,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-rose-300 font-bold flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span>
-                  REMEDY DISPATCH READY
+                  SERVER PREVIEW REQUIRED
                 </span>
                 <span className="text-xs font-mono text-emerald-400 font-bold">
                   Value: €{activeItem.price_eur.toFixed(2)}
@@ -152,12 +152,12 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
                         <line x1="22" y1="2" x2="11" y2="13" />
                         <polygon points="22 2 15 22 11 13 2 9 22 2" />
                       </svg>
-                      <span>1-Click Approve & Dispatch Notice</span>
+                      <span>Review Server Notice Before Approval</span>
                     </>
                   )}
                 </button>
                 <div className="text-[10px] text-center text-slate-400 mt-2 font-mono">
-                  Human-in-the-Loop authorization &bull; Full audit trail preserved on AWS S3
+                  Illustration only. Approval requires the exact server preview in Action Center.
                 </div>
               </div>
             </div>

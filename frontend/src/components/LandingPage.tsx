@@ -19,7 +19,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       id: 'warranties',
       title: 'Statutory 2-Year Warranty Shield',
       badge: 'Directive (EU) 2019/771 & BGB § 437',
-      stat: '€185.00 Recovered',
+      stat: '€185.00 Demo Claim for Review',
       description:
         'Retailers claim commercial guarantees expire after 12 months. Under European law, sellers are strictly liable for lack of conformity for 24 months. Hestia drafts formal statutory claims with exact legal grounds.',
       tagColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
@@ -29,17 +29,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       id: 'subscriptions',
       title: 'Stealth Price Creep & Trial Interceptor',
       badge: 'Directive 93/13/EEC Unfair Terms',
-      stat: '€48.00/yr Saved',
+      stat: '€48.00/yr Illustrative Risk',
       description:
-        'Cloud and streaming services quietly increase debit amounts by 20% to 40% without explicit affirmative assent. Hestia flags unannounced price hikes and kills free trials 48 hours before auto-renewal.',
+        'The synthetic demo flags price changes and trial dates. A simulated cancellation records intent only; it does not cancel a provider subscription.',
       tagColor: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
       accentBorder: 'border-purple-500/40 hover:border-purple-400',
     },
     {
       id: 'receipts',
       title: 'Receipt Anti-Join & Multimodal OCR',
-      badge: 'Amazon Bedrock Vision',
-      stat: '100% Tax & Warranty Proof',
+      badge: 'Scanning not enabled',
+      stat: 'Manual Demo References',
       description:
         'Bank statements prove money left your account, but not serial numbers. When major outlays (>€50) lack receipts, Hestia alerts you before thermal ink fades and preserves proof on encrypted AWS S3.',
       tagColor: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
@@ -49,9 +49,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       id: 'utilities',
       title: 'Domestic Utility Anomaly Radar',
       badge: 'AVBWasserV § 18 Recalibration',
-      stat: '€54.00 Excess Disputed',
+      stat: 'Bill Review Simulation',
       description:
-        'Sudden +60% utility spikes often trace to faulty utility company meters or silent underground leaks. Hestia runs leakage diagnostics and issues formal meter verification demands.',
+        'Review a synthetic bill against its recorded baseline. A simulated request does not inspect a meter or contact a provider.',
       tagColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
       accentBorder: 'border-cyan-500/40 hover:border-cyan-400',
     },
@@ -82,16 +82,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Subtitle */}
         <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-300 leading-relaxed mb-10">
-          European consumer law guarantees 24 months of strict retailer warranty on appliances. Free trials sneak into annual renewals. Hestia runs quietly in the background on AWS Serverless, auditing receipts and bills against statutory law, and surfaces only when money is ready to recover.
+          Explore a synthetic household's repair records, subscription risks, and missing receipts. Begin an isolated demo session to review the exact server notice and record a simulated approval. No model is called, no email is sent, and no money is recovered.
         </p>
 
         {/* Primary Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto mb-16">
           <button
             onClick={onLaunchCockpit}
+            data-testid="launch-cockpit"
             className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5 cursor-pointer"
           >
-            <span>Launch Live Cockpit</span>
+            <span>Launch Demo Cockpit</span>
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12h14" />
               <path d="m12 5 7 7-7 7" />
@@ -107,16 +108,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            <span>Simulate E-Invoice Ingest</span>
+            <span>Invoice Sync (Unavailable)</span>
           </button>
         </div>
 
-        {/* Live Household Metric Ticker */}
+        {/* Explicitly illustrative marketing figures; operational state comes from the API. */}
+        <p className="text-xs text-amber-300 mb-3">Illustrative scenario figures below. Use Action Center for the current server snapshot.</p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto p-4 sm:p-6 rounded-2xl bg-[#0c1017]/80 backdrop-blur-xl border border-white/10 shadow-2xl">
           <div className="text-left p-2 sm:p-3 border-r border-white/5 last:border-0">
             <div className="text-[11px] font-mono text-rose-400 uppercase font-bold">Unclaimed Warranty</div>
             <div className="text-2xl sm:text-3xl font-black font-mono text-white mt-1">€185.00</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Bosch repair reimbursable</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Repair awaiting review</div>
           </div>
           <div className="text-left p-2 sm:p-3 sm:border-r border-white/5 last:border-0">
             <div className="text-[11px] font-mono text-purple-400 uppercase font-bold">Expiring Free Trial</div>
@@ -273,7 +275,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             onClick={onLaunchCockpit}
             className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 shrink-0 cursor-pointer transition-all"
           >
-            Test in Live Cockpit →
+            Test in Demo Cockpit →
           </button>
         </div>
       </section>
@@ -329,10 +331,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* 6. CALL TO ACTION & FOOTER */}
       <footer className="py-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center border-t border-white/10">
         <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-4">
-          Ready to See It Live?
+          Ready to Try the Simulation?
         </h3>
         <p className="text-xs sm:text-sm text-slate-400 mb-8 max-w-md mx-auto">
-          Experience Elena Weber's live operations cockpit hosted on AWS CloudFront. Zero sign-up, zero login required.
+          Explore an isolated synthetic household. Zero sign-up or account login; explicitly begin a temporary demo session before actions.
         </p>
         <button
           onClick={onLaunchCockpit}
@@ -348,7 +350,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* 7. MOBILE STICKY BOTTOM BAR (Mobile Ergonomics) */}
       <div className="sm:hidden fixed bottom-0 inset-x-0 p-3 bg-[#0a0d14]/95 backdrop-blur-xl border-t border-white/10 z-50 flex items-center justify-between gap-3 shadow-2xl">
         <div>
-          <div className="text-[10px] font-mono text-amber-400 uppercase font-bold">Elena Weber Cockpit</div>
+          <div className="text-[10px] font-mono text-amber-400 uppercase font-bold">Synthetic Demo Cockpit</div>
           <div className="text-xs font-bold text-white">€185.00 To Claim</div>
         </div>
         <button
