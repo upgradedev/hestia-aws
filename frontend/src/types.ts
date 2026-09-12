@@ -88,7 +88,7 @@ export interface HouseholdSummary {
   missing_receipts_eur?: number;
 }
 
-export type ActiveTab = 'landing' | 'overview' | 'vault' | 'subscriptions' | 'journeys' | 'gtm' | 'architecture';
+export type ActiveTab = 'landing' | 'overview' | 'cases' | 'vault' | 'subscriptions' | 'journeys' | 'gtm' | 'architecture';
 
 export interface JourneyStep {
   id: string;

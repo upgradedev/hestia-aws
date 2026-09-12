@@ -11,10 +11,11 @@ interface FormalNoticeModalProps {
   onClose: () => void;
   onError: (error: unknown) => void;
   onDispatch: (draft: ClaimDraft) => Promise<DispatchRecord>;
+  onViewCase: () => void;
 }
 
 export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
-  appliance, isOpen, token, enabled, onClose, onError, onDispatch,
+  appliance, isOpen, token, enabled, onClose, onError, onDispatch, onViewCase,
 }) => {
   const [draft, setDraft] = useState<ClaimDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,9 +133,11 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
               <div><strong>CLAIM SUM:</strong> <span data-testid="notice-amount">{(draft.amount_cents / 100).toFixed(2)} {draft.currency}</span></div>
             </div>
             <pre data-testid="server-notice" className="whitespace-pre-wrap break-words font-mono text-xs">{draft.notice}</pre>
-            <div className="pt-3 border-t border-white/10 text-[10px] text-slate-500 break-all">Preview digest: {draft.digest}<br />Expires: {new Date(expiryMillis(draft.expires_at)).toISOString()}<br />Mode: {draft.mode} · Generator: {draft.model_id}</div>
+            <p className="text-xs text-slate-400">Approval expires: {new Date(expiryMillis(draft.expires_at)).toLocaleString()}. Prepared from the recorded facts; no eligibility decision is implied.</p>
+            <details className="pt-3 border-t border-white/10 text-[10px] text-slate-400 break-all"><summary className="cursor-pointer">Preview and generator detail</summary>Preview digest: {draft.digest}<br />Mode: {draft.mode} · Generator: {draft.model_id}</details>
           </>}
           {record && <div role="status" data-testid="claim-result" className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200">Simulated approval recorded. No email sent and no reimbursement recorded. Record: {record.id}</div>}
+          {record && <button data-testid="open-persisted-case" onClick={onViewCase} className="w-full px-5 py-3 rounded-xl bg-amber-400 text-slate-950 font-bold">Continue to saved case and next step</button>}
         </div>
         <div className="px-6 py-4 bg-slate-900 border-t border-white/10 flex items-center justify-between gap-3">
           <button onClick={onClose} disabled={isDispatching} className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">{record ? 'Close' : 'Cancel / Edit Later'}</button>

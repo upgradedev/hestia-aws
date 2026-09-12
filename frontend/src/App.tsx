@@ -11,6 +11,8 @@ import { ReceiptUploadModal } from './components/ReceiptUploadModal';
 import { UtilityDisputeModal } from './components/UtilityDisputeModal';
 import { LandingPage } from './components/LandingPage';
 import { EmailSyncModal } from './components/EmailSyncModal';
+import { CaseWorkspace } from './components/CaseWorkspace';
+import type { CaseUpdate } from './cases';
 import { api, ApiError } from './api';
 import type { ClaimDraft } from './api';
 import { EMPTY_SUMMARY, mapState } from './stateMapping';
@@ -44,6 +46,10 @@ export const App: React.FC = () => {
     const result = await api.approve(token, draft);
     return { state: result.state, value: result.record };
   });
+  const updateCase = (update: CaseUpdate) => demo.mutate(async token => {
+    const result = await api.updateCase(token, update);
+    return { state: result.state, value: result.case };
+  });
   const cancelTrial = (id: string) => demo.mutate(async token => {
     const sub = demo.state?.subscriptions.find(s => s.id === id);
     if (!sub) throw new ApiError('Unknown subscription. Refresh session state.');
@@ -69,9 +75,9 @@ export const App: React.FC = () => {
         activeTab={activeTab} pendingActionsCount={view?.alerts.length ?? 0} locale={locale}
         onToggleLocale={() => setLocale(previous => previous === 'en' ? 'de' : 'en')}
         onResetDemo={() => { void reset().catch(demo.reportError); }} resetDisabled={!enabled || !!selection}
-        onSelectTab={setActiveTab} onOpenSyncModal={() => setIsSyncModalOpen(true)} />
+        onSelectTab={tab => { setActiveTab(tab); if (tab === 'cases') void demo.refresh(); }} onOpenSyncModal={() => setIsSyncModalOpen(true)} />
 
-      <div className="w-full max-w-[1500px] mx-auto px-4 lg:px-8 py-3 border-b border-amber-500/20 bg-amber-950/10 text-xs" data-testid="session-panel">
+      <div className={`${activeTab === 'landing' && !demo.error && demo.status !== 'expired' ? 'hidden' : ''} w-full max-w-[1500px] mx-auto px-4 lg:px-8 py-3 border-b border-amber-500/20 bg-amber-950/10 text-xs`} data-testid="session-panel">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p data-testid="session-status">{demo.status === 'active' ? 'Isolated demo session active' : demo.status === 'expired' ? 'Demo session expired' : 'Synthetic preview'} · Simulation only. No model inference, email send, or real recovery.</p>
           <div className="flex gap-3">
@@ -88,8 +94,9 @@ export const App: React.FC = () => {
         {demo.storageWarning && <p role="status" className="mt-2 text-amber-300">{demo.storageWarning}</p>}
       </div>
 
-      <main className={activeTab === 'landing' ? 'flex-1 w-full mx-auto' : 'flex-1 w-full mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8'}>
-        {activeTab === 'landing' && <LandingPage locale={locale} onLaunchCockpit={() => setActiveTab('overview')} onOpenSyncModal={() => setIsSyncModalOpen(true)} />}
+      <main id="main-content" tabIndex={-1} className={activeTab === 'landing' ? 'flex-1 w-full mx-auto' : 'flex-1 w-full mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8'}>
+        {activeTab === 'landing' && <LandingPage locale={locale} returning={!!demo.state?.cases.length} onLaunchCockpit={() => setActiveTab('overview')} onOpenSyncModal={() => setIsSyncModalOpen(true)} />}
+        {(activeTab === 'overview' || activeTab === 'cases') && demo.state && <CaseWorkspace key={demo.session?.token ?? 'preview'} state={demo.state} enabled={enabled} onPrepare={openNotice} onUpdate={updateCase} onRefresh={demo.refresh} />}
         {activeTab === 'overview' && view && <ConsumerDashboard summary={view.summary} alerts={view.alerts} dispatchHistory={demo.state?.dispatch_records ?? []}
           householdName={demo.state?.household_name ?? ''} actionsDisabled={!enabled}
           onOpenNoticeModal={openNotice} onCancelTrial={cancelTrial} onOpenReceiptModal={() => setIsReceiptModalOpen(true)}
@@ -108,7 +115,8 @@ export const App: React.FC = () => {
       </main>
 
       {selection && demo.session && <FormalNoticeModal key={demo.session.token + ':' + selection} appliance={selectedAppliance} isOpen
-        token={demo.session.token} enabled={enabled} onClose={() => setSelection(null)} onError={demo.reportError} onDispatch={approve} />}
+        token={demo.session.token} enabled={enabled} onClose={() => setSelection(null)} onError={demo.reportError} onDispatch={approve}
+        onViewCase={() => { setSelection(null); setActiveTab('cases'); void demo.refresh(); }} />}
       {isReceiptModalOpen && <ReceiptUploadModal key={demo.session?.token ?? 'preview'} isOpen onClose={() => setIsReceiptModalOpen(false)}
         outflows={view?.outflows ?? []} enabled={enabled} onReceiptMatched={linkReceipt} />}
       {isUtilityModalOpen && <UtilityDisputeModal key={demo.session?.token ?? 'preview'} isOpen onClose={() => setIsUtilityModalOpen(false)}

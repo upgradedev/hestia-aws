@@ -433,6 +433,7 @@ class S3HouseholdStore:
         # Preserve receipts, consumed tokens, revisions and quotas across a demo reset.
         for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count"):
             fresh[key] = copy.deepcopy(state.get(key, fresh.get(key)))
+        fresh["cases"] = copy.deepcopy(state.get("cases", []))
         fresh["generation"] = state.get("generation", 0) + 1
         fresh["reset_seal"] = self.add_audit_event(fresh, "demo_reset", {"simulated": True})
         self.save_state(fresh)
@@ -443,5 +444,7 @@ def fresh_demo_state() -> dict[str, Any]:
     state = copy.deepcopy(DEFAULT_HOUSEHOLD_STATE)
     # Historical seed text is an illustration, not a provider delivery receipt.
     state["dispatch_records"] = []
-    state.update(mode="simulated", drafts={}, audit_events=[], action_count=0, generation=0)
+    state.update(
+        mode="simulated", drafts={}, cases=[], audit_events=[], action_count=0, generation=0,
+    )
     return state

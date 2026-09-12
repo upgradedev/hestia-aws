@@ -1,4 +1,6 @@
 import type { DispatchRecord } from './types';
+import { decodeCase } from './cases';
+import type { CaseUpdate, HouseholdCase } from './cases';
 
 type JsonObject = Record<string, unknown>;
 type Decoder<T> = (value: unknown) => T;
@@ -90,6 +92,7 @@ export interface BackendState {
   };
   appliances: BackendAppliance[]; subscriptions: BackendSubscription[];
   outflows: BackendOutflow[]; utility_bills: UtilityBill[]; dispatch_records: DispatchRecord[];
+  cases: HouseholdCase[];
 }
 
 function dispatch(value: unknown): DispatchRecord {
@@ -166,6 +169,7 @@ export function decodeState(value: unknown): BackendState {
       };
     }, 'utility_bills'), 'utility_bills'),
     dispatch_records: unique(array(s.dispatch_records, dispatch, 'dispatch_records'), 'dispatch_records'),
+    cases: unique(array(s.cases ?? [], decodeCase, 'cases'), 'cases'),
   };
 }
 
@@ -245,6 +249,14 @@ function mutation(value: unknown): BackendState {
   return decodeState(d.state);
 }
 export const api = {
+  updateCase: (token: string, update: CaseUpdate) => request('/api/case/update', value => {
+    const d = object(value, 'case result');
+    if (d.status !== 'simulated' || typeof d.replayed !== 'boolean') return invalid('case result status');
+    const updated = decodeCase(d.case), state = decodeState(d.state);
+    if (updated.id !== update.case_id || !updated.timeline.some(e => e.id === d.event_id) ||
+      !state.cases.some(c => c.id === updated.id && c.revision === updated.revision && c.status === updated.status)) return invalid('persisted case event');
+    return { state, case: updated, replayed: d.replayed };
+  }, protectedToken(token), { ...update }),
   health: () => request('/healthz', value => {
     const d = object(value, 'health');
     if (d.status !== 'ok' || d.mode !== 'simulated' || d.live_send !== false || d.live_model !== false) return invalid('transport mode');

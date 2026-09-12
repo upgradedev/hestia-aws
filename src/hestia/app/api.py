@@ -16,6 +16,7 @@ from hestia.adapters.storage import (
     fresh_demo_state,
 )
 from hestia.app.access import APIError, authorize_demo, issue_demo_access
+from hestia.app.cases import update_case
 from hestia.app.claims import (
     approve_claim,
     charge_action,
@@ -51,6 +52,7 @@ PROTECTED_POST = {
     "/api/action/utility_dispute", "/api/action/reset", "/api/action/receipt",
     "/api/receipt/scan", "/api/ingest/sync", "/api/outbox/dispatch",
     "/api/outbox/status",
+    "/api/case/update",
 }
 
 
@@ -131,6 +133,7 @@ def _record_local_action(
         fresh = fresh_demo_state()
         for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count"):
             fresh[key] = state[key]
+        fresh["cases"] = state.get("cases", [])
         fresh["generation"] = state.get("generation", 0) + 1
         state = fresh
         result = {"status": "simulated", "message": "Demo data reset; audit history retained."}
@@ -272,4 +275,6 @@ def _handle_api(event: dict[str, Any]) -> dict[str, Any]:
         return response(200, prepare_claim(store, body, access.expires_at))
     if path == "/api/action/claim":
         return response(200, approve_claim(store, body))
+    if path == "/api/case/update":
+        return response(200, update_case(store, body))
     return response(200, _record_local_action(store, path, body))
