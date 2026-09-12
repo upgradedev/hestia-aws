@@ -59,6 +59,7 @@ export function mapState(state: BackendState) {
       id: `receipt-${o.id}`, item_id: o.id, timestamp: o.date, severity: 'warning', category: 'receipt_gap',
       title: `Upload Receipt for €${(o.amount_cents / 100).toFixed(2)} ${o.merchant} Purchase`,
       description: `${o.merchant}, ${o.date}: proof of purchase is not linked. Manual import is available; OCR is unavailable.`,
+      documented_amount_eur: o.amount_cents / 100,
       potential_savings_eur: 0, action_type: 'request_receipt', action_label: 'Receipt options',
     });
   }
