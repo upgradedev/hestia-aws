@@ -69,11 +69,14 @@ export interface BackendAppliance {
   purchase_price_cents: number; seller_name: string; seller_email: string;
   has_repair_claim: boolean; repair_date?: string; repair_amount_cents: number;
   repair_issue?: string; claim_status: string;
+  repair_amount_known?: boolean;
 }
 export interface BackendSubscription {
   id: string; service_name: string; category: string; monthly_cents: number;
   previous_monthly_cents?: number; last_billed: string; is_trial: boolean;
   trial_end_date?: string; status: string; notes?: string;
+  demo_cancellation_requested?: boolean;
+  cancellation_request?: { subscription_id: string; service_name: string; monthly_cents: number; status: 'synthetic_requested' };
 }
 export interface BackendOutflow {
   id: string; merchant: string; amount_cents: number; date: string;
@@ -89,10 +92,61 @@ export interface BackendState {
     unclaimed_recovery_cents: number; protected_assets_cents: number;
     monthly_sub_leakage_cents: number; missing_receipt_cents: number;
     protected_items_count: number; active_anomalies_count: number;
+    source?: 'canonical-records'; observed_at?: string; state_version?: number; mode?: 'synthetic';
+    documented_repair_cost_cents?: number; real_recovered_cents?: number; monthly_recurring_cents?: number;
   };
   appliances: BackendAppliance[]; subscriptions: BackendSubscription[];
   outflows: BackendOutflow[]; utility_bills: UtilityBill[]; dispatch_records: DispatchRecord[];
   cases: HouseholdCase[];
+  intakes?: IntakeDraft[];
+}
+
+export type IntakeRecord = Record<string, string | number | boolean | null>;
+export type IntakeRoute = '/api/receipt/scan' | '/api/ingest/sync';
+export interface IntakeChange {
+  index: number; status: 'ready' | 'duplicate' | 'error'; message?: string;
+  collection?: string; record_id?: string; before?: JsonObject | null; after?: JsonObject;
+}
+export interface IntakeDraft {
+  id: string; input_sha256: string; byte_count: number; mime_type: string; source: string;
+  route: IntakeRoute; status: 'staged' | 'review' | 'committed'; records: IntakeRecord[];
+  review: null | { digest: string; source_version: number; original_records: IntakeRecord[]; corrected_records: IntakeRecord[]; changes: IntakeChange[] };
+  result?: { ready: number; duplicate: number; error: number };
+}
+function intakeRecord(value: unknown): IntakeRecord {
+  const row = object(value, 'intake record');
+  if (Object.values(row).some(v => v !== null && typeof v !== 'string' && typeof v !== 'boolean' && !(typeof v === 'number' && Number.isSafeInteger(v)))) return invalid('intake facts');
+  return row as IntakeRecord;
+}
+function hash(value: unknown): string {
+  const parsed = string(value, 'content hash');
+  return /^[a-f0-9]{64}$/.test(parsed) ? parsed : invalid('content hash');
+}
+function decodeIntake(value: unknown): IntakeDraft {
+  const d = object(value, 'intake');
+  if (!['staged', 'review', 'committed'].includes(String(d.status)) || d.ocr_status !== 'unavailable' || d.confidence_score !== null) return invalid('manual intake status');
+  if (d.route !== '/api/receipt/scan' && d.route !== '/api/ingest/sync') return invalid('intake route');
+  const review = d.review == null ? null : object(d.review, 'intake review');
+  const result = d.result == null ? null : object(d.result, 'intake counts');
+  const records = array(d.records, intakeRecord, 'original records');
+  const changes = review ? array(review.changes, value => {
+    const c = object(value, 'change');
+    if (c.status !== 'ready' && c.status !== 'duplicate' && c.status !== 'error') return invalid('change status');
+    return { index: integer(c.index, 'row index'), status: c.status,
+      ...(c.status === 'error' ? { message: string(c.message, 'row error') } : {
+        collection: string(c.collection, 'collection'), record_id: string(c.record_id, 'record ID'),
+        before: c.before === null ? null : object(c.before, 'previous facts'), after: object(c.after, 'new facts'),
+      }) } as IntakeChange;
+  }, 'review changes') : [];
+  if (review && hash(review.input_sha256) !== hash(d.input_sha256)) return invalid('review source');
+  if (d.status === 'committed' && (!review || !result)) return invalid('committed intake evidence');
+  return { id: string(d.id, 'intake ID'), input_sha256: hash(d.input_sha256), byte_count: integer(d.byte_count, 'document bytes'),
+    mime_type: string(d.mime_type, 'document type'), source: string(d.source, 'source'), route: d.route,
+    status: d.status as IntakeDraft['status'], records,
+    review: review ? { digest: hash(review.digest), source_version: integer(review.source_version, 'review version'),
+      original_records: array(review.original_records, intakeRecord, 'original facts'),
+      corrected_records: array(review.corrected_records, intakeRecord, 'corrected facts'), changes } : null,
+    result: result ? { ready: integer(result.ready, 'imported count'), duplicate: integer(result.duplicate, 'duplicate count'), error: integer(result.error, 'error count') } : undefined };
 }
 
 function dispatch(value: unknown): DispatchRecord {
@@ -125,6 +179,14 @@ export function decodeState(value: unknown): BackendState {
       missing_receipt_cents: integer(summary.missing_receipt_cents, 'missing_receipt_cents'),
       protected_items_count: integer(summary.protected_items_count, 'protected_items_count'),
       active_anomalies_count: integer(summary.active_anomalies_count, 'active_anomalies_count'),
+      ...(summary.source === undefined ? {} : {
+        source: summary.source === 'canonical-records' ? 'canonical-records' as const : invalid('metric source'),
+        mode: summary.mode === 'synthetic' ? 'synthetic' as const : invalid('metric mode'),
+        observed_at: dateString(summary.observed_at, 'metric observation'), state_version: integer(summary.state_version, 'metric version'),
+        documented_repair_cost_cents: summary.documented_repair_cost_cents == null ? undefined : integer(summary.documented_repair_cost_cents, 'documented repair cost'),
+        real_recovered_cents: summary.real_recovered_cents === 0 ? 0 : invalid('real recovery'),
+        monthly_recurring_cents: integer(summary.monthly_recurring_cents, 'monthly recurring'),
+      }),
     },
     appliances: unique(array(s.appliances, value => {
       const a = object(value, 'appliance');
@@ -136,7 +198,8 @@ export function decodeState(value: unknown): BackendState {
         purchase_price_cents: integer(a.purchase_price_cents, 'purchase_price_cents'),
         seller_name: string(a.seller_name, 'seller_name'), seller_email: string(a.seller_email, 'seller_email'),
         has_repair_claim: bool(a.has_repair_claim, 'has_repair_claim'), repair_date: a.repair_date == null ? undefined : dateString(a.repair_date, 'repair_date'),
-        repair_amount_cents: integer(a.repair_amount_cents, 'repair_amount_cents'),
+        repair_amount_cents: a.repair_amount_cents == null ? 0 : integer(a.repair_amount_cents, 'repair_amount_cents'),
+        repair_amount_known: a.repair_amount_cents != null,
         repair_issue: optionalString(a.repair_issue, 'repair_issue'), claim_status: string(a.claim_status, 'claim_status'),
       };
     }, 'appliances'), 'appliances'),
@@ -149,6 +212,12 @@ export function decodeState(value: unknown): BackendState {
         last_billed: string(sub.last_billed, 'last_billed'), is_trial: bool(sub.is_trial, 'is_trial'),
         trial_end_date: optionalString(sub.trial_end_date, 'trial_end_date'), status: string(sub.status, 'subscription status'),
         notes: optionalString(sub.notes, 'subscription notes'),
+        demo_cancellation_requested: sub.demo_cancellation_requested === undefined ? false : bool(sub.demo_cancellation_requested, 'synthetic cancellation requested'),
+        cancellation_request: sub.cancellation_request == null ? undefined : (() => {
+          const r = object(sub.cancellation_request, 'cancellation request');
+          if (r.status !== 'synthetic_requested' || r.subscription_id !== sub.id || r.service_name !== sub.service_name || r.monthly_cents !== sub.monthly_cents) return invalid('exact requested subscription');
+          return { subscription_id: string(r.subscription_id, 'subscription ID'), service_name: string(r.service_name, 'requested service'), monthly_cents: integer(r.monthly_cents, 'requested cents'), status: 'synthetic_requested' as const };
+        })(),
       };
     }, 'subscriptions'), 'subscriptions'),
     outflows: unique(array(s.outflows, value => {
@@ -170,6 +239,7 @@ export function decodeState(value: unknown): BackendState {
     }, 'utility_bills'), 'utility_bills'),
     dispatch_records: unique(array(s.dispatch_records, dispatch, 'dispatch_records'), 'dispatch_records'),
     cases: unique(array(s.cases ?? [], decodeCase, 'cases'), 'cases'),
+    intakes: unique(Object.values(object(s.intakes ?? {}, 'intakes')).map(decodeIntake), 'intakes'),
   };
 }
 
@@ -249,6 +319,15 @@ function mutation(value: unknown): BackendState {
   return decodeState(d.state);
 }
 export const api = {
+  intake: (token: string, route: IntakeRoute, body: JsonObject) => request(route, value => {
+    const d = object(value, 'intake result');
+    if (d.status !== 'simulated' || typeof d.replayed !== 'boolean') return invalid('intake result');
+    const intake = decodeIntake(d.intake), state = decodeState(d.state);
+    if (intake.route !== route || !state.intakes?.some(i => JSON.stringify(i) === JSON.stringify(intake))) return invalid('persisted intake');
+    if (body.intake_id !== undefined && body.intake_id !== intake.id) return invalid('intake identity');
+    if (body.operation === 'commit' && (intake.status !== 'committed' || intake.review?.digest !== body.digest)) return invalid('committed exact review');
+    return { intake, state, replayed: d.replayed };
+  }, protectedToken(token), body),
   updateCase: (token: string, update: CaseUpdate) => request('/api/case/update', value => {
     const d = object(value, 'case result');
     if (d.status !== 'simulated' || typeof d.replayed !== 'boolean') return invalid('case result status');
@@ -285,23 +364,25 @@ export const api = {
     if (!state.dispatch_records.some(item => item.id === record.id && item.status === 'simulated')) return invalid('persisted approval record');
     return { record, state };
   }, protectedToken(token), { draft_id: draft.id, digest: draft.digest, approval_token: draft.approval_token }),
-  cancel: (token: string, serviceName: string) => request('/api/action/cancel', value => {
+  cancel: (token: string, serviceName: string, subscriptionId?: string, monthlyCents?: number) => request('/api/action/cancel', value => {
     const result = object(object(value).result);
     if (result.status !== 'simulated' || result.service_name !== serviceName) return invalid('cancellation simulation');
-    return mutation(value);
-  }, protectedToken(token), { service_name: serviceName }),
+    const state = mutation(value);
+    if (subscriptionId && !state.subscriptions.some(s => s.id === subscriptionId && s.demo_cancellation_requested && s.cancellation_request?.status === 'synthetic_requested' && s.cancellation_request.monthly_cents === monthlyCents)) return invalid('persisted exact synthetic request');
+    return state;
+  }, protectedToken(token), { service_name: serviceName, ...(subscriptionId ? { subscription_id: subscriptionId, expected_monthly_cents: monthlyCents } : {}) }),
   utility: (token: string, provider: string, excessCents: number) => request('/api/action/utility_dispute', value => {
     const result = object(object(value).result);
     if (result.status !== 'simulated' || result.provider !== provider) return invalid('utility simulation');
     return mutation(value);
   }, protectedToken(token), { provider, excess_cents: excessCents }),
-  receipt: (token: string, merchant: string, amountCents: number, receiptId: string) => request('/api/action/receipt', value => {
+  receipt: (token: string, merchant: string, amountCents: number, receiptId: string, transactionId?: string) => request('/api/action/receipt', value => {
     const result = object(object(value).result);
     if (result.status !== 'linked' || result.matched !== true || result.receipt_id !== receiptId) return invalid('receipt match');
     const state = mutation(value);
-    if (!state.outflows.some(o => o.merchant === merchant && o.amount_cents === amountCents && o.has_receipt && o.receipt_id === receiptId)) return invalid('persisted receipt match');
+    if (!state.outflows.some(o => (!transactionId || o.id === transactionId) && o.merchant === merchant && o.amount_cents === amountCents && o.has_receipt && o.receipt_id === receiptId)) return invalid('persisted receipt match');
     return state;
-  }, protectedToken(token), { merchant, amount_cents: amountCents, receipt_id: receiptId }),
+  }, protectedToken(token), { merchant, amount_cents: amountCents, receipt_id: receiptId, ...(transactionId ? { transaction_id: transactionId } : {}) }),
   reset: (token: string) => request('/api/action/reset', mutation, protectedToken(token), {}),
   outbox: (token: string) => request('/api/outbox/status', value => {
     const d = object(value, 'outbox result');

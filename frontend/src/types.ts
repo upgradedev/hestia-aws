@@ -30,7 +30,7 @@ export interface PaymentOutflow {
   category: 'electronics' | 'groceries' | 'utilities' | 'subscription' | 'home';
   card_digits: string;
   has_receipt: boolean;
-  requires_receipt: boolean; // > €50
+  requires_receipt: boolean; // >= EUR 50
   flagged_reason?: string;
 }
 
@@ -45,6 +45,7 @@ export interface SubscriptionTracker {
   trial_expires_at?: string;
   next_billing_date: string;
   renewal_cost_eur: number;
+  synthetic_requested?: boolean;
 }
 
 export interface SentinelAlert {
@@ -56,6 +57,7 @@ export interface SentinelAlert {
   description: string;
   statutory_basis?: string;
   potential_savings_eur: number;
+  documented_amount_eur?: number;
   action_type: 'dispatch_claim' | 'cancel_trial' | 'request_receipt' | 'dispute_bill';
   item_id?: string;
   action_label: string;
@@ -86,6 +88,8 @@ export interface HouseholdSummary {
   potential_recovery_eur: number;
   active_sentinels: number;
   missing_receipts_eur?: number;
+  documented_repair_cost_eur?: number;
+  real_recovered_eur?: number;
 }
 
 export type ActiveTab = 'landing' | 'overview' | 'cases' | 'vault' | 'subscriptions' | 'journeys' | 'gtm' | 'architecture';

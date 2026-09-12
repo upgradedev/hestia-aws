@@ -16,6 +16,8 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from hestia.domain.metrics import summary_from_records
+
 # Default initial state matching the verified Athens Apartment 4B scenario
 DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
     "version": "1.0.0",
@@ -368,6 +370,7 @@ class S3HouseholdStore:
         candidate = copy.deepcopy(state)
         candidate["version_seq"] = expected + 1
         candidate["last_updated"] = datetime.now(UTC).isoformat()
+        candidate["summary"] = summary_from_records(candidate)
         payload = self._encode(candidate)
         s3 = self._get_s3()
         if s3 is None:
@@ -434,6 +437,7 @@ class S3HouseholdStore:
         for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count"):
             fresh[key] = copy.deepcopy(state.get(key, fresh.get(key)))
         fresh["cases"] = copy.deepcopy(state.get("cases", []))
+        preserve_intake(state, fresh)
         fresh["generation"] = state.get("generation", 0) + 1
         fresh["reset_seal"] = self.add_audit_event(fresh, "demo_reset", {"simulated": True})
         self.save_state(fresh)
@@ -447,4 +451,12 @@ def fresh_demo_state() -> dict[str, Any]:
     state.update(
         mode="simulated", drafts={}, cases=[], audit_events=[], action_count=0, generation=0,
     )
+    state["summary"] = summary_from_records(state)
     return state
+
+
+def preserve_intake(state: dict[str, Any], fresh: dict[str, Any]) -> None:
+    """Reset cannot detach imported evidence, replay records or synthetic requests."""
+    for key in ("outflows", "subscriptions", "saved_receipts", "intakes", "intake_provenance"):
+        if key in state:
+            fresh[key] = copy.deepcopy(state[key])
