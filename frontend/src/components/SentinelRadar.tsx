@@ -40,9 +40,9 @@ export const SentinelRadar: React.FC<SentinelRadarProps> = ({
           <div>
             <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">ANALYSIS // 02</span>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
-              AI Sentinel Radar
+              Recorded Evidence Radar
               <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono border border-amber-500/30">
-                ACTIVE
+                SNAPSHOT
               </span>
             </h2>
           </div>
@@ -87,6 +87,8 @@ export const SentinelRadar: React.FC<SentinelRadarProps> = ({
             <div
               key={alert.id}
               onClick={() => onSelectAlert(alert)}
+              role="button" tabIndex={0} aria-pressed={isSelected}
+              onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelectAlert(alert); } }}
               className={`glass-card glass-card-interactive rounded-xl p-4 cursor-pointer border transition-all ${
                 isSelected
                   ? 'border-amber-400 bg-slate-800/80 shadow-lg shadow-amber-500/10 ring-1 ring-amber-400/40'
@@ -116,7 +118,7 @@ export const SentinelRadar: React.FC<SentinelRadarProps> = ({
 
                 <div className="text-right">
                   <span className="text-xs font-bold text-emerald-400 font-mono">
-                    +€{alert.potential_savings_eur.toFixed(2)} recovery
+                    €{alert.potential_savings_eur.toFixed(2)} recorded exposure
                   </span>
                 </div>
               </div>

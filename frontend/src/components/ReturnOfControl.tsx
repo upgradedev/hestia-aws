@@ -62,7 +62,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
           </h2>
         </div>
         <div className="text-[11px] font-mono text-slate-400">
-          Enforceable Remedies
+          Review Recorded Facts
         </div>
       </div>
 
@@ -92,10 +92,10 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
               </div>
 
               <h3 className="text-sm font-bold text-white mb-1">
-                Statutory Remedy for {activeItem.brand} {activeItem.name}
+                Recorded Repair for {activeItem.brand} {activeItem.name}
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed mb-3">
-                Commercial seller warranty expired, but under <strong>Directive (EU) 2019/771 Article 10</strong>, the seller remains strictly liable for lack of conformity for 24 months from delivery.
+                Commercial guarantee terms and statutory rights are separate. Delivery facts, jurisdiction and the appropriate remedy require review; this snapshot does not establish entitlement.
               </p>
 
               {/* Pre-Drafted Formal Legal Letter Box */}
@@ -113,7 +113,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
                   The goods exhibit the following defect: "{activeItem.defect_description || 'Functional failure'}".
                 </p>
                 <p className="mb-2">
-                  Pursuant to Article 10(1) and Article 13 of Directive (EU) 2019/771, the consumer is entitled to have the goods brought into conformity free of charge.
+                  Please review the recorded issue and supporting evidence. This illustration does not establish legal eligibility or authorize any external action.
                 </p>
               </div>
 
@@ -124,7 +124,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
                     onClick={onInspectDocument}
                     className="text-xs text-amber-400 hover:text-amber-300 font-medium underline inline-flex items-center gap-1 cursor-pointer"
                   >
-                    <span>View Official Legal Letter & German BGB Details</span>
+                    <span>Review Exact Server-Prepared Notice</span>
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                       <polyline points="15 3 21 3 21 9" />
@@ -144,7 +144,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
                   {isSubmitting ? (
                     <>
                       <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      <span>Dispatching Statutory Notice...</span>
+                      <span>Opening exact notice...</span>
                     </>
                   ) : (
                     <>
@@ -168,10 +168,10 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
               SUBSCRIPTION DEFENSE
             </span>
             <h3 className="text-sm font-bold text-white mt-1 mb-1">
-              Terminate ProStream Free Trial
+              {selectedAlert.title}
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed mb-4">
-              Trial expires in 48 hours. Auto-renewal will silently charge €29.99/mo to card ending ••4892.
+              {selectedAlert.description} This action records a simulation only; provider status does not change.
             </p>
             <button
               onClick={handleApproveAction}
@@ -179,7 +179,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
               className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-950/40 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
-                <span>Cancelling Trial...</span>
+                <span>Recording simulated request...</span>
               ) : (
                 <>
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -187,7 +187,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
                     <line x1="15" y1="9" x2="9" y2="15" />
                     <line x1="9" y1="9" x2="15" y2="15" />
                   </svg>
-                  <span>Approve Immediate Cancellation</span>
+                  <span>Record Simulated Cancellation Request</span>
                 </>
               )}
             </button>
@@ -213,7 +213,7 @@ export const ReturnOfControl: React.FC<ReturnOfControlProps> = ({
             <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold">
               Dispute Audit Trail ({dispatchHistory.length})
             </span>
-            <span className="text-[10px] text-emerald-400 font-mono">Cryptographically Verifiable</span>
+            <span className="text-[10px] text-slate-300 font-mono">Stored history; inspect exact receipts</span>
           </div>
 
           <div className="space-y-2">
