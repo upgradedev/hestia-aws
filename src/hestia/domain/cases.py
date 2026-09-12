@@ -97,7 +97,8 @@ def authorize_case(
     case["approval"] = {"draft_id": draft["id"], "digest": digest, "record_id": record_id}
     append_event(
         case, action="notice_authorized", status="authorized", actor=actor,
-        source="exact_approval", note="Approval persisted. No merchant contacted; no outcome inferred.",
+        source="exact_approval",
+        note="Approval persisted. No merchant contacted; no outcome inferred.",
         evidence_reference=digest, timestamp=utc_now(),
     )
 
@@ -133,7 +134,9 @@ def apply_update(case: dict[str, Any], update: dict[str, Any], actor: str) -> di
             raise ValueError("The recorded planning deadline has not arrived.")
         if any(e["action"] == action and e.get("deadline") == case["deadline"]
                for e in case["timeline"]):
-            raise ValueError("Silence is already recorded for this deadline. Set a new date to follow up.")
+            raise ValueError(
+                "Silence is already recorded for this deadline. Set a new date to follow up."
+            )
     if "deadline" in update:
         case["deadline"] = update["deadline"]
     details: dict[str, Any] = {"deadline": case["deadline"]}
@@ -170,7 +173,9 @@ def project_case(case: dict[str, Any]) -> dict[str, Any]:
     result["next_action"] = {
         "draft": "Review the recorded appliance and receipt facts.",
         "review": "Review an exact current draft and explicitly approve it. Nothing has been sent.",
-        "authorized": "Set a planning deadline and start response tracking. Approval sent no email.",
+        "authorized": (
+            "Set a planning deadline and start response tracking. Approval sent no email."
+        ),
         "pending_response": (
             "Planning date reached. Record whether a reply arrived and choose a follow-up date."
             if overdue else "Record a labeled reply or manual update. No mailbox is connected."

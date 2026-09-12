@@ -131,7 +131,9 @@ def test_unsupported_or_unattested_updates_leave_case_unchanged(household_case, 
 
 
 @pytest.mark.parametrize("status", ["draft", "review", "authorized", "resolved", "rejected"])
-@pytest.mark.parametrize("action", ["reply", "request_information", "add_evidence", "reject", "resolve"])
+@pytest.mark.parametrize("action", [
+    "reply", "request_information", "add_evidence", "reject", "resolve",
+])
 def test_no_case_can_skip_approval_tracking_or_reopen(household_case, status, action):
     c = household_case
     c["status"] = status

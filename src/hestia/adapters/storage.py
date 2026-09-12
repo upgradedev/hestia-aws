@@ -444,5 +444,7 @@ def fresh_demo_state() -> dict[str, Any]:
     state = copy.deepcopy(DEFAULT_HOUSEHOLD_STATE)
     # Historical seed text is an illustration, not a provider delivery receipt.
     state["dispatch_records"] = []
-    state.update(mode="simulated", drafts={}, cases=[], audit_events=[], action_count=0, generation=0)
+    state.update(
+        mode="simulated", drafts={}, cases=[], audit_events=[], action_count=0, generation=0,
+    )
     return state

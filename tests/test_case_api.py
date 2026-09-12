@@ -9,8 +9,11 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 
 from hestia.app.web import read_lambda_handler
+from tests import test_web
 from tests.fakes import service_error
-from tests.test_web import approval, call, prepared, sandbox, scoped_store, session  # noqa: F401
+from tests.test_web import approval, call, prepared, scoped_store, session
+
+sandbox = test_web.sandbox
 
 
 def state(token):
@@ -76,7 +79,8 @@ def test_prepare_approval_replay_and_reset_keep_one_durable_case(sandbox):
 def test_full_functional_lifecycle_persists_provenance_and_never_claims_real_money(sandbox):
     token = session()
     c = save(token, authorized(token))
-    c = save(token, c, "reply", source="synthetic_reply", note="Fixture merchant acknowledges review")
+    c = save(token, c, "reply", source="synthetic_reply",
+             note="Fixture merchant acknowledges review")
     assert c["status"] == "pending_response"
     c = save(token, c, "request_information", source="synthetic_reply")
     assert c["status"] == "needs_information"
@@ -149,7 +153,8 @@ def test_reader_anonymous_tamper_and_cross_session_cannot_write_case(sandbox):
     request = payload(authorized(token))
     before = state(token)
     assert call("/api/case/update", request)[0] == 401
-    assert call("/api/case/update", request, token[:-1] + ("0" if token[-1] != "0" else "1"))[0] == 401
+    forged = token[:-1] + ("0" if token[-1] != "0" else "1")
+    assert call("/api/case/update", request, forged)[0] == 401
     assert call("/api/case/update", request, other)[0] == 404
     response = read_lambda_handler({"rawPath": "/api/case/update", "httpMethod": "POST",
                                     "headers": {"Authorization": "Bearer " + token},
@@ -213,7 +218,8 @@ def test_store_reset_retains_cases_and_quota_remains_enforced(sandbox):
 def test_case_route_is_writer_only_and_retains_explicit_denials():
     from infra.hestia_api_stack import template
     resources = template()["Resources"]
-    routes = [r["Properties"] for r in resources.values() if r["Type"] == "AWS::ApiGatewayV2::Route"]
+    routes = [r["Properties"] for r in resources.values()
+              if r["Type"] == "AWS::ApiGatewayV2::Route"]
     case_route = next(r for r in routes if r["RouteKey"] == "POST /api/case/update")
     assert case_route["Target"] == {"Fn::Sub": "integrations/${Integration}"}
     assert next(r for r in routes if r["RouteKey"] == "$default")["Target"] == {
