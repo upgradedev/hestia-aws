@@ -594,7 +594,9 @@ footer.meta-bar {{
 
         <div class="letter-box">{claim_letter}</div>
 
-        <p style="margin-top:14px;">Approval and dispatch are unavailable on this read-only page.</p>
+        <p style="margin-top:14px;">
+          Approval and dispatch are unavailable on this read-only page.
+        </p>
       </div>
 
       <div class="roc-card">
