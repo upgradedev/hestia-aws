@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" role="img" aria-labelledby="banner-title banner-desc">
+  <title id="banner-title">Hestia</title>
+  <desc id="banner-desc">Hestia keeps a household's receipts, guarantees and repair cases together. A Strands agent on Amazon Bedrock reads the records and the household decides.</desc>
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbf8f2"/>
+      <stop offset="1" stop-color="#f0e7d8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" rx="24" fill="url(#ground)"/>
+  <rect x="0.75" y="0.75" width="1278.5" height="318.5" rx="23.25" fill="none" stroke="#e2d4bf" stroke-width="1.5"/>
+
+  <circle cx="104" cy="106" r="34" fill="#b4520a"/>
+  <text x="104" y="119" text-anchor="middle" font-size="36" font-weight="700" fill="#ffffff">H</text>
+  <text x="156" y="127" font-size="58" font-weight="700" fill="#2b2420">Hestia</text>
+  <text x="72" y="192" font-size="29" fill="#3d342d">Keeps a household's receipts, guarantees</text>
+  <text x="72" y="229" font-size="29" fill="#3d342d">and repair cases together.</text>
+  <text x="72" y="276" font-size="19" fill="#6b6057">A Strands agent on Amazon Bedrock reads the records. The household decides.</text>
+
+  <line x1="846" y1="98" x2="846" y2="238" stroke="#d9c6ab" stroke-width="2"/>
+  <circle cx="846" cy="98" r="8" fill="#b4520a"/>
+  <circle cx="846" cy="168" r="8" fill="#c9772f"/>
+  <circle cx="846" cy="238" r="8" fill="#3f6f55"/>
+
+  <rect x="872" y="70" width="352" height="56" rx="14" fill="#ffffff" stroke="#e2d4bf" stroke-width="1.5"/>
+  <text x="894" y="104" font-size="18" fill="#2b2420"><tspan font-weight="700">Receipts and guarantees</tspan><tspan fill="#6b6057"> added by you</tspan></text>
+
+  <rect x="872" y="140" width="352" height="56" rx="14" fill="#ffffff" stroke="#e2d4bf" stroke-width="1.5"/>
+  <text x="894" y="174" font-size="18" fill="#2b2420"><tspan font-weight="700">Agent review</tspan><tspan fill="#6b6057"> reads and points</tspan></text>
+
+  <rect x="872" y="210" width="352" height="56" rx="14" fill="#ffffff" stroke="#e2d4bf" stroke-width="1.5"/>
+  <text x="894" y="244" font-size="18" fill="#2b2420"><tspan font-weight="700">Notice and case file</tspan><tspan fill="#6b6057"> approved by you</tspan></text>
+</svg>

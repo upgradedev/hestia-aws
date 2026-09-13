@@ -4,7 +4,7 @@ Hestia reads a household's receipts, subscriptions and repair records with a Str
 
 Built for the AWS "Agents for Humans" hackathon, Everyday Agents track. The household is fictional (Athens Apartment 4B, homeowner Elena Georgiou). Approvals are recorded, never sent. Real recovered money is always EUR 0.00.
 
-[Live demo](https://drusjukc9d4oc.cloudfront.net/) · [Health check](https://drusjukc9d4oc.cloudfront.net/healthz) · [Backend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml) · [Frontend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml) · [Architecture diagram](docs/architecture.svg) · [Devpost text](docs/DEVPOST_SUBMISSION.md) · [Video script](docs/VIDEO_SCRIPT_150S.md)
+[Live demo](https://drusjukc9d4oc.cloudfront.net/) · [Health check](https://drusjukc9d4oc.cloudfront.net/healthz) · [Backend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml) · [Frontend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml) · [Architecture diagram](docs/assets/request-flow.svg) · [Devpost text](docs/devpost-submission.md) · [Video script](docs/video-script.md)
 
 ## Try it in 90 seconds
 
@@ -63,7 +63,7 @@ flowchart LR
   X[Not connected: bank feed, mailbox, OCR, SES, AgentCore, Guardrails] -.-> W
 ```
 
-The same picture with the boundaries drawn: [docs/architecture.svg](docs/architecture.svg). Narrative and evidence paths: [docs/BEDROCK_AGENTCORE_ARCHITECTURE.md](docs/BEDROCK_AGENTCORE_ARCHITECTURE.md) (the filename is historical; AgentCore is not connected).
+The same picture with the boundaries drawn: [docs/assets/request-flow.svg](docs/assets/request-flow.svg). Narrative and evidence paths: [docs/architecture.md](docs/architecture.md) (the filename is historical; AgentCore is not connected).
 
 ## What runs where
 
@@ -87,7 +87,7 @@ The same picture with the boundaries drawn: [docs/architecture.svg](docs/archite
 | Legacy toy route | `GET /api/simulation/mcts` still answers with `mode: illustrative`; the UI no longer shows it | `src/hestia/app/api.py:303-306` | No empirical rate behind it |
 | Bank, mailbox, retailer feeds | Not connected | `src/hestia/adapters/storage.py:491-492`, `frontend/src/components/AboutView.tsx` | No PSD2 or mailbox adapter exists |
 | SES | Not connected; direct dispatch route answers 403; IAM denies `ses:*` | `src/hestia/app/api.py:312-313`, `infra/hestia_api_stack.py:88-92` | Recorded approvals are not sent email |
-| Bedrock AgentCore, Guardrails | Not connected | `docs/BEDROCK_AGENTCORE_ARCHITECTURE.md` | The narrative guard is a local pattern check, not a managed guardrail |
+| Bedrock AgentCore, Guardrails | Not connected | `docs/architecture.md` | The narrative guard is a local pattern check, not a managed guardrail |
 
 ## Deploy and verify
 

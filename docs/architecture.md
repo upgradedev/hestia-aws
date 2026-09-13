@@ -4,7 +4,7 @@ Bedrock AgentCore is not connected in the public demo. The filename keeps an ear
 
 [PRIMARY: repository inspection, 2026-09-13] Baseline before the final wave: `b9149c77e7eb18b129df7bbfcc5c19d4241ca050`. Reproduce the inventory with `git show b9149c77e7eb18b129df7bbfcc5c19d4241ca050:<path>` for the baseline and `git show HEAD:<path>` for this branch. No live runtime measurement was performed for this document; `GET /healthz` on the live URL names the deployed revision.
 
-The drawn version is [architecture.svg](architecture.svg); the README carries the same picture as a mermaid diagram.
+The drawn version is [request-flow.svg](assets/request-flow.svg); the README carries the same picture as a mermaid diagram.
 
 ## Implemented source flow
 
