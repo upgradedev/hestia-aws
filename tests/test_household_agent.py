@@ -279,3 +279,17 @@ def test_health_reports_model_configuration(monkeypatch):
     code, data = call("/healthz")
     assert data["live_model"] is True and data["model_id"] == MODEL
     assert data["live_send"] is False and data["mode"] == "simulated"
+
+
+def test_guard_accepts_amounts_written_bare_or_in_cents_by_the_tools():
+    tools = ha.tool_functions(fresh_demo_state(), TODAY)
+    outputs = [tools["audit_subscriptions"](), tools["check_receipts_and_utilities"](),
+               tools["review_repair_evidence"]("app-001")]
+    text = ("What I checked\nCloud Backup Vault rose from €9.99 to €13.99; the trial renews at "
+            "€19.99; the €85.50 outlay has no receipt; the €185.00 repair requires review.\n"
+            "Decisions waiting for you\n- Review the exact notice draft in Hestia.\n"
+            "Suggested next step\nOpen the case and review the draft.")
+    assert ha.guard_narrative(text, outputs) == []
+    assert ha.guard_narrative("A €1,399.00 fee requires review.", ["1399 minor units"]) == []
+    assert ha.guard_narrative("A €14.00 fee requires review.", outputs)  # 14 only appears in dates
+    assert ha.guard_narrative("A €777.77 fee requires review.", outputs)

@@ -7,7 +7,7 @@ self-explanatory: every failure prints WHICH assertion broke and the numbers beh
 so an out-of-sync or mis-ordered video can never ship again.
 
 Inputs:
-  argv[1]            final mp4 (default demo/final-media/memoryagent-demo.mp4)
+  argv[1]            final mp4 (default output/hestia-demo.mp4, as written by video/build-video.py)
   VIDEO_MANIFEST     json emitted by the compose step (default video_manifest.json):
                        { fps, title_dur, screencast_dur, web_dur, outro_dur,
                          segments:[...ordered names...], a_main, a_web, vo_delay, have_vo }
@@ -127,7 +127,7 @@ def frame_kind(path, t):
 
 
 def main():
-    mp4 = sys.argv[1] if len(sys.argv) > 1 else "demo/final-media/memoryagent-demo.mp4"
+    mp4 = sys.argv[1] if len(sys.argv) > 1 else "output/hestia-demo.mp4"
     manifest_path = os.environ.get("VIDEO_MANIFEST", "video_manifest.json")
     windows_path = os.environ.get("CAPTION_WINDOWS", "caption_windows.json")
 

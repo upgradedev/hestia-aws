@@ -58,6 +58,20 @@ BANNED_PATTERNS = (
     r"\bODR\b", r"recover(?:ed|s)?\s+(?:€|EUR)", r"full reimbursement",
 )
 AMOUNT_PATTERN = re.compile(r"(?:€|EUR)\s?(\d+(?:[.,]\d+)*)")
+NUMBER_PATTERN = re.compile(r"\d+(?:[.,]\d+)*")
+
+
+def _canonical(digits: str) -> str:
+    """Normalise 1,399.00 / 1399,00 / 1399 to one spelling for comparison."""
+    text = digits.replace(",", ".")
+    if text.count(".") > 1:  # thousands separators
+        head, _, tail = text.rpartition(".")
+        text = head.replace(".", "") + "." + tail
+    try:
+        value = float(text)
+    except ValueError:
+        return digits
+    return f"{value:.2f}"
 
 
 @dataclass
@@ -245,13 +259,17 @@ def guard_narrative(narrative: str, tool_outputs: list[str]) -> list[str]:
     for pattern in BANNED_PATTERNS:
         if re.search(pattern, narrative, re.I):
             reasons.append(f"unsupported claim matched {pattern!r}")
-    evidence = " ".join(tool_outputs)
-    known = {digits.replace(",", "") for digits in AMOUNT_PATTERN.findall(evidence)}
-    known |= {re.sub(r"[.,]00$", "", value) for value in known}
+    # Tool outputs write amounts bare ("13.99"), with a currency ("EUR 185.00") or in cents
+    # ("18500 minor units"); a narrative amount must match one of those spellings exactly.
+    known: set[str] = set()
+    evidence = re.sub(r"\d{4}-\d{2}-\d{2}", " ", " ".join(tool_outputs))  # dates are not amounts
+    for digits in NUMBER_PATTERN.findall(evidence):
+        known.add(_canonical(digits))
+        if digits.isdigit():
+            known.add(_canonical(f"{int(digits) / 100:.2f}"))
     for digits in AMOUNT_PATTERN.findall(narrative):
-        value = digits.replace(",", "")
-        if value not in known and re.sub(r"[.,]00$", "", value) not in known:
-            reasons.append(f"amount {value} does not appear in tool outputs")
+        if _canonical(digits) not in known:
+            reasons.append(f"amount {digits} does not appear in tool outputs")
     if len(narrative) > MAX_NARRATIVE_CHARS:
         reasons.append("narrative exceeds the length limit")
     if "requires review" not in lowered and "review" not in lowered:

@@ -1,6 +1,6 @@
 {
-  "_comment": "Seven beats. captionText is what a judge reads on screen and carries the exact figures. speechText is the same sentence spelled for a text to speech engine, so AWS becomes A W S and EU becomes E U. Run video/generate-narration.py once and read the total it prints before planning around any length: it refuses outside 90 to 174 seconds and tells you the measured figure.",
-  "schemaVersion": "archon.submission-video/v1",
+  "_comment": "Seven beats in the order the capture journey expects (web/video/capture-production.mjs). captionText is what a judge reads on screen and carries the exact figures. speechText is the same sentence spelled for a text to speech engine, so AWS becomes A W S and EU becomes E U. Run video/generate-narration.py once and read the total it prints before planning around any length: it refuses outside 90 to 174 seconds and tells you the measured figure. Record only after GET /healthz on the live URL reports live_model true and the released commit.",
+  "schemaVersion": "hestia.submission-video/v1",
   "provider": "elevenlabs",
   "elevenLabs": {
     "voiceId": "pNInz6obpgDQGcFmaJgB",
@@ -13,45 +13,45 @@
   "segments": [
     {
       "id": "hook",
-      "_beat": "The problem, in the words of the person who has it. One named person, never a market.",
-      "captionText": "Elena manages a home in Munich. When her Bosch washer failed at month 22, the retailer claimed the one-year guarantee expired. Under European Directive 2019/771, sellers are strictly liable for 24 months. Elena paid 185 EUR out-of-pocket because nobody holds the legal calendar.",
-      "speechText": "Elena manages a home in Munich. When her Bosch washer failed at month twenty-two, the retailer claimed the one-year guarantee expired. Under European Directive twenty-nineteen seven-seventy-one, sellers are strictly liable for twenty-four months. Elena paid one hundred and eighty-five euros out of pocket, because nobody holds the legal calendar."
+      "_beat": "The problem, in the words of the person who has it. The landing page is on screen: the H1 and the sample repair card.",
+      "captionText": "Elena Georgiou's washing machine failed 22 months after purchase, and the repair cost 185 EUR. The receipt, the repair invoice and the seller's address live in three places, and nobody keeps the case together. Hestia starts from that receipt and asks Elena before anything is sent.",
+      "speechText": "Elena Georgiou's washing machine failed twenty-two months after purchase, and the repair cost one hundred and eighty-five euros. The receipt, the repair invoice and the seller's address live in three places, and nobody keeps the case together. Hestia starts from that receipt and asks Elena before anything is sent."
     },
     {
       "id": "surface",
-      "_beat": "The surface they already work from, not a twelfth tab.",
-      "captionText": "Hestia opens directly in the browser as a 3-column cockpit. Appliances with live 24-month statutory horizons down the left, recurring subscriptions, and debits flagged for missing receipts. No new habit to learn. Financial status lands in seconds.",
-      "speechText": "Hestia opens directly in the browser as a three-column cockpit. Appliances with live twenty-four month statutory horizons down the left, recurring subscriptions, and debits flagged for missing receipts. No new habit to learn. Financial status lands in seconds."
+      "_beat": "One click on the landing button creates the demo space; Home is on screen with the decisions queue.",
+      "captionText": "One click on the landing page opens a private demo space with a fictional Athens household: no account, no login, a 30-minute limit. Home shows what needs a decision this week: the recorded repair, a trial ending, a price change from 9.99 to 13.99 EUR, and a receipt missing for 85.50 EUR.",
+      "speechText": "One click on the landing page opens a private demo space with a fictional Athens household: no account, no login, a thirty-minute limit. Home shows what needs a decision this week: the recorded repair, a trial ending, a price change from nine ninety-nine to thirteen ninety-nine euros, and a receipt missing for eighty-five euros fifty."
     },
     {
       "id": "trigger",
-      "_beat": "A real event starts the work. Nobody presses anything.",
-      "captionText": "Nothing waits to be asked. As bank debits post, Hestia reconciles statutory law, subscription baselines, and receipt archives autonomously: 185 EUR repair reimbursable, 4 EUR monthly price creep detected, and an 85 EUR outlay missing proof.",
-      "speechText": "Nothing waits to be asked. As bank debits post, Hestia reconciles statutory law, subscription baselines, and receipt archives autonomously: one hundred and eighty-five euros repair reimbursable, four euros monthly price creep detected, and an eighty-five euro outlay missing proof."
+      "_beat": "The Strands agent runs. The briefing, the mode chips and the opened tool trace are on screen.",
+      "captionText": "Ask Hestia to review this household, and a Strands agent on Amazon Bedrock reads the records through four tools: repair evidence, subscriptions, receipts and utilities, and the case timeline. It writes a short briefing that points at decisions; a guard withholds any sentence that claims an entitlement or invents an amount. The tool trace stays visible.",
+      "speechText": "Ask Hestia to review this household, and a Strands agent on Amazon Bedrock reads the records through four tools: repair evidence, subscriptions, receipts and utilities, and the case timeline. It writes a short briefing that points at decisions; a guard withholds any sentence that claims an entitlement or invents an amount. The tool trace stays visible."
     },
     {
       "id": "live",
-      "_beat": "The flagship claim, executing on the anonymous live path. This is what the capture must be showing.",
-      "captionText": "Then it stops. Hestia never acts without human approval. On the live site, Elena reviews the pre-drafted Article 10 formal notice to MediaMarkt. One click approves it, sealing an immutable dispute record. The cockpit is live now at drusjukc9d4oc.cloudfront.net.",
-      "speechText": "Then it stops. Hestia never acts without human approval. On the live site, Elena reviews the pre-drafted Article ten formal notice to MediaMarkt. One click approves it, sealing an immutable dispute record. The cockpit is live now at drusjukc9d4oc dot cloudfront dot net."
+      "_beat": "The flagship claim on the anonymous live path: the exact notice is reviewed and approved, recorded and not sent.",
+      "captionText": "Then Hestia stops. The notice to Kotsovolos Megastore is prepared on the server from the recorded facts: recipient, subject, the 185 EUR repair cost and the exact text. Elena reads it and approves it with a single-use token bound to that exact draft. The approval is recorded as a simulation. No email is sent.",
+      "speechText": "Then Hestia stops. The notice to Kotsovolos Megastore is prepared on the server from the recorded facts: recipient, subject, the one hundred and eighty-five euro repair cost and the exact text. Elena reads it and approves it with a single-use token bound to that exact draft. The approval is recorded as a simulation. No email is sent."
     },
     {
       "id": "sponsor",
-      "_beat": "One sentence on what is load-bearing. Remove it and the product stops.",
-      "captionText": "Amazon Bedrock and AWS Serverless make that possible. Pure integer math in Lambda Action Groups eliminates arithmetic hallucinations. Bedrock orchestrates the digest while Guardrails filter card data before inference. CloudFront delivers sub-second response times.",
-      "speechText": "Amazon Bedrock and A W S Serverless make that possible. Pure integer math in Lambda Action Groups eliminates arithmetic hallucinations. Bedrock orchestrates the digest while Guardrails filter card data before inference. CloudFront delivers sub-second response times."
+      "_beat": "The saved case timeline is on screen while the narration names what is load-bearing on AWS.",
+      "captionText": "The saved case now carries the draft, the approval and the next step; every reply, deadline or outcome Elena records later stays on that timeline. Remove AWS and the product stops: the Strands Agents SDK runs Claude Haiku 4.5 through Amazon Bedrock inside Lambda, and Amazon S3 conditional writes keep every case revision consistent.",
+      "speechText": "The saved case now carries the draft, the approval and the next step; every reply, deadline or outcome Elena records later stays on that timeline. Remove A W S and the product stops: the Strands Agents S D K runs Claude Haiku four point five through Amazon Bedrock inside Lambda, and Amazon S three conditional writes keep every case revision consistent."
     },
     {
       "id": "evidence",
-      "_beat": "What a judge can check without asking us, including what is not deployed.",
-      "captionText": "Every claim is checkable without asking us. The repository carries 37 tests with 100 percent statement and branch coverage in CI. The ablation suite measures each rule: remove the statutory engine and recovery drops from 185 EUR to zero. Zero em dashes, zero marketing claims.",
-      "speechText": "Every claim is checkable without asking us. The repository carries thirty-seven tests with one hundred percent statement and branch coverage in C I. The ablation suite measures each rule: remove the statutory engine and recovery drops from one hundred and eighty-five euros to zero. Zero em dashes, zero marketing claims."
+      "_beat": "The About page with the mode list and the read-only console showing the live health check.",
+      "captionText": "Every claim is checkable without asking us. The About page lists what runs and what does not: bank feeds, mailbox sync, receipt OCR, Guardrails, AgentCore and email sending are not connected. Its read-only console returns the live health check with the model limits: 3 reviews per demo space, 200 per day. Independent human testing is reported as not run.",
+      "speechText": "Every claim is checkable without asking us. The About page lists what runs and what does not: bank feeds, mailbox sync, receipt O C R, Guardrails, AgentCore and email sending are not connected. Its read-only console returns the live health check with the model limits: three reviews per demo space, two hundred per day. Independent human testing is reported as not run."
     },
     {
       "id": "close",
-      "_beat": "The republishable sentence. One mechanism, one consequence.",
-      "captionText": "Hestia reconciles household debits against statutory warranty law and subscription baselines, recovering out-of-pocket appliance repairs through human-approved legal notices. Live on AWS, login-free, open source. Try the cockpit yourself.",
-      "speechText": "Hestia reconciles household debits against statutory warranty law and subscription baselines, recovering out-of-pocket appliance repairs through human-approved legal notices. Live on A W S, login-free, open source. Try the cockpit yourself."
+      "_beat": "The republishable sentence, one mechanism and one consequence, over the landing page and the URL.",
+      "captionText": "Hestia reads a household's receipts, subscriptions and repair records with a Strands agent on Amazon Bedrock, and nothing is sent until the household has approved the exact text. Open source under the MIT license, running on AWS, no login. Try it now at drusjukc9d4oc.cloudfront.net.",
+      "speechText": "Hestia reads a household's receipts, subscriptions and repair records with a Strands agent on Amazon Bedrock, and nothing is sent until the household has approved the exact text. Open source under the M I T license, running on A W S, no login. Try it now at drusjukc9d4oc dot cloudfront dot net."
     }
   ]
 }

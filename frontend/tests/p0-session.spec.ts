@@ -5,23 +5,34 @@ import type { BackendState, ClaimDraft, DemoSession } from '../src/api';
 const BACKEND = 'http://127.0.0.1:8000';
 const SESSION_KEY = 'hestia.demo-session.v1';
 type Started = DemoSession & { state: BackendState };
+type NavTab = 'Home' | 'Case' | 'Records' | 'About' | 'Import records';
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
+const nav = (page: Page, name: NavTab) =>
+  page.getByRole('navigation', { name: 'Household navigation' }).getByRole('button', { name, exact: true });
 
+// One click: the landing CTA creates the isolated session itself and opens Home.
 async function start(page: Page): Promise<Started> {
   await page.goto('/');
-  await page.getByTestId('launch-cockpit').click();
-  await expect(page.getByTestId('begin-demo')).toBeEnabled();
-  await expect(page.getByTestId('review-claim')).toBeDisabled();
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Start with the sample household/);
   const created = page.waitForResponse(response => response.url().endsWith('/api/demo/session') && response.request().method() === 'POST');
-  await page.getByTestId('begin-demo').click();
+  await page.getByTestId('launch-cockpit').click();
   const response = await created;
   expect(response.status()).toBe(201);
   const session = await response.json() as Started;
   expect(session.mode).toBe('simulated');
   expect(session.state.appliances.find(a => a.id === 'app-001')?.item_name).toBe('Bosch Series 6 Washing Machine');
   await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
+  await expect(page.getByTestId('begin-demo')).toHaveCount(0);
   await expect(page.getByTestId('review-claim')).toBeEnabled();
   return session;
+}
+
+// A stored session resumes without another POST: the CTA only opens Home.
+async function resume(page: Page) {
+  await page.reload();
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Continue your household case/);
+  await page.getByTestId('launch-cockpit').click();
+  await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
 }
 
 async function openNotice(page: Page): Promise<ClaimDraft> {
@@ -50,35 +61,46 @@ async function stateFor(request: APIRequestContext, token: string): Promise<Back
 
 async function expectNoRecovery(page: Page, request: APIRequestContext, token: string, count = 0) {
   await expect(page.getByTestId('recovery-amount')).toHaveText('€185.00');
-  await expect(page.getByTestId('review-claim')).toBeVisible();
+  await expect(page.getByTestId('dashboard-real-recovery')).toContainText('€0.00');
+  await expect(page.getByTestId('alert-warranty')).toHaveCount(1);
   const state = await stateFor(request, token);
   expect(state.summary.unclaimed_recovery_cents).toBe(18500);
+  expect(state.summary.real_recovered_cents).toBe(0);
   expect(state.dispatch_records).toHaveLength(count);
 }
 
-test('anonymous preview never creates a session, calls a model, or seeds delivered history', async ({ page, request }) => {
+test('loading the landing and browsing the preview never creates a session, calls a model or seeds delivered history', async ({ page, request }) => {
   const posts: string[] = [];
   page.on('request', req => { if (req.method() === 'POST') posts.push(req.url()); });
   const health = await request.get(`${BACKEND}/healthz`);
   expect(health.status()).toBe(200);
-  expect(await health.json()).toMatchObject({ mode: 'simulated', live_send: false, live_model: false });
+  expect(await health.json()).toMatchObject({ mode: 'simulated', live_send: false, live_model: false, model_id: null });
   await page.goto('/');
-  await page.getByTestId('launch-cockpit').click();
-  await expect(page.getByTestId('begin-demo')).toBeEnabled();
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Start with the sample household/);
+  await expect(page.getByTestId('session-panel')).toBeHidden();
+  await nav(page, 'Home').click();
+  await expect(page.getByTestId('session-status')).toContainText('Synthetic preview');
+  await expect(page.getByTestId('begin-demo')).toHaveText('Start demo space');
+  await expect(page.getByTestId('home-disabled-note')).toBeVisible();
   await expect(page.getByTestId('dispatch-record')).toHaveCount(0);
   await expect(page.getByTestId('review-claim')).toBeDisabled();
-  await expect(page.getByTestId('session-status')).toContainText('Synthetic preview');
+  await expect(page.getByTestId('agent-review')).toBeDisabled();
+  await expect(page.getByTestId('agent-mode')).toHaveCount(0);
+  await expect(page.getByTestId('recovery-amount')).toHaveText('€185.00');
   expect(posts).toEqual([]);
   const anonymous = await request.post(`${BACKEND}/api/action/claim`, { data: { item_id: 'app-001' } });
   expect(anonymous.status()).toBe(401);
+  const review = await request.post(`${BACKEND}/api/agent/review`, { data: {} });
+  expect(review.status()).toBe(401);
 });
 
-test('explicit demo → exact server preview → simulated approval → reload retains history and recovery', async ({ page, context, request }) => {
+test('one click opens an isolated space → exact server preview → simulated approval → reload retains history and the saved case', async ({ page, context, request }) => {
   const posted: { url: string; body: unknown; authorization: string | undefined }[] = [];
   page.on('request', req => {
     if (req.method() === 'POST') posted.push({ url: req.url(), body: req.postDataJSON(), authorization: req.headers().authorization });
   });
   const session = await start(page);
+  expect(posted.map(p => p.url)).toEqual(['http://127.0.0.1:3000/api/demo/session']);
   const draft = await openNotice(page);
   expect(draft.item_id).toBe('app-001');
   expect(draft.seller_email).toBe(session.state.appliances[0].seller_email);
@@ -90,8 +112,8 @@ test('explicit demo → exact server preview → simulated approval → reload r
   });
 
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.getByRole('button', { name: 'Copy Text', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Copied!', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Copy text', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(draft.notice);
   const downloaded = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export .txt', exact: true }).click();
@@ -110,6 +132,7 @@ test('explicit demo → exact server preview → simulated approval → reload r
   expect(result.status).toBe('simulated');
   expect(result.dispatch_record).toMatchObject({ status: 'simulated', delivery_status: 'SIMULATED', ses_message_id: null, full_letter: draft.notice });
   await expect(page.getByTestId('claim-result')).toContainText('Simulated approval recorded');
+  await expect(page.getByTestId('claim-result')).toContainText('No email sent');
   await expect(page.getByTestId('approve-claim')).toBeDisabled();
   expect(posted.filter(p => p.url.endsWith('/api/action/claim/prepare'))).toHaveLength(1);
   expect(posted.filter(p => p.url.endsWith('/api/action/claim'))).toEqual([{
@@ -121,21 +144,25 @@ test('explicit demo → exact server preview → simulated approval → reload r
   await page.getByRole('button', { name: 'Close notice', exact: true }).click();
   await expectNoRecovery(page, request, session.token, 1);
   await expect(page.getByTestId('dispatch-record')).toHaveCount(1);
+  await expect(page.getByTestId('home-case-status')).toHaveText('Authorized');
+  await expect(page.getByTestId('review-claim')).toHaveText('Open the case');
   await test.info().attach('recorded-simulation-desktop', {
     body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
   });
-  await page.reload();
-  await page.getByTestId('launch-cockpit').click();
-  await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
+  await resume(page);
   await expect(page.getByTestId('dispatch-record')).toContainText(result.dispatch_record.id);
   await expectNoRecovery(page, request, session.token, 1);
   expect(posted.filter(p => p.url.endsWith('/api/demo/session'))).toHaveLength(1);
   const outbox = await request.get(`${BACKEND}/api/outbox/status`, { headers: bearer(session.token) });
   expect(outbox.status()).toBe(200);
   expect((await outbox.json()).outbox.records[0].id).toBe(result.dispatch_record.id);
-  const reopened = await openNotice(page);
-  expect(reopened.id).not.toBe(draft.id);
+  // The approved notice is never offered again: the queue opens the saved case with the exact approved text.
+  await page.getByTestId('review-claim').click();
+  await expect(page.getByTestId('case-status')).toHaveText('Authorized');
+  await page.getByText('Receipt, decision and exact notice', { exact: true }).click();
+  expect(await page.getByTestId('case-exact-notice').textContent()).toBe(draft.notice);
   await expect(page.getByTestId('claim-result')).toHaveCount(0);
+  expect(posted.filter(p => p.url.endsWith('/api/action/claim/prepare'))).toHaveLength(1);
 });
 
 test('HTTP abort retains the pending claim, disables approval, and never replays a mutation', async ({ page, request }) => {
@@ -149,6 +176,7 @@ test('HTTP abort retains the pending claim, disables approval, and never replays
   await expect(page.getByTestId('claim-result')).toHaveCount(0);
   await expectNoRecovery(page, request, session.token);
   await page.getByRole('button', { name: 'Close notice', exact: true }).click();
+  await expect(page.getByTestId('home-disabled-note')).toBeVisible();
   await page.getByTestId('refresh-state').click();
   await expect(page.getByTestId('review-claim')).toBeEnabled();
   expect(attempts).toBe(1);
@@ -165,7 +193,7 @@ test('notice keyboard focus is contained and mobile approval remains an explicit
   await page.keyboard.press('Shift+Tab');
   await expect(page.getByTestId('approve-claim')).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Copy Text', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Copy text', exact: true })).toBeFocused();
   await test.info().attach('exact-notice-mobile', {
     body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
   });
@@ -192,9 +220,9 @@ test('lost response after a real backend commit shows uncertainty until reload r
   await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Outcome unconfirmed');
   await expect(page.getByTestId('dispatch-record')).toHaveCount(0);
   await expectNoRecovery(page, request, session.token, 1);
-  await page.reload();
-  await page.getByTestId('launch-cockpit').click();
+  await resume(page);
   await expect(page.getByTestId('dispatch-record')).toHaveCount(1);
+  await expect(page.getByTestId('home-case-status')).toHaveText('Authorized');
   expect(attempts).toBe(1);
 });
 
@@ -270,7 +298,9 @@ test('client session expiry requires explicit restart and clears the old preview
   await page.clock.fastForward(31 * 60 * 1000);
   await expect(page.getByTestId('session-status')).toContainText('Demo session expired');
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByTestId('begin-demo')).toHaveText('Restart Isolated Demo Session');
+  await expect(page.getByTestId('begin-demo')).toHaveText('Start a new demo space');
+  await expect(page.getByTestId('review-claim')).toBeDisabled();
+  await expect(page.getByTestId('agent-review')).toBeDisabled();
   expect(posts).toEqual([]);
   // Restore browser time before explicitly requesting a new server-issued session.
   await page.clock.setSystemTime(Date.now());
@@ -279,6 +309,7 @@ test('client session expiry requires explicit restart and clears the old preview
   expect((await (await restarted).json()).token).not.toBe(session.token);
   await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
   await expect(page.getByTestId('dispatch-record')).toHaveCount(0);
+  await expect(page.getByTestId('review-claim')).toBeEnabled();
 });
 
 test('denied bearer requires restart without sending an automatic session request', async ({ page }) => {
@@ -290,18 +321,26 @@ test('denied bearer requires restart without sending an automatic session reques
   const denied = page.waitForResponse(response => response.url().endsWith('/api/action/claim'));
   await page.getByTestId('approve-claim').click();
   expect((await denied).status()).toBe(401);
-  await expect(page.getByTestId('begin-demo')).toHaveText('Restart Isolated Demo Session');
+  await expect(page.getByTestId('session-status')).toContainText('Demo session expired');
+  await expect(page.getByTestId('begin-demo')).toHaveText('Start a new demo space');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(newSessions).toBe(0);
 });
 
 test('sessionStorage failures still permit an in-memory isolated session', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(window, 'sessionStorage', { get() { throw new Error('Storage unavailable'); } }));
+  const posts: string[] = [];
+  page.on('request', req => { if (req.method() === 'POST') posts.push(req.url()); });
   await start(page);
   await expect(page.getByTestId('session-panel')).toContainText('session storage is unavailable');
   await openNotice(page);
   await page.reload();
-  await expect(page.getByTestId('begin-demo')).toBeEnabled();
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Start with the sample household/);
+  await nav(page, 'Home').click();
   await expect(page.getByTestId('session-status')).toContainText('Synthetic preview');
+  await expect(page.getByTestId('begin-demo')).toBeEnabled();
+  await expect(page.getByTestId('review-claim')).toBeDisabled();
+  expect(posts.filter(url => url.endsWith('/api/demo/session'))).toHaveLength(1);
 });
 
 test('expired persisted credentials cannot silently create or recover another workspace', async ({ page }) => {
@@ -309,7 +348,9 @@ test('expired persisted credentials cannot silently create or recover another wo
   const posts: string[] = [];
   page.on('request', req => { if (req.method() === 'POST') posts.push(req.url()); });
   await page.goto('/');
-  await expect(page.getByTestId('begin-demo')).toHaveText('Restart Isolated Demo Session');
+  await expect(page.getByTestId('session-status')).toContainText('Demo session expired');
+  await expect(page.getByTestId('begin-demo')).toHaveText('Start a new demo space');
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Start a new demo space/);
   expect(posts).toEqual([]);
 });
 
@@ -356,13 +397,15 @@ test('pending preview cannot be approved, and draft expiry disables approval wit
   expect(prepares).toBe(1);
 });
 
-test('appliance vault uses backend identity and re-opening discards the old draft', async ({ page }) => {
+test('records view uses backend identity and re-opening the notice discards the old draft', async ({ page }) => {
   const session = await start(page);
   const previous = await openNotice(page);
   await page.getByRole('button', { name: 'Close notice', exact: true }).click();
-  await page.getByRole('button', { name: /Asset Vault/ }).click();
+  await nav(page, 'Records').click();
   await expect(page.getByRole('heading', { name: 'Sony Bravia 55 OLED TV', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Daikin Inverter AC 12000 BTU', exact: true })).toBeVisible();
+  await expect(page.getByTestId('repair-cost-app-001')).toContainText('€185.00 recorded repair cost');
+  await expect(page.getByText('Purchase-based illustration', { exact: false }).first()).toBeVisible();
   const response = page.waitForResponse(res => res.url().endsWith('/api/action/claim/prepare'));
   await page.getByTestId('review-appliance-app-001').click();
   const fresh = (await (await response).json()).draft as ClaimDraft;
@@ -370,6 +413,7 @@ test('appliance vault uses backend identity and re-opening discards the old draf
   expect(fresh.seller_email).toBe(session.state.appliances.find(a => a.id === 'app-001')?.seller_email);
   await expect(page.getByTestId('approve-claim')).toBeEnabled();
   expect(await page.getByTestId('server-notice').textContent()).toBe(fresh.notice);
+  await expect(page.getByTestId('claim-result')).toHaveCount(0);
 });
 
 test('other simulated actions preserve provider risks; manual receipt only links an existing outflow', async ({ page, request }) => {
@@ -378,20 +422,25 @@ test('other simulated actions preserve provider risks; manual receipt only links
   const cancel = page.waitForResponse(res => res.url().endsWith('/api/action/cancel'));
   await page.getByTestId('cancel-trial').click();
   expect((await cancel).status()).toBe(200);
-  await expect(page.getByText('Simulated cancellation request recorded. No provider subscription was cancelled; monthly risk is unchanged.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Cancellation request recorded in this demo space. No provider was contacted and the charge is unchanged.', { exact: true })).toBeVisible();
   await expect(page.getByTestId('cancel-trial')).toBeVisible();
-  expect((await stateFor(request, session.token)).summary.monthly_sub_leakage_cents).toBe(before.summary.monthly_sub_leakage_cents);
+  const afterCancel = await stateFor(request, session.token);
+  expect(afterCancel.summary.monthly_sub_leakage_cents).toBe(before.summary.monthly_sub_leakage_cents);
+  expect(afterCancel.summary.monthly_recurring_cents).toBe(before.summary.monthly_recurring_cents);
+  expect(afterCancel.subscriptions.find(s => s.id === 'sub-001')).toMatchObject({ status: 'expiring_trial', monthly_cents: 1999, demo_cancellation_requested: true });
 
   await page.getByTestId('review-utility').click();
   const utility = page.waitForResponse(res => res.url().endsWith('/api/action/utility_dispute'));
-  await page.getByTestId('approve-utility').click();
+  await page.getByRole('button', { name: 'Record a meter review request', exact: true }).click();
   expect((await utility).status()).toBe(200);
   await expect(page.getByTestId('utility-result')).toContainText('No provider was contacted');
+  await expect(page.getByTestId('approve-utility')).toBeDisabled();
   await page.getByRole('button', { name: 'Close utility review', exact: true }).click();
   await expect(page.getByTestId('review-utility')).toBeVisible();
   expect((await stateFor(request, session.token)).summary.active_anomalies_count).toBe(before.summary.active_anomalies_count);
 
-  await page.getByRole('button', { name: 'Receipt Options (Scanning Unavailable)', exact: true }).click();
+  await page.getByTestId('open-receipt-options').click();
+  await expect(page.getByRole('dialog')).toContainText('Link a receipt');
   await expect(page.getByRole('dialog')).toContainText('Receipt scanning is not enabled');
   await page.getByTestId('receipt-outflow').selectOption('out-001');
   await page.getByTestId('receipt-reference').fill('DEMO-MANUAL-REF-1');
@@ -402,7 +451,11 @@ test('other simulated actions preserve provider risks; manual receipt only links
   const after = await stateFor(request, session.token);
   expect(after.appliances).toEqual(before.appliances);
   expect(after.summary.protected_assets_cents).toBe(before.summary.protected_assets_cents);
+  expect(after.summary.real_recovered_cents).toBe(0);
   expect(after.outflows.find(o => o.id === 'out-001')).toMatchObject({ has_receipt: true, receipt_id: 'DEMO-MANUAL-REF-1' });
+  await page.getByRole('button', { name: 'Close receipt options', exact: true }).click();
+  await expect(page.getByTestId('alert-receipt_gap')).toHaveCount(0);
+  await expect(page.getByTestId('recovery-amount')).toHaveText('€185.00');
 });
 
 test('cancel, utility, receipt and reset propagate denied responses without clearing UI state', async ({ page, request }) => {
@@ -424,7 +477,7 @@ test('cancel, utility, receipt and reset propagate denied responses without clea
   await expect(page.getByTestId('utility-result')).toHaveCount(0);
   await page.getByRole('button', { name: 'Close utility review', exact: true }).click();
 
-  await page.getByRole('button', { name: 'Receipt Options (Scanning Unavailable)', exact: true }).click();
+  await page.getByTestId('open-receipt-options').click();
   await page.getByTestId('receipt-reference').fill('DENIED-REFERENCE');
   const receipt = page.waitForResponse(res => res.url().endsWith('/api/action/receipt'));
   await page.getByTestId('link-receipt').click();
@@ -458,21 +511,23 @@ test('unavailable sync/scan and legacy dispatch aliases cannot bypass the approv
   expect(legacy.status()).toBe(400);
   const posts: string[] = [];
   page.on('request', req => { if (req.method() === 'POST') posts.push(req.url()); });
-  await page.getByText('About / Advanced', { exact: true }).click();
-  await page.getByRole('button', { name: 'Sync Invoices', exact: true }).click();
+  await nav(page, 'Import records').click();
   await expect(page.getByRole('dialog')).toContainText('Invoice sync is not enabled');
   await page.getByRole('button', { name: 'Close invoice sync', exact: true }).click();
-  await page.getByRole('button', { name: 'AWS Console', exact: true }).click();
-  await page.getByRole('button', { name: 'POST /outbox/dispatch', exact: true }).click();
-  await expect(page.getByTestId('console-request')).toBeDisabled();
-  await expect(page.getByText(/Console writes are disabled/)).toBeVisible();
-  await page.getByRole('button', { name: 'POST /claim', exact: true }).click();
-  await expect(page.getByTestId('console-request')).toBeDisabled();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await nav(page, 'About').click();
+  const view = page.getByTestId('architecture-claims');
+  await expect(view).toBeVisible();
+  await expect(view.getByRole('button', { name: /^POST / })).toHaveCount(0);
+  await expect(view.getByText(/Console writes are disabled/)).toBeVisible();
   expect(posts).toEqual([]);
   const read = page.waitForRequest(req => req.url().endsWith('/api/outbox/status'));
-  await page.getByRole('button', { name: 'GET /outbox/status', exact: true }).click();
+  await view.getByRole('button', { name: 'GET /outbox/status', exact: true }).click();
+  await expect(page.getByTestId('console-boundary')).toHaveCount(0);
   await page.getByTestId('console-request').click();
   expect((await read).headers().authorization).toBe(`Bearer ${session.token}`);
+  await expect(view.locator('pre')).toHaveText('[]');
+  expect(posts).toEqual([]);
   expect(await stateFor(request, session.token)).toEqual(before);
 });
 
@@ -483,9 +538,13 @@ test('session service 503 leaves the preview read-only and displays its explanat
   }));
   await page.goto('/');
   await page.getByTestId('launch-cockpit').click();
-  await page.getByTestId('begin-demo').click();
   await expect(page.getByTestId('session-panel').getByRole('alert')).toContainText('Read-only preview is available');
+  await expect(page.getByTestId('launch-cockpit')).toBeEnabled();
+  await nav(page, 'Home').click();
+  await expect(page.getByTestId('session-status')).toContainText('Synthetic preview');
+  await expect(page.getByTestId('begin-demo')).toBeEnabled();
   await expect(page.getByTestId('review-claim')).toBeDisabled();
+  await expect(page.getByTestId('agent-review')).toBeDisabled();
   await expect(page.getByTestId('dispatch-record')).toHaveCount(0);
   await expect(page.getByTestId('recovery-amount')).toHaveText('€185.00');
 });
