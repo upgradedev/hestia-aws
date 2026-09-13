@@ -293,3 +293,17 @@ def test_guard_accepts_amounts_written_bare_or_in_cents_by_the_tools():
     assert ha.guard_narrative("A €1,399.00 fee requires review.", ["1399 minor units"]) == []
     assert ha.guard_narrative("A €14.00 fee requires review.", outputs)  # 14 only appears in dates
     assert ha.guard_narrative("A €777.77 fee requires review.", outputs)
+
+
+def test_daily_counter_treats_access_denied_on_missing_key_as_absent_and_creates_atomically():
+    s3 = ConditionalS3()
+    s3.missing_without_list = True  # the deployed roles have no ListBucket authority
+    store = S3HouseholdStore(bucket_name="bucket", workspace_id="b" * 32, s3_client=s3)
+    assert store.increment_daily_counter("agent-review", 3, day="2026-09-13") == (True, 1)
+    assert store.increment_daily_counter("agent-review", 3, day="2026-09-13") == (True, 2)
+    first_put = next(c[1] for c in s3.calls if c[0] == "put")
+    assert first_put["IfNoneMatch"] == "*"
+    # A real permission failure on the create still fails closed.
+    other = S3HouseholdStore(bucket_name="bucket", workspace_id="c" * 32, s3_client=s3)
+    s3.write_error = RuntimeError("AccessDenied")
+    assert other.increment_daily_counter("agent-review", 3, day="2026-09-14") == (None, 0)
