@@ -73,6 +73,7 @@ def test_readonly_root_health_preview_make_no_cloud_calls():
     code, data = call("/healthz", method="GET")
     assert code == 200
     assert data["live_send"] is False and data["live_model"] is False
+    assert data["model_id"] is None and data["agent"]["session_cap"] == 3
     code, state = call("/api/state", method="GET")
     assert code == 200 and state["read_only_preview"] is True
     assert state["dispatch_records"] == []

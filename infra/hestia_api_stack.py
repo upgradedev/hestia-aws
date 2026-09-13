@@ -13,6 +13,10 @@ except ImportError:
     from frontend_stack import attr, ref, sub
 
 
+BEDROCK_MODEL_ID = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+AGENT_LIMITS = {"session_cap": "3", "daily_cap": "200", "max_output_tokens": "700"}
+
+
 def template():
     private = {
         "PublicAccessBlockConfiguration": {
@@ -71,8 +75,18 @@ def template():
                 ),
             },
             {
+                # Owner-approved bounded model access (2026-09-13): one Haiku profile only.
+                "Effect": "Allow",
+                "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+                "Resource": [
+                    sub("arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:"
+                        "inference-profile/" + BEDROCK_MODEL_ID),
+                    "arn:aws:bedrock:*::foundation-model/" + BEDROCK_MODEL_ID.split(".", 1)[1],
+                ],
+            },
+            {
                 "Effect": "Deny",
-                "Action": ["bedrock:*", "ses:*", "s3:DeleteObject", "s3:DeleteObjectVersion"],
+                "Action": ["ses:*", "s3:DeleteObject", "s3:DeleteObjectVersion"],
                 "Resource": "*",
             },
         ],
@@ -86,13 +100,19 @@ def template():
         "Role": attr("Role", "Arn"),
         "Code": {"S3Bucket": ref("CodeBucket"), "S3Key": ref("CodeKey")},
         "Timeout": 28,
-        "MemorySize": 512,
+        "MemorySize": 1024,
         "ReservedConcurrentExecutions": 2,
         "Environment": {"Variables": {
             "HESTIA_STATE_BUCKET": ref("State"),
             "HESTIA_STATE_PREFIX": "audit/",
             "HESTIA_COMMIT_SHA": ref("CommitSha"),
             "HESTIA_SES_REGION": "eu-west-1",
+            "HESTIA_LIVE_MODEL": "bedrock",
+            "HESTIA_BEDROCK_MODEL_ID": BEDROCK_MODEL_ID,
+            "HESTIA_BEDROCK_REGION": "eu-west-1",
+            "HESTIA_AGENT_SESSION_CAP": AGENT_LIMITS["session_cap"],
+            "HESTIA_AGENT_DAILY_CAP": AGENT_LIMITS["daily_cap"],
+            "HESTIA_AGENT_MAX_TOKENS": AGENT_LIMITS["max_output_tokens"],
             "HESTIA_DEMO_SECRET": sub(
                 "{{resolve:secretsmanager:${DemoSecretArn}:SecretString}}"
             ),
@@ -236,7 +256,7 @@ def template():
     }
     resources["ReaderFunction"] = {
         "Type": "AWS::Lambda::Function", "DependsOn": "ReaderLogs",
-        "Properties": {**fn_props, "FunctionName": "hestia-afh-reader",
+        "Properties": {**fn_props, "FunctionName": "hestia-afh-reader", "MemorySize": 512,
                        "Handler": "hestia.app.web.read_lambda_handler",
                        "Role": attr("ReaderRole", "Arn")},
     }
@@ -256,7 +276,7 @@ def template():
         "/action/utility_dispute", "/api/action/reset", "/action/reset", "/api/action/receipt",
         "/api/receipt/scan", "/receipt/scan", "/api/ingest/sync", "/ingest/sync",
         "/api/outbox/dispatch", "/outbox/dispatch", "/api/outbox/status", "/outbox/status",
-        "/api/case/update",
+        "/api/case/update", "/api/agent/review",
     )
     for number, path in enumerate(write_paths):
         resources[f"WriteRoute{number}"] = {

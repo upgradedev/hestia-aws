@@ -40,9 +40,13 @@ def smoke_test(
         assert data.get("ok") is True or data.get("status") == "ok", f"Healthz failed: {data}"
         assert data.get("service") == "hestia-aws", f"Unexpected service: {data}"
 
-        assert data.get("live_send") is False and data.get("live_model") is False, (
-            "Refuse action probes against a legacy or provider-enabled backend"
+        assert data.get("live_send") is False and isinstance(data.get("live_model"), bool), (
+            "Refuse action probes against a legacy or mail-enabled backend"
         )
+        if data.get("live_model"):
+            assert isinstance(data.get("model_id"), str) and data["model_id"], (
+                "A model-enabled backend must name its bounded model"
+            )
         if expected_backend_sha:
             assert data.get("commit") == expected_backend_sha, "Backend changed during release"
 

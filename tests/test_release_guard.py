@@ -16,8 +16,9 @@ from scripts.deploy_api import validate_release
 SHA = "a" * 40
 HEALTH = {
     "status": "ok", "service": "hestia-aws", "commit": SHA, "mode": "simulated",
-    "live_send": False, "live_model": False, "storage_configured": True,
-    "demo_sessions_configured": True,
+    "live_send": False, "live_model": True,
+    "model_id": "eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "storage_configured": True, "demo_sessions_configured": True,
 }
 
 
@@ -61,14 +62,21 @@ def test_release_command_only_prepares_change_set(monkeypatch, tmp_path):
 def test_backend_release_requires_exact_safe_revision():
     validate(HEALTH, SHA)
     for field, value in (
-        ("commit", "b" * 40), ("live_send", True), ("live_model", True),
-        ("live_send", 0), ("mode", "live"), ("demo_sessions_configured", False),
+        ("commit", "b" * 40), ("live_send", True), ("live_model", False), ("model_id", None),
+        ("model_id", ""), ("live_send", 0), ("mode", "live"), ("demo_sessions_configured", False),
         ("storage_configured", False), ("service", "other"),
     ):
         with pytest.raises(ValueError):
             validate({**HEALTH, field: value}, SHA)
     with pytest.raises(ValueError):
         validate(HEALTH, "short")
+    # A deliberately model-disabled release must not carry a model id either.
+    disabled = {**HEALTH, "live_model": False, "model_id": None}
+    validate(disabled, SHA, expect_live_model=False)
+    with pytest.raises(ValueError):
+        validate({**disabled, "model_id": "x"}, SHA, expect_live_model=False)
+    with pytest.raises(ValueError):
+        validate(HEALTH, SHA, expect_live_model=False)
 
 
 class Response(BytesIO):
