@@ -41,7 +41,7 @@ Python, under `tests/` plus `infra/test_frontend_hosting.py`:
 
 | File | What it covers |
 |---|---|
-| `tests/test_web.py` | the Lambda API contract: read-only preview, anonymous denial, session isolation, exact approval, tamper, replay and limits |
+| `tests/test_web.py` | the Lambda API contract: read-only preview, anonymous denial, session isolation, exact approval, tamper, replay, limits, and a 403 on the email dispatch route |
 | `tests/test_storage.py` | S3 and in-memory conditional persistence, isolation, fail-closed reads and writes |
 | `tests/test_intake.py` | stage, review, consent and commit of imported facts; replay, isolation and failure contracts |
 | `tests/test_registry_intake.py` | household appliances and repairs, and the reading agent route with its limits |
@@ -53,9 +53,9 @@ Python, under `tests/` plus `infra/test_frontend_hosting.py`:
 | `tests/test_claims_inventory.py` | claims in the README, the docs, the video narration and four UI copy files |
 | `tests/test_measurement_truthfulness.py` | the synthetic measurement and ablation, and refusal to overwrite the historical files |
 | `tests/test_release_guard.py` | the guards in the backend packager, the backend health gate and the frontend smoke probe |
-| `tests/test_ses_dispatcher.py` | an offline email transport module; the dispatch route answers 403 and IAM denies SES |
+| `tests/test_ses_dispatcher.py` | an offline email transport module tested with stubbed AWS clients: MIME and header bounds, reservation, replay and retry contracts |
 | `tests/test_sentinel.py`, `tests/test_mcts.py` | earlier coordinator and negotiation-illustration modules kept in the source |
-| `infra/test_frontend_hosting.py` | both CloudFormation templates and the conditional-write SDK contract |
+| `infra/test_frontend_hosting.py` | both CloudFormation templates, including the IAM deny on `ses:*`, and the conditional-write SDK contract |
 
 Browser, under `frontend/tests/` (Playwright, Chromium):
 

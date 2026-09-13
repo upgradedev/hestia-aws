@@ -44,7 +44,7 @@ Caption: Every claim is checkable without asking us. The About page lists what r
 
 ### 7. close (about 17 s): the sentence and the URL
 
-Screen: click the Hestia mark to return to the landing page; the H1 and the button "Continue your household case" are on screen with the URL in the browser bar.
+Screen: click the Hestia mark to return to the landing page; the H1 and the button "Continue your household case" are on screen. The recording shows the page only, so the URL reaches the viewer through the narration and the burned caption.
 
 Caption: Hestia reads a household's receipts, subscriptions and repair records with Strands agents on Amazon Bedrock, and the household approves the exact text of every notice; the approval is recorded and nothing is sent. Open source under the MIT license, running on AWS, no login. Try it now at drusjukc9d4oc.cloudfront.net.
 

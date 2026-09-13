@@ -28,7 +28,7 @@ def strands_tools(state: dict[str, Any], today: date) -> list[Any]:
     return [tool(func) for func in tool_functions(state, today).values()]
 ```
 
-The repair tool's output opens with "REVIEW REQUIRED. No legal entitlement determined." and closes with the legal limits of any remedy. It returns recorded dates and screening boundaries, never a determination of coverage, and it cites Directive (EU) 2019/771 as general reference only. The other tools return recorded flags with a suggested action, and the case tool ends by stating that real recovered money is EUR 0.00.
+The repair tool's output names the seller of record and any saved case, then states, after the appliance name, "REVIEW REQUIRED. No legal entitlement determined." It closes with the legal limits of any remedy, which name Directive (EU) 2024/1799 among the rules to review. It returns recorded dates and screening boundaries, never a determination of coverage. Directive (EU) 2019/771 appears as general reference only in the notice the server prepares for the seller. The other tools return recorded flags with a suggested action, and the case tool ends by stating that real recovered money is EUR 0.00.
 
 ## The agent is built per request, with a bounded model
 

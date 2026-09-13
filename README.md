@@ -79,7 +79,7 @@ Request flow, trust boundaries and every resource: [docs/architecture.md](docs/a
 | Case file with replies, deadlines and outcomes | Live; outcomes are attested by the household | `src/hestia/app/cases.py` |
 | Conditional S3 state, one private copy per session | Live | `src/hestia/adapters/storage.py` |
 | Email sending through Amazon SES | Not connected; IAM denies it | `infra/hestia_api_stack.py` |
-| Bank feeds, mailbox or retailer sync, receipt photo OCR | Not connected | `src/hestia/adapters/storage.py` |
+| Bank feeds, mailbox or retailer sync, receipt photo OCR | Not connected | `src/hestia/adapters/storage.py`, `src/hestia/domain/ocr.py` |
 | Bedrock AgentCore, Bedrock Guardrails | Not connected | [docs/architecture.md](docs/architecture.md#what-runs-where) |
 
 Every mode with its evidence and limits is in [docs/architecture.md](docs/architecture.md#what-runs-where). Briefing quality and extraction accuracy are unmeasured, and independent human UAT is NOT_RUN.
