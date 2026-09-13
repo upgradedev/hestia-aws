@@ -514,7 +514,10 @@ def fresh_demo_state() -> dict[str, Any]:
 
 def preserve_intake(state: dict[str, Any], fresh: dict[str, Any]) -> None:
     """Reset cannot detach imported evidence, replay records or synthetic requests."""
-    for key in ("outflows", "subscriptions", "saved_receipts", "intakes", "intake_provenance",
-                "appliances"):
+    for key in ("outflows", "subscriptions", "saved_receipts", "intakes", "intake_provenance"):
         if key in state:
             fresh[key] = copy.deepcopy(state[key])
+    # Sample appliances return to their sample facts; the household's own appliances stay.
+    sample_ids = {a["id"] for a in fresh["appliances"]}
+    fresh["appliances"].extend(copy.deepcopy(a) for a in state.get("appliances", [])
+                               if a.get("id") not in sample_ids)

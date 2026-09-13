@@ -130,9 +130,16 @@ def test_reset_keeps_registry_appliances(session):
     staged = run("stage", records=[APPLIANCE])
     reviewed = run("review", intake_id=staged["id"], records=[APPLIANCE])
     run("commit", intake_id=staged["id"], digest=reviewed["review"]["digest"], confirmed=True)
+    edited = {**APPLIANCE, "appliance_id": "app-002", "item_name": "Renamed TV"}
+    staged = run("stage", records=[edited])
+    reviewed = run("review", intake_id=staged["id"], records=[edited])
+    run("commit", intake_id=staged["id"], digest=reviewed["review"]["digest"], confirmed=True)
     code, data = call("/api/action/reset", {}, session)
     assert code == 200
-    assert any(a["id"] == "my-fridge" for a in data["state"]["appliances"])
+    kept = {a["id"]: a for a in data["state"]["appliances"]}
+    assert kept["my-fridge"]["manual_url"] == "https://example.com/manual.pdf"
+    assert kept["app-002"]["item_name"] == "Sony Bravia 55 OLED TV"  # sample facts restored
+    assert len(kept) == 4
 
 
 def test_normalise_extracted_keeps_only_known_kinds_and_keys():

@@ -139,7 +139,7 @@ test('explicit partial batch imports valid rows, keeps duplicates unchanged and 
   await upload(page, [tx, tx, { ...tx, transaction_id: 'bad-tx', amount_cents: 0 }]);
   await review(page);
   await expect(page.getByTestId('intake-changes')).toContainText('positive integer');
-  await expect(page.getByTestId('intake-changes')).toContainText('1 to import, 1 unchanged duplicates, 1 errors excluded');
+  await expect(page.getByTestId('intake-changes')).toContainText('1 to save, 1 unchanged duplicates, 1 errors excluded');
   await confirm(page);
   const saved = await state(request, token);
   expect(saved.outflows.filter(o => o.id === 'new-tx')).toHaveLength(1);

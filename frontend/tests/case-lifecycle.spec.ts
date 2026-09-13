@@ -339,7 +339,7 @@ test('HE8 resolved case leaves the queue while the recorded repair cost stays a 
   await expect(page.getByTestId('prepare-case-notice')).toHaveCount(0);
   await nav(page, 'Records').click();
   await expect(page.getByTestId('repair-cost-app-001')).toContainText('€185.00 recorded repair cost');
-  await expect(page.getByTestId('review-appliance-app-001')).toHaveText('Open the saved case');
+  await expect(page.getByTestId('review-appliance-app-001')).toHaveText('Open the saved case file');
   await page.getByTestId('review-appliance-app-001').click();
   await expect(page.getByTestId('case-status')).toHaveText('Resolved');
   const persisted = await savedState(request, token);

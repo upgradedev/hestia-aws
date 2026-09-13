@@ -172,7 +172,7 @@ test('reset keeps agent briefings, the saved case and recorded approvals', async
   await page.getByTestId('refresh-state').click();
   await expect(page.getByTestId('home-case-status')).toHaveText('Authorized');
   await expect(page.getByTestId('dispatch-record')).toHaveCount(1);
-  await expect(page.getByTestId('reset-demo')).toHaveText('Reset facts');
+  await expect(page.getByTestId('reset-demo')).toHaveText('Reset sample');
   const reset = page.waitForResponse(r => r.url().endsWith('/api/action/reset'));
   await page.getByTestId('reset-demo').click();
   expect((await reset).status()).toBe(200);
