@@ -37,6 +37,8 @@ DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
         {
             "id": "app-001",
             "item_name": "Bosch Series 6 Washing Machine",
+            "brand": "Bosch",
+            "model_number": "WAU28T64GB",
             "serial_number": "WAU28T64GB/01",
             "purchase_date": "2024-10-15",
             "statutory_months": 24,
@@ -54,6 +56,8 @@ DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
         {
             "id": "app-002",
             "item_name": "Sony Bravia 55 OLED TV",
+            "brand": "Sony",
+            "model_number": "XR-55A80K",
             "serial_number": "XR-55A80K-902",
             "purchase_date": "2025-03-20",
             "statutory_months": 24,
@@ -71,6 +75,8 @@ DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
         {
             "id": "app-003",
             "item_name": "Daikin Inverter AC 12000 BTU",
+            "brand": "Daikin",
+            "model_number": "FTXM35R",
             "serial_number": "FTXM35R-2025",
             "purchase_date": "2025-06-10",
             "statutory_months": 24,
