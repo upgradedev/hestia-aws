@@ -237,8 +237,36 @@ def test_extract_route_reports_model_failure_without_saving_records(session, mon
     monkeypatch.setattr(agent_app, "run_text_extraction", fake_runner(REPLY, fail=True))
     code, data = call("/api/agent/extract", {"text": "Order 123"}, session)
     assert code == 502 and "Nothing was saved" in data["message"]
+    assert "not counted" in data["message"]
+    code, state = call("/api/state", token=session)
+    # The client-side failure never reached the model: the reading is handed back.
+    assert state["intakes"] == {} and state["agent_extracts"] == 0
+    assert state["audit_events"][-1]["payload"]["reading_counted"] is False
+
+
+def test_extract_route_keeps_the_charge_when_the_model_timed_out(session, monkeypatch):
+    monkeypatch.setenv("HESTIA_LIVE_MODEL", "bedrock")
+    monkeypatch.setattr(agent_app, "run_text_extraction",
+                        lambda text, hint, **_k: ha.ExtractionOutcome(
+                            "unavailable", "model-x", "strands-agents", reason="model_timeout",
+                            duration_ms=20000))
+    code, data = call("/api/agent/extract", {"text": "Order 123"}, session)
+    assert code == 502 and "not counted" not in data["message"]
     code, state = call("/api/state", token=session)
     assert state["intakes"] == {} and state["agent_extracts"] == 1
+    assert state["audit_events"][-1]["payload"]["reading_counted"] is True
+
+
+def test_text_extraction_runner_times_out_a_slow_model():
+    import time as clock
+
+    class SlowAgent:
+        def __call__(self, prompt):
+            clock.sleep(0.3)
+            return None
+
+    slow = ha.run_text_extraction("x", "auto", timeout_seconds=0.05, agent_factory=SlowAgent)
+    assert slow.mode == "unavailable" and slow.reason == "model_timeout"
 
 
 def test_health_reports_extract_cap(monkeypatch):
