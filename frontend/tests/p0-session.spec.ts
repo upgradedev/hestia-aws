@@ -431,7 +431,8 @@ test('other simulated actions preserve provider risks; manual receipt only links
 
   await page.getByTestId('review-utility').click();
   const utility = page.waitForResponse(res => res.url().endsWith('/api/action/utility_dispute'));
-  await page.getByRole('button', { name: 'Record a meter review request', exact: true }).click();
+  await expect(page.getByTestId('approve-utility')).toHaveText('Record a meter review request');
+  await page.getByTestId('approve-utility').click();
   expect((await utility).status()).toBe(200);
   await expect(page.getByTestId('utility-result')).toContainText('No provider was contacted');
   await expect(page.getByTestId('approve-utility')).toBeDisabled();

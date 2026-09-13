@@ -1,10 +1,14 @@
 import { expect, test } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
-import type { BackendState } from '../src/api';
+import { randomUUID } from 'node:crypto';
+import type { BackendState, ClaimDraft } from '../src/api';
 import type { CaseAction, HouseholdCase } from '../src/cases';
 
 const backend = 'http://127.0.0.1:8000';
+type NavTab = 'Home' | 'Case' | 'Records' | 'About' | 'Import records';
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
+const nav = (page: Page, name: NavTab) =>
+  page.getByRole('navigation', { name: 'Household navigation' }).getByRole('button', { name, exact: true });
 
 async function savedState(request: APIRequestContext, token: string): Promise<BackendState> {
   const response = await request.get(`${backend}/api/state`, { headers: bearer(token) });
@@ -14,20 +18,38 @@ async function savedState(request: APIRequestContext, token: string): Promise<Ba
 async function screenshot(page: Page, name: string) {
   await test.info().attach(`${process.env.HESTIA_COMMIT_SHA}-${name}`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
 }
-async function openCase(page: Page) {
+// One click: the landing CTA creates the isolated session itself and opens Home.
+async function launch(page: Page): Promise<string> {
   await page.goto('/');
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Start with the sample household/);
+  const created = page.waitForResponse(r => r.url().endsWith('/api/demo/session') && r.request().method() === 'POST');
   await page.getByTestId('launch-cockpit').click();
-  await expect(page.getByTestId('case-empty')).toContainText('No case saved yet');
-  const sessionResponse = page.waitForResponse(r => r.url().endsWith('/api/demo/session'));
-  await page.getByTestId('begin-demo').click();
-  const response = await sessionResponse;
+  const response = await created;
   expect(response.status()).toBe(201);
   const session = await response.json();
+  expect(session.mode).toBe('simulated');
+  await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
+  await expect(page.getByTestId('begin-demo')).toHaveCount(0);
+  return session.token as string;
+}
+// A stored session resumes without another POST: the CTA only opens Home.
+async function resume(page: Page) {
+  await page.reload();
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Continue your household case/);
+  await page.getByTestId('launch-cockpit').click();
+  await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
+}
+async function openCase(page: Page) {
+  const token = await launch(page);
+  await expect(page.getByTestId('home-case-status')).toHaveCount(0);
+  await nav(page, 'Case').click();
+  await expect(page.getByTestId('case-empty')).toContainText('No case saved yet');
   await expect(page.getByTestId('reviewed-facts')).toContainText('REC-2024-BOSCH-88');
   const prepared = page.waitForResponse(r => r.url().endsWith('/api/action/claim/prepare'));
   await page.getByTestId('prepare-case-notice').click();
-  expect((await prepared).status()).toBe(200);
-  const draft = (await (await prepared).json()).draft;
+  const preparedResponse = await prepared;
+  expect(preparedResponse.status()).toBe(200);
+  const draft = (await preparedResponse.json()).draft as ClaimDraft;
   await expect(page.getByTestId('server-notice')).toBeVisible();
   expect(await page.getByTestId('server-notice').textContent()).toBe(draft.notice);
   const approved = page.waitForResponse(r => r.url().endsWith('/api/action/claim'));
@@ -36,7 +58,7 @@ async function openCase(page: Page) {
   await page.getByTestId('open-persisted-case').click();
   await expect(page.getByTestId('case-status')).toHaveText('Authorized');
   await expect(page.getByTestId('case-next-action')).toContainText('Approval sent no email');
-  return { token: session.token as string, draft };
+  return { token, draft };
 }
 
 async function fillUpdate(page: Page, action: CaseAction, options: {
@@ -61,6 +83,27 @@ async function update(page: Page, action: CaseAction, options: Parameters<typeof
   await expect(page.getByTestId('case-update-result')).toContainText('Update saved');
   return (await result.json()).case;
 }
+// Protected case updates through the real API, so Home can be checked against server truth.
+async function apiUpdate(request: APIRequestContext, token: string, c: HouseholdCase, action: CaseAction, extra: Record<string, unknown> = {}): Promise<HouseholdCase> {
+  const response = await request.post(`${backend}/api/case/update`, { headers: bearer(token), data: {
+    case_id: c.id, expected_revision: c.revision, request_id: randomUUID().replaceAll('-', ''),
+    action, source: 'manual_update', note: `API fixture ${action}`, evidence_reference: `FIXTURE-API-${action.toUpperCase()}`, ...extra,
+  } });
+  expect(response.status(), `${action}: expected HTTP 200`).toBe(200);
+  const result = await response.json();
+  expect(result.replayed).toBe(false);
+  return result.case as HouseholdCase;
+}
+async function expectHomeCase(page: Page, status: string, queued: boolean) {
+  await expect(page.getByTestId('home-case-status')).toHaveText(status);
+  await expect(page.getByTestId('alert-warranty')).toHaveCount(queued ? 1 : 0);
+  await expect(page.getByTestId('recovery-amount')).toHaveText('€185.00');
+  await expect(page.getByTestId('recovery-amount').locator('..')).toContainText(
+    queued ? 'Evidence to review, not money recovered' : `Case ${status.toLowerCase()} · not money recovered`,
+  );
+  await expect(page.getByTestId('dashboard-real-recovery')).toContainText('€0.00');
+  await expect(page.getByTestId('dispatch-record')).toHaveCount(1);
+}
 
 test('cold start explains household, problem, outcome and first action on desktop and mobile', async ({ page }) => {
   const posts: string[] = [];
@@ -69,7 +112,8 @@ test('cold start explains household, problem, outcome and first action on deskto
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Keep the whole case together');
   await expect(page.getByText('For households facing a repair bill')).toBeVisible();
   await expect(page.getByTestId('launch-cockpit')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Pitch & GTM', exact: true })).toBeHidden();
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Start with the sample household/);
+  await expect(page.getByTestId('session-panel')).toBeHidden();
   await screenshot(page, 'cold-start-desktop');
   await page.setViewportSize({ width: 375, height: 812 });
   await expect(page.getByTestId('launch-cockpit')).toBeInViewport();
@@ -102,9 +146,9 @@ test('receipt facts to exact approval, synthetic reply, more evidence, partial a
   await page.getByText('Receipt, decision and exact notice', { exact: true }).click();
   expect(await page.getByTestId('case-exact-notice').textContent()).toBe(draft.notice);
   await screenshot(page, 'completed-case-desktop');
-  await page.reload();
-  await expect(page.getByTestId('launch-cockpit')).toContainText('Continue your household case');
-  await page.getByTestId('launch-cockpit').click();
+  await resume(page);
+  await expect(page.getByTestId('home-case-status')).toHaveText('Resolved');
+  await page.getByTestId('home-open-case').click();
   await expect(page.getByTestId('case-status')).toHaveText('Resolved');
   const persisted = await savedState(request, token);
   expect(persisted.cases[0]).toEqual(resolved);
@@ -215,8 +259,11 @@ test('mobile keyboard journey reaches a non-monetary resolution and saved return
   await expect(page.getByTestId('case-status')).toHaveText('Resolved');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await screenshot(page, 'completed-case-mobile-keyboard');
-  await page.reload();
-  await page.getByTestId('launch-cockpit').click();
+  await resume(page);
+  await expect(page.getByTestId('home-case-status')).toHaveText('Resolved');
+  await expect(page.getByTestId('alert-warranty')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByTestId('home-open-case').click();
   await expect(page.getByTestId('case-outcome')).toContainText('€0.00 total (synthetic)');
 });
 
@@ -267,4 +314,83 @@ test('outcome attestation binds amount, summary, evidence, source and current ca
   const final = (await savedState(request, token)).cases[0];
   expect(final.outcome?.amount_cents).toBe(5000);
   expect(final.outcome?.evidence_reference).toBe('FIXTURE-CHANGED-EVIDENCE');
+});
+
+test('HE8 resolved case leaves the queue while the recorded repair cost stays a fact, before and after reload', async ({ page, request }) => {
+  const { token } = await openCase(page);
+  let c = (await savedState(request, token)).cases[0];
+  c = await apiUpdate(request, token, c, 'start_tracking', { deadline: '2026-10-01' });
+  c = await apiUpdate(request, token, c, 'resolve', { amount_cents: 18500, attested: true, evidence_reference: 'FIXTURE-API-RESOLUTION-185' });
+  expect(c.status).toBe('resolved');
+  expect(c.real_recovered_cents).toBe(0);
+  await nav(page, 'Home').click();
+  await expectHomeCase(page, 'Resolved', false);
+  await expect(page.getByTestId('metric-cases')).toContainText('0 open');
+  await expect(page.getByTestId('metric-cases')).toContainText('1 closed');
+  await expect(page.getByTestId('review-claim')).toHaveCount(0);
+  await screenshot(page, 'he8-resolved-home');
+  await resume(page);
+  await expectHomeCase(page, 'Resolved', false);
+  await expect(page.getByTestId('review-claim')).toHaveCount(0);
+  await page.getByTestId('home-open-case').click();
+  await expect(page.getByTestId('case-status')).toHaveText('Resolved');
+  await expect(page.getByTestId('case-outcome')).toContainText('€185.00 total (synthetic)');
+  await expect(page.getByTestId('case-real-recovery')).toContainText('€0.00');
+  await expect(page.getByTestId('prepare-case-notice')).toHaveCount(0);
+  await nav(page, 'Records').click();
+  await expect(page.getByTestId('repair-cost-app-001')).toContainText('€185.00 recorded repair cost');
+  await expect(page.getByTestId('review-appliance-app-001')).toHaveText('Open the saved case');
+  await page.getByTestId('review-appliance-app-001').click();
+  await expect(page.getByTestId('case-status')).toHaveText('Resolved');
+  const persisted = await savedState(request, token);
+  expect(persisted.cases[0].status).toBe('resolved');
+  expect(persisted.summary.unclaimed_recovery_cents).toBe(18500);
+  expect(persisted.summary.real_recovered_cents).toBe(0);
+  expect(persisted.dispatch_records).toHaveLength(1);
+});
+
+test('HE8 partial, refused and reopened cases keep the queue honest and the follow-up opens the saved case', async ({ page, request }) => {
+  const { token } = await openCase(page);
+  let c = (await savedState(request, token)).cases[0];
+  c = await apiUpdate(request, token, c, 'start_tracking', { deadline: '2026-10-01' });
+  c = await apiUpdate(request, token, c, 'partial_outcome', { amount_cents: 4900, attested: true, evidence_reference: 'FIXTURE-API-PARTIAL-49' });
+  expect(c.status).toBe('pending_response');
+  await nav(page, 'Home').click();
+  await expectHomeCase(page, 'Pending response', true);
+  const card = page.getByTestId('alert-warranty');
+  await expect(card).toContainText('Repair · Pending response');
+  await expect(card).toContainText('Follow up the saved case for Bosch Series 6 Washing Machine');
+  await expect(card).toContainText('€185.00 recorded');
+  await expect(card).toContainText('the case is pending response');
+  await expect(page.getByTestId('review-claim')).toHaveText('Open the case');
+  await expect(page.getByTestId('metric-cases')).toContainText('1 open');
+  await page.getByTestId('review-claim').click();
+  await expect(page.getByTestId('case-status')).toHaveText('Pending response');
+  await expect(page.getByTestId('case-outcome')).toContainText('Partial outcome: €49.00 total (synthetic)');
+  c = await apiUpdate(request, token, c, 'reject', { source: 'synthetic_reply', evidence_reference: 'FIXTURE-API-REFUSAL-1' });
+  expect(c.status).toBe('rejected');
+  await nav(page, 'Home').click();
+  await expectHomeCase(page, 'Rejected', false);
+  await expect(page.getByTestId('review-claim')).toHaveCount(0);
+  await screenshot(page, 'he8-rejected-home');
+  c = await apiUpdate(request, token, c, 'reopen', { deadline: '2026-10-10' });
+  expect(c.status).toBe('pending_response');
+  expect(c.outcome).toBeNull();
+  await page.getByTestId('refresh-state').click();
+  await expectHomeCase(page, 'Pending response', true);
+  await expect(card).toContainText('Follow up the saved case');
+  await page.getByTestId('review-claim').click();
+  await expect(page.getByTestId('case-status')).toHaveText('Pending response');
+  await expect(page.getByTestId('case-outcome')).toHaveCount(0);
+  await expect(page.getByTestId('case-timeline')).toContainText('Rejected');
+  await expect(page.getByTestId('case-timeline')).toContainText('Synthetic reply fixture; not a merchant response');
+  await resume(page);
+  await expectHomeCase(page, 'Pending response', true);
+  await screenshot(page, 'he8-reopened-home');
+  const persisted = await savedState(request, token);
+  expect(persisted.cases[0].status).toBe('pending_response');
+  expect(persisted.cases[0].timeline.find(e => e.status === 'rejected')?.evidence_reference).toBe('FIXTURE-API-REFUSAL-1');
+  expect(persisted.summary.unclaimed_recovery_cents).toBe(18500);
+  expect(persisted.summary.real_recovered_cents).toBe(0);
+  expect(persisted.dispatch_records).toHaveLength(1);
 });
