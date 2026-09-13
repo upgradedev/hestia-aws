@@ -14,20 +14,20 @@
     {
       "id": "hook",
       "_beat": "The problem, in the words of the person who has it. The landing page is on screen: the H1 and the sample repair card.",
-      "captionText": "Elena Georgiou's washing machine failed 22 months after purchase, and the repair cost 185 EUR. The receipt, the repair invoice and the seller's address live in three places, and nobody keeps the case together. Hestia starts from that receipt and asks Elena before anything is sent.",
-      "speechText": "Elena Georgiou's washing machine failed twenty-two months after purchase, and the repair cost one hundred and eighty-five euros. The receipt, the repair invoice and the seller's address live in three places, and nobody keeps the case together. Hestia starts from that receipt and asks Elena before anything is sent."
+      "captionText": "Elena Georgiou's washing machine failed 22 months after purchase, and the repair cost 185 EUR. The receipt, the repair invoice and the seller's address live in three places, and nobody keeps the case together. Hestia starts from that receipt and asks Elena to approve the exact notice; nothing is sent.",
+      "speechText": "Elena Georgiou's washing machine failed twenty-two months after purchase, and the repair cost one hundred and eighty-five euros. The receipt, the repair invoice and the seller's address live in three places, and nobody keeps the case together. Hestia starts from that receipt and asks Elena to approve the exact notice; nothing is sent."
     },
     {
       "id": "surface",
-      "_beat": "One click on the landing button creates the demo space; Home is on screen with the decisions queue.",
-      "captionText": "One click on the landing page opens a private demo space with a fictional Athens household: no account, no login, a 30-minute limit. Home shows what needs a decision this week: the recorded repair, a trial ending, a price change from 9.99 to 13.99 EUR, and a receipt missing for 85.50 EUR.",
-      "speechText": "One click on the landing page opens a private demo space with a fictional Athens household: no account, no login, a thirty-minute limit. Home shows what needs a decision this week: the recorded repair, a trial ending, a price change from nine ninety-nine to thirteen ninety-nine euros, and a receipt missing for eighty-five euros fifty."
+      "_beat": "One click on the landing button creates the demo space; Home opens at the top with the Start here block and the review card.",
+      "captionText": "One click on the landing page opens a private demo space with a fictional Athens household: no account, no login, a 30-minute limit. Home starts with three ways to add your own records, then shows what needs a decision this week: the recorded repair, a trial ending, a price change from 9.99 to 13.99 EUR, and a receipt missing for 85.50 EUR.",
+      "speechText": "One click on the landing page opens a private demo space with a fictional Athens household: no account, no login, a thirty-minute limit. Home starts with three ways to add your own records, then shows what needs a decision this week: the recorded repair, a trial ending, a price change from nine ninety-nine to thirteen ninety-nine euros, and a receipt missing for eighty-five euros fifty."
     },
     {
       "id": "trigger",
       "_beat": "The Strands agent runs. The briefing, the mode chips and the opened tool trace are on screen.",
-      "captionText": "Ask Hestia to review this household, and a Strands agent on Amazon Bedrock reads the records through four tools: repair evidence, subscriptions, receipts and utilities, and the case timeline. It writes a short briefing that points at decisions; a guard withholds any sentence that claims an entitlement or invents an amount. The tool trace stays visible.",
-      "speechText": "Ask Hestia to review this household, and a Strands agent on Amazon Bedrock reads the records through four tools: repair evidence, subscriptions, receipts and utilities, and the case timeline. It writes a short briefing that points at decisions; a guard withholds any sentence that claims an entitlement or invents an amount. The tool trace stays visible."
+      "captionText": "Ask Hestia to review this household, and a Strands agent on Amazon Bedrock reads the records through four tools: repair evidence, subscriptions, receipts and utilities, and the case timeline. It writes a short briefing that points at decisions; a guard withholds the whole briefing if it claims an entitlement or states an amount the tools did not return. The tool trace stays visible.",
+      "speechText": "Ask Hestia to review this household, and a Strands agent on Amazon Bedrock reads the records through four tools: repair evidence, subscriptions, receipts and utilities, and the case timeline. It writes a short briefing that points at decisions; a guard withholds the whole briefing if it claims an entitlement or states an amount the tools did not return. The tool trace stays visible."
     },
     {
       "id": "live",
@@ -44,14 +44,14 @@
     {
       "id": "evidence",
       "_beat": "The About page with the mode list and the read-only console showing the live health check.",
-      "captionText": "Every claim is checkable without asking us. The About page lists what runs and what does not: bank feeds, mailbox sync, receipt OCR, Guardrails, AgentCore and email sending are not connected. Its read-only console returns the live health check with the model limits: 3 reviews per demo space, 200 per day. Independent human testing is reported as not run.",
-      "speechText": "Every claim is checkable without asking us. The About page lists what runs and what does not: bank feeds, mailbox sync, receipt O C R, Guardrails, AgentCore and email sending are not connected. Its read-only console returns the live health check with the model limits: three reviews per demo space, two hundred per day. Independent human testing is reported as not run."
+      "captionText": "Every claim is checkable without asking us. The About page lists what runs and what does not: bank feeds, mailbox sync, receipt OCR, Guardrails, AgentCore and email sending are not connected. Its read-only console returns the live health check with the model limits: 3 reviews and 3 text readings per demo space, 200 a day shared by both. Independent human testing is reported as not run.",
+      "speechText": "Every claim is checkable without asking us. The About page lists what runs and what does not: bank feeds, mailbox sync, receipt O C R, Guardrails, AgentCore and email sending are not connected. Its read-only console returns the live health check with the model limits: three reviews and three text readings per demo space, two hundred a day shared by both. Independent human testing is reported as not run."
     },
     {
       "id": "close",
       "_beat": "The republishable sentence, one mechanism and one consequence, over the landing page and the URL.",
-      "captionText": "Hestia reads a household's receipts, subscriptions and repair records with a Strands agent on Amazon Bedrock, and nothing is sent until the household has approved the exact text. Open source under the MIT license, running on AWS, no login. Try it now at drusjukc9d4oc.cloudfront.net.",
-      "speechText": "Hestia reads a household's receipts, subscriptions and repair records with a Strands agent on Amazon Bedrock, and nothing is sent until the household has approved the exact text. Open source under the M I T license, running on A W S, no login. Try it now at drusjukc9d4oc dot cloudfront dot net."
+      "captionText": "Hestia reads a household's receipts, subscriptions and repair records with Strands agents on Amazon Bedrock, and the household approves the exact text of every notice; the approval is recorded and nothing is sent. Open source under the MIT license, running on AWS, no login. Try it now at drusjukc9d4oc.cloudfront.net.",
+      "speechText": "Hestia reads a household's receipts, subscriptions and repair records with Strands agents on Amazon Bedrock, and the household approves the exact text of every notice; the approval is recorded and nothing is sent. Open source under the M I T license, running on A W S, no login. Try it now at drusjukc9d4oc dot cloudfront dot net."
     }
   ]
 }

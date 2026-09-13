@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="910" viewBox="0 0 1400 910" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" role="img" aria-labelledby="t d">
+  <title id="t">Hestia request flow: what runs, where, and where it stops</title>
+  <desc id="d">Logical view of Hestia: the browser reaches CloudFront and API Gateway; the reader only reads S3 state; the writer handles records, the two Strands agents on Amazon Bedrock, the deterministic notice and the human approval, which is recorded and never sent. Bank feeds, mailbox sync, image OCR, SES, AgentCore and Guardrails are not connected.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4a3f35"/></marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9a8f84"/></marker>
+  </defs>
+  <rect width="1400" height="910" fill="#f6f2ea"/>
+  <text x="40" y="44" font-size="22" font-weight="700" fill="#2b2420" text-anchor="start">Hestia request flow: what runs, where, and where it stops</text>
+  <text x="40" y="68" font-size="14" fill="#5c534b" text-anchor="start">Logical view. Fictional household. Approvals are recorded, never sent. Real recovered money: EUR 0.00.</text>
+  <rect x="40" y="100" width="230" height="100" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="40" y="110" width="5" height="80" rx="2.5" fill="#4a3f35"/>
+  <text x="56" y="125" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Browser</text>
+  <text x="56" y="146" font-size="12.5" fill="#5c534b" text-anchor="start">React app from CloudFront</text>
+  <text x="56" y="163" font-size="12.5" fill="#5c534b" text-anchor="start">a private copy for 30 minutes</text>
+  <text x="56" y="180" font-size="12.5" fill="#5c534b" text-anchor="start">bearer capability (HMAC)</text>
+  <rect x="320" y="100" width="260" height="100" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="320" y="110" width="5" height="80" rx="2.5" fill="#6b4fbb"/>
+  <text x="336" y="125" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">CloudFront, API Gateway</text>
+  <text x="336" y="146" font-size="12.5" fill="#5c534b" text-anchor="start">same-origin /api/* and /healthz</text>
+  <text x="336" y="163" font-size="12.5" fill="#5c534b" text-anchor="start">$default route: reader</text>
+  <text x="336" y="180" font-size="12.5" fill="#5c534b" text-anchor="start">22 POST routes: writer</text>
+  <rect x="630" y="100" width="300" height="100" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="630" y="110" width="5" height="80" rx="2.5" fill="#b4520a"/>
+  <text x="646" y="125" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Reader function</text>
+  <text x="646" y="146" font-size="12.5" fill="#5c534b" text-anchor="start">GET and OPTIONS only</text>
+  <text x="646" y="163" font-size="12.5" fill="#5c534b" text-anchor="start">denies writes, Bedrock and SES</text>
+  <text x="646" y="180" font-size="12.5" fill="#5c534b" text-anchor="start">answers /healthz and /api/state</text>
+  <rect x="980" y="100" width="380" height="100" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="980" y="110" width="5" height="80" rx="2.5" fill="#3f6f55"/>
+  <text x="996" y="125" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Amazon S3: one state.json per copy</text>
+  <text x="996" y="146" font-size="12.5" fill="#5c534b" text-anchor="start">create If-None-Match, update If-Match</text>
+  <text x="996" y="163" font-size="12.5" fill="#5c534b" text-anchor="start">audit events in the same write</text>
+  <text x="996" y="180" font-size="12.5" fill="#5c534b" text-anchor="start">daily model counter under _usage/</text>
+  <polyline points="270,150 320,150" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="275.1" y="130" width="39.8" height="17" rx="4" fill="#f6f2ea"/>
+  <text x="295" y="142" font-size="12" text-anchor="middle" fill="#2b2420">HTTPS</text>
+  <polyline points="580,135 630,135" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="591.5" y="115" width="27.1" height="17" rx="4" fill="#f6f2ea"/>
+  <text x="605" y="127" font-size="12" text-anchor="middle" fill="#2b2420">GET</text>
+  <polyline points="930,150 980,150" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="938.3" y="130" width="33.4" height="17" rx="4" fill="#f6f2ea"/>
+  <text x="955" y="142" font-size="12" text-anchor="middle" fill="#2b2420">read</text>
+  <polyline points="560,200 560,290" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="566.0" y="228" width="33.4" height="17" rx="4" fill="#f6f2ea"/>
+  <text x="570" y="240" font-size="12" text-anchor="start" fill="#2b2420">POST</text>
+  <polyline points="1170,250 1170,200" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="1176.0" y="218" width="116.1" height="17" rx="4" fill="#f6f2ea"/>
+  <text x="1180" y="230" font-size="12" text-anchor="start" fill="#2b2420">conditional write</text>
+  <rect x="320" y="250" width="1040" height="345" rx="14" fill="#efe6d8" stroke="#d9c6ab" stroke-width="1.5"/>
+  <text x="336" y="272" font-size="12.5" font-weight="700" fill="#5c534b" text-anchor="start">Writer function</text>
+  <rect x="340" y="290" width="320" height="110" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="340" y="300" width="5" height="90" rx="2.5" fill="#8a5a00"/>
+  <text x="356" y="315" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Records you add</text>
+  <text x="356" y="336" font-size="12.5" fill="#5c534b" text-anchor="start">appliance, repair, JSON facts</text>
+  <text x="356" y="353" font-size="12.5" fill="#5c534b" text-anchor="start">stage, review, consent, commit</text>
+  <text x="356" y="370" font-size="12.5" fill="#5c534b" text-anchor="start">POST /api/ingest/sync</text>
+  <rect x="340" y="450" width="320" height="120" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="340" y="460" width="5" height="100" rx="2.5" fill="#2a7a78"/>
+  <text x="356" y="475" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Reading agent: Strands, no tools</text>
+  <text x="356" y="496" font-size="12.5" fill="#5c534b" text-anchor="start">reads pasted text once</text>
+  <text x="356" y="513" font-size="12.5" fill="#5c534b" text-anchor="start">stages proposed records</text>
+  <text x="356" y="530" font-size="12.5" fill="#5c534b" text-anchor="start">POST /api/agent/extract</text>
+  <rect x="690" y="290" width="320" height="110" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="690" y="300" width="5" height="90" rx="2.5" fill="#2a7a78"/>
+  <text x="706" y="315" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Review agent: Strands, 4 tools</text>
+  <text x="706" y="336" font-size="12.5" fill="#5c534b" text-anchor="start">reads the recorded facts</text>
+  <text x="706" y="353" font-size="12.5" fill="#5c534b" text-anchor="start">briefing, tool trace, guard</text>
+  <text x="706" y="370" font-size="12.5" fill="#5c534b" text-anchor="start">POST /api/agent/review</text>
+  <rect x="1040" y="290" width="300" height="110" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="1040" y="300" width="5" height="90" rx="2.5" fill="#8a5a00"/>
+  <text x="1056" y="315" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Your approval</text>
+  <text x="1056" y="336" font-size="12.5" fill="#5c534b" text-anchor="start">deterministic notice, no model</text>
+  <text x="1056" y="353" font-size="12.5" fill="#5c534b" text-anchor="start">you read the exact text</text>
+  <text x="1056" y="370" font-size="12.5" fill="#5c534b" text-anchor="start">single-use token on the digest</text>
+  <rect x="1040" y="440" width="300" height="140" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="1040" y="450" width="5" height="120" rx="2.5" fill="#3f6f55"/>
+  <text x="1056" y="465" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Recorded, not sent</text>
+  <text x="1056" y="486" font-size="12.5" fill="#5c534b" text-anchor="start">delivery_status SIMULATED</text>
+  <text x="1056" y="503" font-size="12.5" fill="#5c534b" text-anchor="start">ses_message_id null</text>
+  <text x="1056" y="520" font-size="12.5" fill="#5c534b" text-anchor="start">case file: replies, deadlines,</text>
+  <text x="1056" y="537" font-size="12.5" fill="#5c534b" text-anchor="start">evidence, attested outcomes</text>
+  <text x="1056" y="554" font-size="12.5" fill="#5c534b" text-anchor="start">real_recovered_cents 0</text>
+  <polyline points="500,450 500,400" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="506.0" y="418" width="84.3" height="17" rx="4" fill="#efe6d8"/>
+  <text x="510" y="430" font-size="12" text-anchor="start" fill="#2b2420">staged draft</text>
+  <polyline points="660,345 690,345" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="1010,345 1040,345" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polyline points="1190,400 1190,440" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="1196.0" y="412" width="52.5" height="17" rx="4" fill="#efe6d8"/>
+  <text x="1200" y="424" font-size="12" text-anchor="start" fill="#2b2420">approve</text>
+  <rect x="340" y="630" width="320" height="110" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="340" y="640" width="5" height="90" rx="2.5" fill="#a33b2b"/>
+  <text x="356" y="655" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Session capability</text>
+  <text x="356" y="676" font-size="12.5" fill="#5c534b" text-anchor="start">HMAC token, 30 minutes, no login</text>
+  <text x="356" y="693" font-size="12.5" fill="#5c534b" text-anchor="start">40 actions per private copy</text>
+  <text x="356" y="710" font-size="12.5" fill="#5c534b" text-anchor="start">checked on every protected route</text>
+  <rect x="690" y="630" width="320" height="110" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="690" y="640" width="5" height="90" rx="2.5" fill="#2a7a78"/>
+  <text x="706" y="655" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Amazon Bedrock</text>
+  <text x="706" y="676" font-size="12.5" fill="#5c534b" text-anchor="start">Claude Haiku 4.5, EU inference profile</text>
+  <text x="706" y="693" font-size="12.5" fill="#5c534b" text-anchor="start">700 output tokens, 20 s timeout</text>
+  <text x="706" y="710" font-size="12.5" fill="#5c534b" text-anchor="start">3 reviews, 3 readings per copy; 200 a day</text>
+  <rect x="1040" y="630" width="300" height="110" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <rect x="1040" y="640" width="5" height="90" rx="2.5" fill="#a33b2b"/>
+  <text x="1056" y="655" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Guard and fallback</text>
+  <text x="1056" y="676" font-size="12.5" fill="#5c534b" text-anchor="start">briefing withheld on banned claims</text>
+  <text x="1056" y="693" font-size="12.5" fill="#5c534b" text-anchor="start">or unknown EUR amounts</text>
+  <text x="1056" y="710" font-size="12.5" fill="#5c534b" text-anchor="start">tools-only answer with a reason</text>
+  <polyline points="850,400 850,630" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="856.0" y="508" width="78.0" height="17" rx="4" fill="#efe6d8"/>
+  <text x="860" y="520" font-size="12" text-anchor="start" fill="#2b2420">InvokeModel</text>
+  <polyline points="500,570 500,605 760,605 760,630" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="591.0" y="588" width="78.0" height="17" rx="4" fill="#f6f2ea"/>
+  <text x="630" y="600" font-size="12" text-anchor="middle" fill="#2b2420">one reading</text>
+  <text x="40" y="780" font-size="13" font-weight="700" fill="#5c534b" text-anchor="start">Not connected: nothing below executes</text>
+  <rect x="40" y="795" width="248" height="70" rx="10" fill="#fbf8f2" stroke="#9a8f84" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="56" y="820" font-size="15" font-weight="700" fill="#5c534b" text-anchor="start">Bank feed (PSD2)</text>
+  <text x="56" y="841" font-size="12.5" fill="#5c534b" text-anchor="start">no transaction adapter</text>
+  <rect x="308" y="795" width="248" height="70" rx="10" fill="#fbf8f2" stroke="#9a8f84" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="324" y="820" font-size="15" font-weight="700" fill="#5c534b" text-anchor="start">Mailbox, retailer sync</text>
+  <text x="324" y="841" font-size="12.5" fill="#5c534b" text-anchor="start">pasted text reads no mailbox</text>
+  <rect x="576" y="795" width="248" height="70" rx="10" fill="#fbf8f2" stroke="#9a8f84" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="592" y="820" font-size="15" font-weight="700" fill="#5c534b" text-anchor="start">Receipt OCR from images</text>
+  <text x="592" y="841" font-size="12.5" fill="#5c534b" text-anchor="start">PNG bytes validated only</text>
+  <rect x="844" y="795" width="248" height="70" rx="10" fill="#fbf8f2" stroke="#9a8f84" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="860" y="820" font-size="15" font-weight="700" fill="#5c534b" text-anchor="start">Amazon SES email</text>
+  <text x="860" y="841" font-size="12.5" fill="#5c534b" text-anchor="start">route answers 403, IAM deny</text>
+  <rect x="1112" y="795" width="248" height="70" rx="10" fill="#fbf8f2" stroke="#9a8f84" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="1128" y="820" font-size="15" font-weight="700" fill="#5c534b" text-anchor="start">AgentCore, Guardrails</text>
+  <text x="1128" y="841" font-size="12.5" fill="#5c534b" text-anchor="start">local pattern guard only</text>
+  <text x="40" y="895" font-size="12" fill="#5c534b" text-anchor="start">Sources: src/hestia/app/api.py, src/hestia/app/agent.py, src/hestia/agents/household_agent.py, src/hestia/app/claims.py, src/hestia/domain/cases.py, src/hestia/adapters/storage.py, infra/hestia_api_stack.py. AWS resources: infrastructure.svg.</text>
+</svg>
