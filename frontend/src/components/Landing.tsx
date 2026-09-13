@@ -7,13 +7,15 @@ interface LandingProps {
 
 export function Landing({ preview, returning, expired, busy, error, onStart }: LandingProps) {
   const repair = preview?.appliances.find(a => a.has_repair_claim);
-  const cost = repair && repair.repair_amount_known !== false ? `€${(repair.repair_amount_cents / 100).toFixed(2)}` : 'an unrecorded amount';
+  const costLine = !preview ? 'The repair bill has arrived.'
+    : repair && repair.repair_amount_known !== false ? `The repair cost €${(repair.repair_amount_cents / 100).toFixed(2)}.`
+    : 'The repair cost is not recorded yet.';
   return (
     <div className="max-w-6xl mx-auto px-5 py-10 sm:py-16 space-y-14" aria-labelledby="welcome-title">
       <section className="grid lg:grid-cols-[1.15fr_1fr] gap-10 items-center">
         <div className="space-y-6">
           <p className="eyebrow">For households facing a repair bill</p>
-          <h1 id="welcome-title" className="title text-4xl sm:text-5xl lg:text-[3.4rem]">Your receipt is the start.<br />Keep the whole case together.</h1>
+          <h1 id="welcome-title" className="title text-4xl sm:text-5xl text-balance">Your receipt is the start. Keep the whole case together.</h1>
           <p className="text-lg muted leading-relaxed max-w-xl">
             Hestia's agent reads your appliance, subscription and receipt records, points at what needs a decision,
             and prepares the exact letter for you to approve. Then it keeps replies, evidence and the outcome in one saved case.
@@ -28,7 +30,7 @@ export function Landing({ preview, returning, expired, busy, error, onStart }: L
         </div>
         <div className="card-accent p-6 sm:p-8 space-y-5">
           <div className="flex justify-between items-center gap-3"><span className="eyebrow">Sample repair case</span><span className="chip">For review</span></div>
-          <h2 className="text-2xl font-bold leading-snug">The washing machine broke.<br />The repair cost {cost}.</h2>
+          <h2 className="text-2xl font-bold leading-snug">The washing machine broke.<br />{costLine}</h2>
           <p className="muted">Can the seller be asked to review it? Hestia starts from the receipt and the repair record, and keeps the request and the eventual outcome connected.</p>
           <ol className="space-y-3 text-sm">
             <li className="flex gap-3"><span className="font-extrabold text-[var(--hearth)]">01</span><span>Hestia's agent checks the recorded facts and tells you what is waiting for a decision.</span></li>
