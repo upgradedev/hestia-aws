@@ -105,7 +105,7 @@ export function SentinelHome({
         <div className="card p-4">
           <p className="text-xs muted">Recorded repair cost</p>
           <p data-testid="recovery-amount" className="text-2xl font-extrabold mono mt-1">{summary.documented_repair_cost_eur === undefined ? 'Not available' : euro(summary.documented_repair_cost_eur)}</p>
-          <p className="text-xs faint mt-1">{warranty ? 'Evidence to review, not money recovered' : primaryCase ? `Case ${CASE_STATUS[primaryCase.status].toLowerCase()} · not money recovered` : 'No open repair in this snapshot'}</p>
+          <p className="text-xs faint mt-1">{warranties.length ? 'Evidence to review, not money recovered' : primaryCase ? `Case ${CASE_STATUS[primaryCase.status].toLowerCase()} · not money recovered` : 'No open repair in this snapshot'}</p>
         </div>
         <button className="card p-4 text-left" onClick={onOpenCase} data-testid="metric-cases">
           <p className="text-xs muted">Saved cases</p>

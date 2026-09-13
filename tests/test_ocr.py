@@ -98,8 +98,8 @@ def test_json_strict_shape_duplicate_fields_and_nonfinite_rejected(raw):
 
 
 @pytest.mark.parametrize("rows", [None, [], [{}] * 21, [1], [{"x": "x" * 201}],
-                                  [{"x" * 81: 1}], [dict.fromkeys(map(str, range(15)), 1)],
-                                  [dict.fromkeys(map(str, range(14)), "x" * 200)] * 20])
+                                  [{"x" * 81: 1}], [dict.fromkeys(map(str, range(21)), 1)],
+                                  [dict.fromkeys(map(str, range(20)), "x" * 200)] * 20])
 def test_record_shape_and_total_bytes_bounded(rows):
     with pytest.raises(ValueError):
         validate_records(rows)
