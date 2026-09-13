@@ -27,7 +27,8 @@ export function mapState(state: BackendState) {
   const caseByItem = new Map<string, HouseholdCase>();
   for (const c of state.cases) caseByItem.set(c.item_id, c);
   const appliances: ApplianceWarranty[] = state.appliances.map(a => ({
-    id: a.id, name: a.item_name, brand: '', model: a.serial_number ?? 'Not provided', serial_number: a.serial_number,
+    id: a.id, name: a.item_name, brand: a.brand ?? '', model: a.model_number ?? 'Not provided', serial_number: a.serial_number,
+    product_url: a.product_url, manual_url: a.manual_url, quickstart_url: a.quickstart_url, source: a.source,
     purchase_date: a.purchase_date, price_eur: a.purchase_price_cents / 100,
     seller_name: a.seller_name, seller_email: a.seller_email, receipt_id: a.receipt_reference ?? 'Not provided',
     legal_statutory_months: a.statutory_months, statutory_warranty_months: a.statutory_months,

@@ -50,6 +50,34 @@ REVIEW_PROMPT = (
     "appliance ids: {appliance_ids}. Today's date for the review is {today}."
 )
 
+EXTRACT_PROMPT = (
+    "You extract household purchase facts from text a household member pasted (a receipt, an "
+    "order confirmation email, a bank statement excerpt). Return ONLY a JSON object of the form "
+    '{"records": [...]} with no prose. Each record is one of:\n'
+    '{"kind": "appliance", "appliance_id": "<short-id>", "item_name": "...", "brand": "...", '
+    '"model_number": "...", "serial_number": "...", "purchase_date": "YYYY-MM-DD", '
+    '"purchase_price_cents": <integer cents>, "seller_name": "...", "seller_email": "...", '
+    '"receipt_reference": "<order or receipt number>"}\n'
+    '{"kind": "transaction", "transaction_id": "<short-id>", "merchant": "...", '
+    '"amount_cents": <integer cents>, "date": "YYYY-MM-DD", "category": "..."}\n'
+    '{"kind": "subscription", "subscription_id": "<short-id>", "service_name": "...", '
+    '"category": "...", "monthly_cents": <integer cents>, "last_billed": "YYYY-MM-DD", '
+    '"is_trial": false}\n'
+    "Rules: include a field only when the text states it; never guess dates, prices, emails or "
+    "model numbers; amounts are integer cents; ids are short lowercase slugs; an appliance is a "
+    "device or machine that carries a guarantee; at most 20 records; if nothing is extractable "
+    'return {"records": []}.'
+)
+ALLOWED_EXTRACT_KEYS = {
+    "appliance": {"appliance_id", "item_name", "brand", "model_number", "serial_number",
+                  "purchase_date", "purchase_price_cents", "seller_name", "seller_email",
+                  "receipt_reference"},
+    "transaction": {"transaction_id", "merchant", "amount_cents", "date", "category"},
+    "subscription": {"subscription_id", "service_name", "category", "monthly_cents",
+                     "last_billed", "is_trial", "trial_end_date", "previous_monthly_cents"},
+}
+MAX_EXTRACT_CHARS = 6000
+
 BANNED_PATTERNS = (
     r"entitled to", r"legally (?:entitled|required|obliged|owed)", r"must (?:refund|reimburse)",
     r"will (?:be )?(?:refund|reimburs)",
@@ -315,6 +343,109 @@ def extract_tool_calls(messages: list[dict[str, Any]]) -> list[ToolCall]:
                 call.output = _clip("\n".join(texts))
                 call.status = str(result.get("status") or "success")
     return ordered
+
+
+@dataclass
+class ExtractionOutcome:
+    mode: str  # "live_model" or "unavailable"
+    model_id: str | None
+    framework: str
+    records: list[dict[str, Any]] = field(default_factory=list)
+    usage: dict[str, int] | None = None
+    duration_ms: int = 0
+    reason: str | None = None
+    raw_chars: int = 0
+
+
+def normalise_extracted(payload: Any) -> list[dict[str, Any]]:
+    """Keep only known kinds and keys with plain values; the review step validates the rest."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("records"), list):
+        return []
+    rows: list[dict[str, Any]] = []
+    for item in payload["records"][:20]:
+        if not isinstance(item, dict):
+            continue
+        kind = item.get("kind")
+        keys = ALLOWED_EXTRACT_KEYS.get(str(kind))
+        if keys is None:
+            continue
+        row: dict[str, Any] = {"kind": kind}
+        for key in keys:
+            value = item.get(key)
+            if value is None:
+                continue
+            if isinstance(value, float) and value.is_integer():
+                value = int(value)
+            if isinstance(value, bool) or isinstance(value, int) or (
+                isinstance(value, str) and value.strip()
+            ):
+                row[key] = value.strip() if isinstance(value, str) else value
+        if kind == "subscription" and "is_trial" not in row:
+            row["is_trial"] = False
+        rows.append(row)
+    return rows
+
+
+def parse_extraction_text(text: str) -> Any:
+    """Locate the first JSON object in a model reply; the model may wrap it in a fence."""
+    import json
+
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        raise ValueError("No JSON object in the model reply")
+    return json.loads(text[start:end + 1])
+
+
+def run_text_extraction(
+    text: str, hint: str, *, model_id: str = DEFAULT_MODEL_ID, region_name: str = DEFAULT_REGION,
+    max_tokens: int = MAX_OUTPUT_TOKENS, timeout_seconds: float = MODEL_TIMEOUT_SECONDS,
+    agent_factory: Callable[..., Any] | None = None,
+) -> ExtractionOutcome:
+    """One bounded model call that proposes records for human review; nothing is saved here."""
+    started = time.monotonic()
+    outcome: dict[str, Any] = {}
+
+    def build_agent() -> Any:
+        from strands import Agent
+        from strands.models import BedrockModel
+
+        model = BedrockModel(
+            model_id=model_id, region_name=region_name, max_tokens=max_tokens,
+            temperature=0.0, streaming=False,
+        )
+        return Agent(model=model, tools=[], system_prompt=EXTRACT_PROMPT, callback_handler=None)
+
+    def work() -> None:
+        try:
+            agent = (agent_factory or build_agent)()
+            outcome["result"] = agent(f"Document type hint: {hint}.\n\n{text}")
+        except Exception as exc:
+            outcome["error"] = type(exc).__name__
+
+    worker = threading.Thread(target=work, name="hestia-extract", daemon=True)
+    worker.start()
+    worker.join(timeout_seconds)
+    duration = int((time.monotonic() - started) * 1000)
+    if worker.is_alive():
+        return ExtractionOutcome("unavailable", model_id, framework_version(),
+                                 reason="model_timeout", duration_ms=duration)
+    if "error" in outcome:
+        return ExtractionOutcome("unavailable", model_id, framework_version(),
+                                 reason="model_error:" + outcome["error"], duration_ms=duration)
+    reply = _result_text(outcome["result"])
+    try:
+        records = normalise_extracted(parse_extraction_text(reply))
+    except ValueError:
+        return ExtractionOutcome("unavailable", model_id, framework_version(),
+                                 reason="unparseable_reply",
+                                 usage=_usage(getattr(outcome["result"], "metrics", None)),
+                                 duration_ms=duration, raw_chars=len(reply))
+    return ExtractionOutcome(
+        "live_model", model_id, framework_version(), records=records,
+        usage=_usage(getattr(outcome["result"], "metrics", None)), duration_ms=duration,
+        raw_chars=len(reply),
+    )
 
 
 def _usage(metrics: Any) -> dict[str, int] | None:

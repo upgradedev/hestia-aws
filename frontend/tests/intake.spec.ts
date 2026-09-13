@@ -4,7 +4,7 @@ import type { BackendState, IntakeDraft, IntakeRecord } from '../src/api';
 
 const backend = 'http://127.0.0.1:8000';
 const route = '/api/receipt/scan';
-type NavTab = 'Home' | 'Case' | 'Records' | 'About' | 'Import records';
+type NavTab = 'Home' | 'Case file' | 'Records' | 'About' | 'Add records';
 const receipt: IntakeRecord = { kind: 'receipt', transaction_id: 'out-001', merchant: 'Leroy Merlin DIY', amount_cents: 8550, date: '2026-09-04', receipt_id: 'DOCUMENT-REF' };
 const headers = (token: string) => ({ Authorization: `Bearer ${token}` });
 const nav = (page: Page, name: NavTab) =>
@@ -192,8 +192,9 @@ test('mobile sync import and exact synthetic subscription request persist withou
   const token = await open(page);
   await page.getByRole('button', { name: 'Close receipt options', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await nav(page, 'Import records').click();
-  await expect(page.getByRole('dialog')).toContainText('Invoice sync is not enabled');
+  await nav(page, 'Add records').click();
+  await page.getByTestId('registry-tab-file').click();
+  await expect(page.getByRole('dialog')).toContainText('Mailbox and bank sync are not connected');
   const rows = [{ kind: 'subscription', subscription_id: 'imported-sub', service_name: 'My Imported Plan', monthly_cents: 1750, category: 'Productivity', last_billed: '2026-09-12', is_trial: true, trial_end_date: '2026-09-20' }];
   const staging = page.waitForResponse(r => r.url().endsWith('/api/ingest/sync'));
   await page.getByTestId('intake-file').setInputFiles({ name: 'subscription.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ records: rows })) });
@@ -207,7 +208,7 @@ test('mobile sync import and exact synthetic subscription request persist withou
   expect((await importing).status()).toBe(200);
   await expect(page.getByTestId('intake-result')).toContainText('Saved: 1 changes');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Close invoice sync', exact: true }).click();
+  await page.getByRole('button', { name: 'Close add records', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await nav(page, 'Records').click();
   const before = await state(request, token);

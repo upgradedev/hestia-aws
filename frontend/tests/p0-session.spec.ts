@@ -5,7 +5,7 @@ import type { BackendState, ClaimDraft, DemoSession } from '../src/api';
 const BACKEND = 'http://127.0.0.1:8000';
 const SESSION_KEY = 'hestia.demo-session.v1';
 type Started = DemoSession & { state: BackendState };
-type NavTab = 'Home' | 'Case' | 'Records' | 'About' | 'Import records';
+type NavTab = 'Home' | 'Case file' | 'Records' | 'About' | 'Add records';
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 const nav = (page: Page, name: NavTab) =>
   page.getByRole('navigation', { name: 'Household navigation' }).getByRole('button', { name, exact: true });
@@ -512,9 +512,10 @@ test('unavailable sync/scan and legacy dispatch aliases cannot bypass the approv
   expect(legacy.status()).toBe(400);
   const posts: string[] = [];
   page.on('request', req => { if (req.method() === 'POST') posts.push(req.url()); });
-  await nav(page, 'Import records').click();
-  await expect(page.getByRole('dialog')).toContainText('Invoice sync is not enabled');
-  await page.getByRole('button', { name: 'Close invoice sync', exact: true }).click();
+  await nav(page, 'Add records').click();
+  await page.getByTestId('registry-tab-file').click();
+  await expect(page.getByRole('dialog')).toContainText('Mailbox and bank sync are not connected');
+  await page.getByRole('button', { name: 'Close add records', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await nav(page, 'About').click();
   const view = page.getByTestId('architecture-claims');

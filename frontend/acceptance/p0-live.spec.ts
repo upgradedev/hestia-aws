@@ -8,7 +8,7 @@ const live = process.env.HESTIA_ACCEPTANCE_URL!.startsWith('https:');
 const pause = () => new Promise<void>(resolve => setTimeout(resolve, 1_100));
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 const NARRATIVE_HEADINGS = ['What I checked', 'Decisions waiting for you', 'Suggested next step'];
-type NavTab = 'Home' | 'Case' | 'Records' | 'About' | 'Import records';
+type NavTab = 'Home' | 'Case file' | 'Records' | 'About' | 'Add records';
 const nav = (page: Page, name: NavTab) =>
   page.getByRole('navigation', { name: 'Household navigation' }).getByRole('button', { name, exact: true });
 
@@ -387,7 +387,7 @@ if (process.env.HESTIA_ACCEPTANCE_PHASE === 'frontend') {
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Keep the whole case together');
     await test.info().attach(`${sha}-cold-start`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
     await start(page);
-    await nav(page, 'Case').click();
+    await nav(page, 'Case file').click();
     await expect(page.getByTestId('case-empty')).toContainText('No case saved yet');
     await expect(page.getByTestId('reviewed-facts')).toContainText('REC-2024-BOSCH-88');
     await page.getByTestId('prepare-case-notice').click();

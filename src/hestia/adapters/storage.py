@@ -490,7 +490,7 @@ class S3HouseholdStore:
         fresh = fresh_demo_state()
         # Preserve receipts, consumed tokens, revisions and quotas across a demo reset.
         for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count",
-                    "agent_calls", "agent_briefings"):
+                    "agent_calls", "agent_briefings", "agent_extracts"):
             fresh[key] = copy.deepcopy(state.get(key, fresh.get(key)))
         fresh["cases"] = copy.deepcopy(state.get("cases", []))
         preserve_intake(state, fresh)
@@ -506,7 +506,7 @@ def fresh_demo_state() -> dict[str, Any]:
     state["dispatch_records"] = []
     state.update(
         mode="simulated", drafts={}, cases=[], audit_events=[], action_count=0, generation=0,
-        agent_calls=0, agent_briefings=[],
+        agent_calls=0, agent_briefings=[], agent_extracts=0,
     )
     state["summary"] = summary_from_records(state)
     return state
@@ -514,6 +514,7 @@ def fresh_demo_state() -> dict[str, Any]:
 
 def preserve_intake(state: dict[str, Any], fresh: dict[str, Any]) -> None:
     """Reset cannot detach imported evidence, replay records or synthetic requests."""
-    for key in ("outflows", "subscriptions", "saved_receipts", "intakes", "intake_provenance"):
+    for key in ("outflows", "subscriptions", "saved_receipts", "intakes", "intake_provenance",
+                "appliances"):
         if key in state:
             fresh[key] = copy.deepcopy(state[key])

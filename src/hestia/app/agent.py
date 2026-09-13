@@ -1,6 +1,7 @@
 """Bounded, session-scoped Strands review route with server-side cost limits."""
 from __future__ import annotations
 
+import hashlib
 import os
 import uuid
 from collections.abc import Callable
@@ -10,15 +11,21 @@ from typing import Any
 from hestia.adapters.storage import S3HouseholdStore
 from hestia.agents.household_agent import (
     DEFAULT_MODEL_ID,
+    MAX_EXTRACT_CHARS,
     MAX_OUTPUT_TOKENS,
     AgentOutcome,
+    ExtractionOutcome,
     framework_version,
     run_live_agent,
+    run_text_extraction,
     run_tools_only,
 )
+from hestia.app.access import APIError
 from hestia.app.claims import charge_action, public_state, require_fields
+from hestia.domain.ocr import content_hash
 
 SESSION_CAP_DEFAULT = 3
+EXTRACT_SESSION_CAP_DEFAULT = 3
 DAILY_CAP_DEFAULT = 200
 BRIEFINGS_KEPT = 5
 
@@ -31,6 +38,8 @@ def agent_config() -> dict[str, Any]:
         "model_id": os.environ.get("HESTIA_BEDROCK_MODEL_ID", DEFAULT_MODEL_ID) if live else None,
         "framework": framework_version(),
         "session_cap": int(os.environ.get("HESTIA_AGENT_SESSION_CAP", SESSION_CAP_DEFAULT)),
+        "extract_session_cap": int(os.environ.get("HESTIA_AGENT_EXTRACT_SESSION_CAP",
+                                                  EXTRACT_SESSION_CAP_DEFAULT)),
         "daily_cap": int(os.environ.get("HESTIA_AGENT_DAILY_CAP", DAILY_CAP_DEFAULT)),
         "max_output_tokens": int(os.environ.get("HESTIA_AGENT_MAX_TOKENS", MAX_OUTPUT_TOKENS)),
         "region": os.environ.get("HESTIA_BEDROCK_REGION", "eu-west-1"),
@@ -82,3 +91,69 @@ def agent_review(
     })
     store.save_state(state)
     return {"status": "simulated", "briefing": record, "state": public_state(state)}
+
+
+def agent_extract(
+    store: S3HouseholdStore, body: dict[str, Any],
+    live_runner: Callable[..., ExtractionOutcome] | None = None,
+) -> dict[str, Any]:
+    """Propose intake records from pasted text; the household reviews and confirms them."""
+    require_fields(body, {"text"}, {"hint"})
+    text = body.get("text")
+    if (not isinstance(text, str) or not text.strip() or len(text) > MAX_EXTRACT_CHARS
+            or any(ord(c) < 32 and c not in "\n\r\t" for c in text)):
+        raise APIError(400, f"Paste 1 to {MAX_EXTRACT_CHARS} characters of plain text.")
+    hint = body.get("hint", "auto")
+    if hint not in ("auto", "receipt", "order", "statement"):
+        raise APIError(400, "Unknown document hint.")
+    config = agent_config()
+    if not config["live_model"]:
+        raise APIError(503, "Reading pasted text needs the model, which is not configured here. "
+                            "Enter the facts manually instead.")
+    state = store.load_state(create=False)
+    route = "/api/ingest/sync"
+    drafts = state.setdefault("intakes", {})
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    identity = "intake-" + content_hash({"source": "model_text_extraction", "hash": digest,
+                                        "route": route})[:32]
+    if identity in drafts:
+        return {"status": "simulated", "intake": drafts[identity], "replayed": True,
+                "state": public_state(state)}
+    used = int(state.get("agent_extracts", 0) or 0)
+    if used >= config["extract_session_cap"]:
+        raise APIError(429, "This sample copy has used its text readings. "
+                            "Enter the facts manually.")
+    if len(drafts) >= 8:
+        raise APIError(429, "Intake limit reached for this isolated session")
+    allowed, _count = store.increment_daily_counter("agent-review", config["daily_cap"])
+    if not allowed:
+        raise APIError(503, "The shared model budget is used up or unconfirmed today. "
+                            "Enter the facts manually instead.")
+    state["agent_extracts"] = used + 1
+    runner = live_runner or run_text_extraction
+    outcome = runner(text, hint, model_id=config["model_id"], region_name=config["region"],
+                     max_tokens=config["max_output_tokens"])
+    charge_action(state)
+    if outcome.mode != "live_model":
+        store.add_audit_event(state, "agent_extract", {"outcome": outcome.reason,
+                                                       "input_sha256": digest})
+        store.save_state(state)
+        raise APIError(502, "The model could not read this text. Nothing was saved; "
+                            "enter the facts manually or try again later.")
+    draft = {
+        "id": identity, "input_sha256": digest, "byte_count": len(text.encode("utf-8")),
+        "mime_type": "text/plain", "source": "model_text_extraction", "route": route,
+        "status": "staged", "created_at": datetime.now(UTC).isoformat(), "review": None,
+        "records": outcome.records, "ocr_status": "model_text", "confidence_score": None,
+        "model_id": outcome.model_id, "usage": outcome.usage, "duration_ms": outcome.duration_ms,
+        "message": "Proposed by the model from the pasted text. Review and correct every "
+                   "fact before importing; nothing is verified.",
+    }
+    drafts[identity] = draft
+    store.add_audit_event(state, "agent_extract", {
+        "intake_id": identity, "input_sha256": digest, "records": len(outcome.records),
+        "usage": outcome.usage, "model_id": outcome.model_id,
+    })
+    store.save_state(state)
+    return {"status": "simulated", "intake": state["intakes"][identity], "replayed": False,
+            "state": public_state(state)}

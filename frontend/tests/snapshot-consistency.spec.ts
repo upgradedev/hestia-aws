@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-type NavTab = 'Home' | 'Case' | 'Records' | 'About' | 'Import records';
+type NavTab = 'Home' | 'Case file' | 'Records' | 'About' | 'Add records';
 const nav = (page: Page, name: NavTab) =>
   page.getByRole('navigation', { name: 'Household navigation' }).getByRole('button', { name, exact: true });
 
@@ -51,7 +51,7 @@ for (const width of [1280, 375]) {
     await expect(page.getByText('2 purchases need a receipt reference', { exact: true })).toBeVisible();
     await page.getByTestId('metric-definitions').locator('summary').click();
     await expect(page.getByTestId('metric-definitions')).toContainText('Version 17');
-    await nav(page, 'Case').click();
+    await nav(page, 'Case file').click();
     await expect(page.getByTestId('reviewed-facts')).toContainText('Fixture Retailer B');
     await expect(page.getByTestId('reviewed-facts')).toContainText('€73.91 (not recovered)');
     await expect(page.getByTestId('prepare-case-notice')).toBeDisabled();
@@ -91,7 +91,7 @@ test('HE8 missing amount fails closed instead of fabricating money', async ({ pa
   await expect(page.getByTestId('recovery-amount')).toHaveText('Not available');
   await expect(page.getByTestId('alert-warranty')).toContainText('Amount not recorded');
   await expect(page.getByTestId('review-claim')).toBeDisabled();
-  await nav(page, 'Case').click();
+  await nav(page, 'Case file').click();
   await expect(page.getByTestId('reviewed-facts')).toContainText('Amount not recorded');
   await expect(page.getByTestId('prepare-case-notice')).toBeDisabled();
   await nav(page, 'Records').click();

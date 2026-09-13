@@ -38,6 +38,15 @@ function bool(value: unknown, field: string): boolean {
 function optionalString(value: unknown, field: string): string | undefined {
   return value === undefined || value === null ? undefined : string(value, field);
 }
+// Household-entered facts may be stored as empty text; treat blank as absent.
+function blankable(value: unknown, field: string): string | undefined {
+  return value === undefined || value === null || value === '' ? undefined : string(value, field);
+}
+function link(value: unknown, field: string): string | undefined {
+  const parsed = blankable(value, field);
+  if (parsed !== undefined && !/^https?:\/\/\S+$/.test(parsed)) return invalid(field);
+  return parsed;
+}
 function dateString(value: unknown, field: string): string {
   const parsed = string(value, field);
   if (!Number.isFinite(Date.parse(parsed))) return invalid(field);
@@ -64,12 +73,13 @@ function expiry(value: unknown): Expiry {
 }
 
 export interface BackendAppliance {
-  id: string; item_name: string; serial_number?: string; purchase_date: string;
+  id: string; item_name: string; brand?: string; model_number?: string; serial_number?: string; purchase_date: string;
   statutory_months: number; commercial_months: number; receipt_reference?: string;
   purchase_price_cents: number; seller_name: string; seller_email: string;
   has_repair_claim: boolean; repair_date?: string; repair_amount_cents: number;
   repair_issue?: string; claim_status: string;
   repair_amount_known?: boolean;
+  product_url?: string; manual_url?: string; quickstart_url?: string; source?: string;
 }
 export interface BackendSubscription {
   id: string; service_name: string; category: string; monthly_cents: number;
@@ -101,10 +111,12 @@ export interface BackendState {
   intakes?: IntakeDraft[];
   agent_briefings: AgentBriefing[];
   agent_calls: number;
+  agent_extracts: number;
 }
 
 export type IntakeRecord = Record<string, string | number | boolean | null>;
 export type IntakeRoute = '/api/receipt/scan' | '/api/ingest/sync';
+export type ExtractHint = 'auto' | 'receipt' | 'order' | 'statement';
 export interface IntakeChange {
   index: number; status: 'ready' | 'duplicate' | 'error'; message?: string;
   collection?: string; record_id?: string; before?: JsonObject | null; after?: JsonObject;
@@ -112,6 +124,7 @@ export interface IntakeChange {
 export interface IntakeDraft {
   id: string; input_sha256: string; byte_count: number; mime_type: string; source: string;
   route: IntakeRoute; status: 'staged' | 'review' | 'committed'; records: IntakeRecord[];
+  ocr_status: 'unavailable' | 'model_text'; model_id?: string; message?: string;
   review: null | { digest: string; source_version: number; original_records: IntakeRecord[]; corrected_records: IntakeRecord[]; changes: IntakeChange[] };
   result?: { ready: number; duplicate: number; error: number };
 }
@@ -126,7 +139,11 @@ function hash(value: unknown): string {
 }
 function decodeIntake(value: unknown): IntakeDraft {
   const d = object(value, 'intake');
-  if (!['staged', 'review', 'committed'].includes(String(d.status)) || d.ocr_status !== 'unavailable' || d.confidence_score !== null) return invalid('manual intake status');
+  if (!['staged', 'review', 'committed'].includes(String(d.status)) || d.confidence_score !== null) return invalid('manual intake status');
+  // Facts come from a person or from a bounded model reading pasted text; never from OCR.
+  if (d.ocr_status !== 'unavailable' && d.ocr_status !== 'model_text') return invalid('intake provenance');
+  if ((d.ocr_status === 'model_text') !== (d.source === 'model_text_extraction')) return invalid('intake provenance');
+  if (d.ocr_status === 'model_text' && typeof d.model_id !== 'string') return invalid('intake model');
   if (d.route !== '/api/receipt/scan' && d.route !== '/api/ingest/sync') return invalid('intake route');
   const review = d.review == null ? null : object(d.review, 'intake review');
   const result = d.result == null ? null : object(d.result, 'intake counts');
@@ -144,7 +161,8 @@ function decodeIntake(value: unknown): IntakeDraft {
   if (d.status === 'committed' && (!review || !result)) return invalid('committed intake evidence');
   return { id: string(d.id, 'intake ID'), input_sha256: hash(d.input_sha256), byte_count: integer(d.byte_count, 'document bytes'),
     mime_type: string(d.mime_type, 'document type'), source: string(d.source, 'source'), route: d.route,
-    status: d.status as IntakeDraft['status'], records,
+    status: d.status as IntakeDraft['status'], records, ocr_status: d.ocr_status,
+    model_id: blankable(d.model_id, 'intake model'), message: blankable(d.message, 'intake message'),
     review: review ? { digest: hash(review.digest), source_version: integer(review.source_version, 'review version'),
       original_records: array(review.original_records, intakeRecord, 'original facts'),
       corrected_records: array(review.corrected_records, intakeRecord, 'corrected facts'), changes } : null,
@@ -226,7 +244,8 @@ export function decodeState(value: unknown): BackendState {
       const a = object(value, 'appliance');
       return {
         id: string(a.id, 'appliance id'), item_name: string(a.item_name, 'item_name'),
-        serial_number: optionalString(a.serial_number, 'serial_number'), purchase_date: dateString(a.purchase_date, 'purchase_date'),
+        brand: blankable(a.brand, 'brand'), model_number: blankable(a.model_number, 'model_number'),
+        serial_number: blankable(a.serial_number, 'serial_number'), purchase_date: dateString(a.purchase_date, 'purchase_date'),
         statutory_months: integer(a.statutory_months, 'statutory_months'), commercial_months: integer(a.commercial_months, 'commercial_months'),
         receipt_reference: optionalString(a.receipt_reference, 'receipt_reference'),
         purchase_price_cents: integer(a.purchase_price_cents, 'purchase_price_cents'),
@@ -235,6 +254,8 @@ export function decodeState(value: unknown): BackendState {
         repair_amount_cents: a.repair_amount_cents == null ? 0 : integer(a.repair_amount_cents, 'repair_amount_cents'),
         repair_amount_known: a.repair_amount_cents != null,
         repair_issue: optionalString(a.repair_issue, 'repair_issue'), claim_status: string(a.claim_status, 'claim_status'),
+        product_url: link(a.product_url, 'product_url'), manual_url: link(a.manual_url, 'manual_url'),
+        quickstart_url: link(a.quickstart_url, 'quickstart_url'), source: blankable(a.source, 'appliance source'),
       };
     }, 'appliances'), 'appliances'),
     subscriptions: unique(array(s.subscriptions, value => {
@@ -276,6 +297,7 @@ export function decodeState(value: unknown): BackendState {
     intakes: unique(Object.values(object(s.intakes ?? {}, 'intakes')).map(decodeIntake), 'intakes'),
     agent_briefings: unique(array(s.agent_briefings ?? [], decodeBriefing, 'agent briefings'), 'agent briefings'),
     agent_calls: s.agent_calls === undefined ? 0 : integer(s.agent_calls, 'agent calls'),
+    agent_extracts: s.agent_extracts === undefined ? 0 : integer(s.agent_extracts, 'agent extracts'),
   };
 }
 
@@ -381,10 +403,20 @@ export const api = {
     return { status: 'ok' as const, mode: 'simulated' as const, live_send: false as const, live_model: d.live_model, model_id: modelId,
       commit: optionalString(d.commit, 'commit') ?? null,
       agent: { framework: string(agent.framework, 'framework'), session_cap: integer(agent.session_cap, 'session cap'),
+        extract_session_cap: agent.extract_session_cap === undefined ? null : integer(agent.extract_session_cap, 'extract cap'),
         daily_cap: integer(agent.daily_cap, 'daily cap'), max_output_tokens: integer(agent.max_output_tokens, 'max tokens') },
       storage_configured: bool(d.storage_configured, 'storage_configured'),
       demo_sessions_configured: bool(d.demo_sessions_configured, 'demo_sessions_configured') };
   }),
+  // The model proposes facts from pasted text; they land as a staged intake for human review.
+  agentExtract: (token: string, text: string, hint: ExtractHint) => request('/api/agent/extract', value => {
+    const d = object(value, 'extraction result');
+    if (d.status !== 'simulated' || typeof d.replayed !== 'boolean') return invalid('extraction result');
+    const intake = decodeIntake(d.intake), state = decodeState(d.state);
+    if (intake.source !== 'model_text_extraction' || intake.route !== '/api/ingest/sync' || intake.status !== 'staged') return invalid('extraction provenance');
+    if (!state.intakes?.some(i => JSON.stringify(i) === JSON.stringify(intake))) return invalid('persisted extraction');
+    return { intake, state, replayed: d.replayed };
+  }, protectedToken(token), { text, hint }),
   agentReview: (token: string) => request('/api/agent/review', value => {
     const d = object(value, 'review result');
     if (d.status !== 'simulated') return invalid('review status');
