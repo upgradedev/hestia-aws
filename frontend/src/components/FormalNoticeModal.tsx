@@ -1,22 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, ApiError, errorMessage, expiryMillis } from '../api';
 import type { ClaimDraft } from '../api';
 import type { ApplianceWarranty, DispatchRecord } from '../types';
 
 interface FormalNoticeModalProps {
-  appliance: ApplianceWarranty | null;
-  isOpen: boolean;
-  token: string;
-  enabled: boolean;
-  onClose: () => void;
-  onError: (error: unknown) => void;
-  onDispatch: (draft: ClaimDraft) => Promise<DispatchRecord>;
-  onViewCase: () => void;
+  appliance: ApplianceWarranty | null; isOpen: boolean; token: string; enabled: boolean;
+  onClose: () => void; onError: (error: unknown) => void;
+  onDispatch: (draft: ClaimDraft) => Promise<DispatchRecord>; onViewCase: () => void;
 }
 
-export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
-  appliance, isOpen, token, enabled, onClose, onError, onDispatch, onViewCase,
-}) => {
+export function FormalNoticeModal({ appliance, isOpen, token, enabled, onClose, onError, onDispatch, onViewCase }: FormalNoticeModalProps) {
   const [draft, setDraft] = useState<ClaimDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDispatching, setIsDispatching] = useState(false);
@@ -62,7 +55,6 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
     return () => { if (previous instanceof HTMLElement) previous.focus(); };
   }, [isOpen]);
 
-  // All hooks precede conditional returns. App remounts on close, selection, or session change.
   if (!isOpen || !appliance) return null;
   const unavailable = loading || !draft || !!error || expired || isDispatching || !!record || !enabled;
 
@@ -87,13 +79,13 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
     if (!draft || loading || error) return;
     const url = URL.createObjectURL(new Blob([draft.notice], { type: 'text/plain;charset=utf-8' }));
     const link = document.createElement('a');
-    link.href = url; link.download = 'Hestia-Statutory-Notice.txt';
+    link.href = url; link.download = 'Hestia-repair-notice.txt';
     document.body.appendChild(link); link.click(); link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+    <div className="modal-backdrop">
       <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="formal-notice-title" tabIndex={-1}
         onKeyDown={event => {
           if (event.key === 'Escape' && !isDispatching) onClose();
@@ -104,48 +96,48 @@ export const FormalNoticeModal: React.FC<FormalNoticeModalProps> = ({
             else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
           }
         }}
-        className="max-w-2xl w-full bg-[#0d121c] border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="px-6 py-4 bg-slate-900 border-b border-white/10 flex items-center justify-between gap-3">
+        className="modal max-w-2xl">
+        <div className="modal-head">
           <div>
-            <h3 id="formal-notice-title" className="text-sm font-bold text-white">Repair Notice for Human Review</h3>
-            <p className="text-[11px] font-mono text-slate-400">Server preview · isolated simulation · no email will be sent</p>
+            <h3 id="formal-notice-title" className="font-bold">Repair notice for your review</h3>
+            <p className="text-xs muted">Prepared on the server from the recorded facts · recorded on approval, never sent</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handleCopy} disabled={!draft || loading || !!error} title="Copy to clipboard" className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg text-xs border border-white/10 disabled:opacity-50">{copied ? 'Copied!' : 'Copy Text'}</button>
-            <button onClick={handleDownload} disabled={!draft || loading || !!error} title="Download notice as text" className="text-slate-400 hover:text-amber-300 p-1.5 rounded-lg text-xs border border-white/10 disabled:opacity-50">Export .txt</button>
-            <button onClick={onClose} disabled={isDispatching} aria-label="Close notice" className="text-slate-400 hover:text-white p-1 text-lg">&times;</button>
+            <button onClick={handleCopy} disabled={!draft || loading || !!error} title="Copy to clipboard" className="btn btn-quiet btn-sm">{copied ? 'Copied' : 'Copy text'}</button>
+            <button onClick={handleDownload} disabled={!draft || loading || !!error} title="Download notice as text" className="btn btn-quiet btn-sm">Export .txt</button>
+            <button onClick={onClose} disabled={isDispatching} aria-label="Close notice" className="btn btn-quiet btn-sm text-lg">&times;</button>
           </div>
         </div>
-        <div className="p-6 overflow-y-auto space-y-4 text-xs font-mono text-slate-300 leading-relaxed bg-[#080b10]">
-          <p>{appliance.name}</p>
-          {loading && <p role="status">Preparing the server notice...</p>}
-          {error && <p role="alert" className="p-3 rounded-xl border border-rose-500/40 text-rose-300">{error} Close this preview, refresh state, and review a new draft before another approval.</p>}
-          {expired && !record && <p role="alert" className="text-amber-300">Draft expired. Close and reopen to explicitly request a new preview.</p>}
-          {!enabled && !record && <p className="text-amber-300">Approval unavailable while session state needs recovery or another action is pending.</p>}
-          {copyError && <p role="alert">{copyError}</p>}
+        <div className="modal-body space-y-4 text-sm">
+          <p className="font-semibold">{appliance.name}</p>
+          {loading && <p role="status" className="note">Preparing the server notice...</p>}
+          {error && <p role="alert" className="note-alert">{error} Close this preview, refresh state, and review a new draft before another approval.</p>}
+          {expired && !record && <p role="alert" className="note-alert">Draft expired. Close and reopen to explicitly request a new preview.</p>}
+          {!enabled && !record && <p className="note-alert">Approval unavailable while session state needs recovery or another action is pending.</p>}
+          {copyError && <p role="alert" className="note-alert">{copyError}</p>}
           {draft && <>
-            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-white/10 grid grid-cols-2 gap-3 text-[11px]">
-              <div><span className="text-slate-500 uppercase block">Claimant (Consumer)</span><span data-testid="notice-claimant">{draft.homeowner_name}</span></div>
-              <div><span className="text-slate-500 uppercase block">Seller (Commercial Respondent)</span><span>{draft.seller}</span><div data-testid="notice-recipient">{draft.seller_email}</div></div>
+            <div className="inset p-3 grid grid-cols-2 gap-3 text-xs">
+              <div><span className="faint uppercase block">Claimant (consumer)</span><span data-testid="notice-claimant" className="font-semibold">{draft.homeowner_name}</span></div>
+              <div><span className="faint uppercase block">Seller (respondent)</span><span className="font-semibold">{draft.seller}</span><div data-testid="notice-recipient" className="mono">{draft.seller_email}</div></div>
             </div>
-            <div className="border-t border-b border-white/10 py-2.5">
-              <div><strong>SUBJECT:</strong> <span data-testid="notice-subject">{draft.subject}</span></div>
-              <div><strong>RECORDED REPAIR COST:</strong> <span data-testid="notice-amount">{(draft.amount_cents / 100).toFixed(2)} {draft.currency}</span></div>
+            <div className="border-t border-b border-[var(--line)] py-2.5 text-xs space-y-1">
+              <div><strong>Subject:</strong> <span data-testid="notice-subject">{draft.subject}</span></div>
+              <div><strong>Recorded repair cost:</strong> <span data-testid="notice-amount">{(draft.amount_cents / 100).toFixed(2)} {draft.currency}</span></div>
             </div>
-            <pre data-testid="server-notice" className="whitespace-pre-wrap break-words font-mono text-xs">{draft.notice}</pre>
-            <p className="text-xs text-slate-400">Approval expires: {new Date(expiryMillis(draft.expires_at)).toLocaleString()}. Prepared from the recorded facts; no eligibility decision is implied.</p>
-            <details className="pt-3 border-t border-white/10 text-[10px] text-slate-400 break-all"><summary className="cursor-pointer">Preview and generator detail</summary>Preview digest: {draft.digest}<br />Mode: {draft.mode} · Generator: {draft.model_id}</details>
+            <pre data-testid="server-notice" className="whitespace-pre-wrap break-words mono text-xs inset p-3">{draft.notice}</pre>
+            <p className="text-xs muted">Approval expires: {new Date(expiryMillis(draft.expires_at)).toLocaleString()}. Prepared from the recorded facts; no eligibility decision is implied.</p>
+            <details className="text-xs faint break-all"><summary>Preview and generator detail</summary>Preview digest: {draft.digest}<br />Mode: {draft.mode} · Generator: {draft.model_id}</details>
           </>}
-          {record && <div role="status" data-testid="claim-result" className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200">Simulated approval recorded. No email sent and no reimbursement recorded. Record: {record.id}</div>}
-          {record && <button data-testid="open-persisted-case" onClick={onViewCase} className="w-full px-5 py-3 rounded-xl bg-amber-400 text-slate-950 font-bold">Continue to saved case and next step</button>}
+          {record && <div role="status" data-testid="claim-result" className="inset p-3 note-ok">Simulated approval recorded. No email sent and no reimbursement recorded. Record: {record.id}</div>}
+          {record && <button data-testid="open-persisted-case" onClick={onViewCase} className="btn btn-primary w-full">Continue to the saved case and next step</button>}
         </div>
-        <div className="px-6 py-4 bg-slate-900 border-t border-white/10 flex items-center justify-between gap-3">
-          <button onClick={onClose} disabled={isDispatching} className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">{record ? 'Close' : 'Cancel / Edit Later'}</button>
-          <button onClick={handleSend} disabled={unavailable} data-testid="approve-claim" className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-lg disabled:opacity-50">
-            {record ? 'Simulated approval recorded' : isDispatching ? 'Recording simulated approval...' : 'Approve Simulated Notice'}
+        <div className="modal-foot">
+          <button onClick={onClose} disabled={isDispatching} className="btn btn-quiet btn-sm">{record ? 'Close' : 'Cancel / edit later'}</button>
+          <button onClick={handleSend} disabled={unavailable} data-testid="approve-claim" className="btn btn-primary">
+            {record ? 'Approval recorded' : isDispatching ? 'Recording your approval…' : 'Approve this notice (recorded, not sent)'}
           </button>
         </div>
       </div>
     </div>
   );
-};
+}
