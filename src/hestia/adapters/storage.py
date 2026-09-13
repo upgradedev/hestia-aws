@@ -217,6 +217,7 @@ class S3HouseholdStore:
     """Scoped conditional state writes; explicit in-memory mode is for CI only."""
 
     _states: dict[str, dict[str, Any]] = {}
+    _counters: dict[str, int] = {}
     _lock = threading.RLock()
     MAX_STATE_BYTES = 262144
 
@@ -412,6 +413,51 @@ class S3HouseholdStore:
         })
         return seal
 
+    def increment_daily_counter(
+        self, name: str, limit: int, day: str | None = None,
+    ) -> tuple[bool | None, int]:
+        """Reserve one unit of a shared daily budget with conditional writes.
+
+        Returns (allowed, count). ``allowed`` is None when the budget could not be
+        confirmed; callers must then treat the paid action as unavailable.
+        """
+        if not re.fullmatch(r"[a-z0-9-]{1,40}", name):
+            raise ValueError("Invalid counter name")
+        day = day or datetime.now(UTC).date().isoformat()
+        key = f"demo/workspaces/_usage/{name}-{day}.json"
+        s3 = self._get_s3()
+        if s3 is None:
+            with self._lock:
+                count = self._counters.get(key, 0)
+                if count >= limit:
+                    return False, count
+                self._counters[key] = count + 1
+                return True, count + 1
+        for _attempt in range(4):
+            try:
+                try:
+                    response = s3.get_object(Bucket=self.bucket, Key=key)
+                except Exception as exc:
+                    if self._error_code(exc) != "NoSuchKey":
+                        raise
+                    s3.put_object(Bucket=self.bucket, Key=key, ContentType="application/json",
+                                  Body=json.dumps({"count": 1, "day": day}).encode("utf-8"),
+                                  IfNoneMatch="*")
+                    return True, 1
+                stored = json.loads(response["Body"].read(4096).decode("utf-8"))
+                count = int(stored.get("count", 0))
+                if count >= limit:
+                    return False, count
+                s3.put_object(Bucket=self.bucket, Key=key, ContentType="application/json",
+                              Body=json.dumps({"count": count + 1, "day": day}).encode("utf-8"),
+                              IfMatch=response["ETag"])
+                return True, count + 1
+            except Exception as exc:
+                if self._error_code(exc) in ("PreconditionFailed", "ConditionalRequestConflict"):
+                    continue
+                return None, 0
+        return None, 0
+
     def get_outbox_status(self) -> dict[str, Any]:
         state = self.load_state(create=False)
         dispatches = state.get("dispatch_records", [])
@@ -434,7 +480,8 @@ class S3HouseholdStore:
         state = self.load_state(create=False)
         fresh = fresh_demo_state()
         # Preserve receipts, consumed tokens, revisions and quotas across a demo reset.
-        for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count"):
+        for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count",
+                    "agent_calls", "agent_briefings"):
             fresh[key] = copy.deepcopy(state.get(key, fresh.get(key)))
         fresh["cases"] = copy.deepcopy(state.get("cases", []))
         preserve_intake(state, fresh)
@@ -450,6 +497,7 @@ def fresh_demo_state() -> dict[str, Any]:
     state["dispatch_records"] = []
     state.update(
         mode="simulated", drafts={}, cases=[], audit_events=[], action_count=0, generation=0,
+        agent_calls=0, agent_briefings=[],
     )
     state["summary"] = summary_from_records(state)
     return state

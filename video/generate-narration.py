@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
-"""Generate short, measured TTS scenes and aligned captions in CI.
+"""Generate short, measured TTS scenes and aligned captions for the demo video.
 
-Copied from upgradedev/archon-datahub, master a1feb16, file video/generate-narration.py.
-The pristine copy is kept at ../../upstream/archon-datahub/generate-narration.py, so
-`diff` shows every change the kit made. Those changes are:
+Reads video/narration.json, synthesizes one MP3 per beat under HESTIA_VIDEO_ROOT/narration,
+measures each file with ffprobe and writes timing.json plus captions.en.srt with per-beat
+offsets. The capture and compose steps consume those measured offsets, so the video is cut
+to the audio that was actually produced, never to an estimate.
 
-  1. Per-scene caching. A scene is re-synthesized only when its speech text or its
-     voice settings change, so fixing one beat costs one TTS call instead of all of
-     them. ElevenLabs does not return identical audio for identical input, so without
-     this every fix re-rolls every other beat and shifts every measured offset.
-  2. An ElevenLabs provider next to the original Google Cloud TTS provider.
-  3. OUT.mkdir(exist_ok=True), which caching requires. The original refused to run
-     twice into the same directory.
-  4. A fail-closed check that no scene still contains an unfilled <PLACEHOLDER>, so
-     the template cannot be narrated verbatim into a shipped video.
-
-Everything else, including the measured per-beat timing that makes this pipeline
-worth copying, is unchanged.
+Behaviour:
+  1. Per-scene caching. A scene is re-synthesized only when its speech text or its voice
+     settings change, so fixing one beat costs one TTS call instead of all of them. The
+     provider does not return identical audio for identical input, so without the cache
+     every fix would re-roll every other beat and shift every measured offset.
+  2. Two providers: ElevenLabs (default in the spec) and Google Cloud TTS.
+  3. The output directory may already exist, which caching requires.
+  4. A fail-closed check that no scene still contains an unfilled <PLACEHOLDER>, so a
+     template cannot be narrated verbatim into a shipped video.
 """
 
 from __future__ import annotations
@@ -32,13 +30,13 @@ import time
 import urllib.error
 import urllib.request
 
-ROOT = pathlib.Path(os.environ.get("HESTIA_VIDEO_ROOT", os.environ.get("ARCHON_VIDEO_ROOT", ".")))
+ROOT = pathlib.Path(os.environ.get("HESTIA_VIDEO_ROOT", "."))
 SPEC = pathlib.Path(__file__).with_name("narration.json")
 OUT = ROOT / "narration"
 TAIL_SECONDS = 0.65
 
-# Historical names across the fourteen entries, in precedence order. Whichever is set
-# is used. The value is never printed and never written to a receipt.
+# Accepted key variable names, in precedence order. Whichever is set is used. The value
+# is never printed and never written to a receipt.
 ELEVENLABS_KEY_ENV_NAMES = ("ELEVENLABS_API_KEY", "XI_API_KEY", "ELEVEN_LABS_KEY")
 
 
@@ -102,10 +100,8 @@ def elevenlabs_key() -> str:
 
 
 def synthesize_elevenlabs(text: str, spec: dict[str, object], retries: int = 3) -> bytes:
-    """Body copied from upgradedev/archon-qwen-autopilot, 2a85b4f, file
-    scripts/build_video.py, function synth_elevenlabs (lines 313-338). Changed only to
-    read the voice and model from the narration spec and to return the bytes instead of
-    writing the file."""
+    """Call the ElevenLabs text-to-speech endpoint with the voice and model from the spec
+    and return the audio bytes; retries with a growing pause on any failure."""
     config = spec.get("elevenLabs")
     if not isinstance(config, dict):
         raise SystemExit("provider is elevenlabs but the spec has no elevenLabs block")
@@ -236,7 +232,7 @@ def synthesize_google(text: str, spec: dict[str, object], token: str) -> bytes:
 def main() -> None:
     spec = json.loads(SPEC.read_text(encoding="utf-8"))
     segments = spec.get("segments")
-    if spec.get("schemaVersion") != "archon.submission-video/v1" or not isinstance(segments, list):
+    if spec.get("schemaVersion") != "hestia.submission-video/v1" or not isinstance(segments, list):
         raise SystemExit("narration contract is invalid")
     provider = str(spec.get("provider", "google"))
     if provider not in ("google", "elevenlabs"):
@@ -312,7 +308,7 @@ def main() -> None:
     (OUT / "timing.json").write_text(
         json.dumps(
             {
-                "schemaVersion": "archon.submission-video-timing/v1",
+                "schemaVersion": "hestia.submission-video-timing/v1",
                 "totalSeconds": round(offset, 3),
                 "scenes": timing,
             },

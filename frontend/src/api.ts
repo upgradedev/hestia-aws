@@ -99,6 +99,8 @@ export interface BackendState {
   outflows: BackendOutflow[]; utility_bills: UtilityBill[]; dispatch_records: DispatchRecord[];
   cases: HouseholdCase[];
   intakes?: IntakeDraft[];
+  agent_briefings: AgentBriefing[];
+  agent_calls: number;
 }
 
 export type IntakeRecord = Record<string, string | number | boolean | null>;
@@ -147,6 +149,38 @@ function decodeIntake(value: unknown): IntakeDraft {
       original_records: array(review.original_records, intakeRecord, 'original facts'),
       corrected_records: array(review.corrected_records, intakeRecord, 'corrected facts'), changes } : null,
     result: result ? { ready: integer(result.ready, 'imported count'), duplicate: integer(result.duplicate, 'duplicate count'), error: integer(result.error, 'error count') } : undefined };
+}
+
+export interface AgentToolCall { tool: string; input: Record<string, unknown>; output: string; status: string }
+export interface AgentBriefing {
+  id: string; timestamp: string; mode: 'live_model' | 'tools_only'; model_id: string | null; framework: string;
+  narrative: string | null; withheld: boolean; withheld_reasons: string[]; tool_calls: AgentToolCall[];
+  usage: { input_tokens: number; output_tokens: number } | null; duration_ms: number; stop_reason: string | null;
+  reason: string | null; session_calls_used: number; session_cap: number; daily_cap: number; real_recovered_cents: 0;
+}
+export function decodeBriefing(value: unknown): AgentBriefing {
+  const b = object(value, 'agent briefing');
+  if (b.mode !== 'live_model' && b.mode !== 'tools_only') return invalid('briefing mode');
+  if (b.real_recovered_cents !== 0 || typeof b.withheld !== 'boolean') return invalid('briefing boundary');
+  const narrative = b.narrative == null ? null : string(b.narrative, 'briefing narrative');
+  if ((b.mode === 'tools_only' || b.withheld) && narrative !== null) return invalid('briefing narrative source');
+  const usage = b.usage == null ? null : (() => {
+    const u = object(b.usage, 'briefing usage');
+    return { input_tokens: integer(u.input_tokens, 'input tokens'), output_tokens: integer(u.output_tokens, 'output tokens') };
+  })();
+  return {
+    id: string(b.id, 'briefing id'), timestamp: dateString(b.timestamp, 'briefing timestamp'), mode: b.mode,
+    model_id: b.model_id == null ? null : string(b.model_id, 'model id'), framework: string(b.framework, 'framework'),
+    narrative, withheld: b.withheld, withheld_reasons: array(b.withheld_reasons ?? [], v => string(v, 'withheld reason'), 'withheld reasons'),
+    tool_calls: array(b.tool_calls ?? [], v => {
+      const c = object(v, 'tool call');
+      return { tool: string(c.tool, 'tool name'), input: object(c.input ?? {}, 'tool input'), output: typeof c.output === 'string' ? c.output : invalid('tool output'), status: string(c.status, 'tool status') };
+    }, 'tool calls'),
+    usage, duration_ms: integer(b.duration_ms, 'duration'), stop_reason: b.stop_reason == null ? null : String(b.stop_reason),
+    reason: b.reason == null ? null : string(b.reason, 'briefing reason'),
+    session_calls_used: integer(b.session_calls_used, 'session calls'), session_cap: integer(b.session_cap, 'session cap'),
+    daily_cap: integer(b.daily_cap, 'daily cap'), real_recovered_cents: 0,
+  };
 }
 
 function dispatch(value: unknown): DispatchRecord {
@@ -240,6 +274,8 @@ export function decodeState(value: unknown): BackendState {
     dispatch_records: unique(array(s.dispatch_records, dispatch, 'dispatch_records'), 'dispatch_records'),
     cases: unique(array(s.cases ?? [], decodeCase, 'cases'), 'cases'),
     intakes: unique(Object.values(object(s.intakes ?? {}, 'intakes')).map(decodeIntake), 'intakes'),
+    agent_briefings: unique(array(s.agent_briefings ?? [], decodeBriefing, 'agent briefings'), 'agent briefings'),
+    agent_calls: s.agent_calls === undefined ? 0 : integer(s.agent_calls, 'agent calls'),
   };
 }
 
@@ -338,11 +374,24 @@ export const api = {
   }, protectedToken(token), { ...update }),
   health: () => request('/healthz', value => {
     const d = object(value, 'health');
-    if (d.status !== 'ok' || d.mode !== 'simulated' || d.live_send !== false || d.live_model !== false) return invalid('transport mode');
-    return { status: 'ok', mode: 'simulated', live_send: false, live_model: false,
+    if (d.status !== 'ok' || d.mode !== 'simulated' || d.live_send !== false || typeof d.live_model !== 'boolean') return invalid('transport mode');
+    const modelId = d.model_id == null ? null : string(d.model_id, 'model id');
+    if (d.live_model !== (modelId !== null)) return invalid('model configuration');
+    const agent = object(d.agent ?? {}, 'agent limits');
+    return { status: 'ok' as const, mode: 'simulated' as const, live_send: false as const, live_model: d.live_model, model_id: modelId,
+      commit: optionalString(d.commit, 'commit') ?? null,
+      agent: { framework: string(agent.framework, 'framework'), session_cap: integer(agent.session_cap, 'session cap'),
+        daily_cap: integer(agent.daily_cap, 'daily cap'), max_output_tokens: integer(agent.max_output_tokens, 'max tokens') },
       storage_configured: bool(d.storage_configured, 'storage_configured'),
       demo_sessions_configured: bool(d.demo_sessions_configured, 'demo_sessions_configured') };
   }),
+  agentReview: (token: string) => request('/api/agent/review', value => {
+    const d = object(value, 'review result');
+    if (d.status !== 'simulated') return invalid('review status');
+    const briefing = decodeBriefing(d.briefing), state = decodeState(d.state);
+    if (!state.agent_briefings.some(b => b.id === briefing.id)) return invalid('persisted briefing');
+    return { briefing, state };
+  }, protectedToken(token), {}),
   mcts: () => request('/api/simulation/mcts', value => {
     const d = object(value, 'illustration');
     if (d.mode !== 'illustrative' || d.empirical_success_rate !== null) return invalid('illustration mode');

@@ -78,8 +78,16 @@ class FrontendHostingTests(unittest.TestCase):
         self.assertEqual(object_policy["Resource"], {"Fn::Sub": "${State.Arn}/demo/workspaces/*"})
         deny = next(s for s in statements if s["Effect"] == "Deny")
         self.assertIn("ses:*", deny["Action"])
-        self.assertIn("bedrock:*", deny["Action"])
+        self.assertNotIn("bedrock:*", deny["Action"])
         self.assertIn("s3:DeleteObject", deny["Action"])
+        bedrock = next(s for s in statements if "bedrock:InvokeModel" in s.get("Action", []))
+        self.assertEqual(bedrock["Effect"], "Allow")
+        self.assertEqual(len(bedrock["Resource"]), 2)
+        self.assertIn("inference-profile/eu.anthropic.claude-haiku-4-5-20251001-v1:0",
+                      bedrock["Resource"][0]["Fn::Sub"])
+        self.assertEqual(bedrock["Resource"][1],
+                         "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0")
+        self.assertNotIn("bedrock:*", bedrock["Action"])
         env = resources["Function"]["Properties"]["Environment"]["Variables"]
         self.assertIn("resolve:secretsmanager", env["HESTIA_DEMO_SECRET"]["Fn::Sub"])
         self.assertNotIn("Default", tmpl["Parameters"]["DemoSecretArn"])
@@ -87,6 +95,12 @@ class FrontendHostingTests(unittest.TestCase):
         reader = resources["ReaderRole"]["Properties"]["Policies"][0]["PolicyDocument"]
         reader_deny = next(s for s in reader["Statement"] if s["Effect"] == "Deny")
         self.assertIn("s3:PutObject", reader_deny["Action"])
+        self.assertIn("bedrock:*", reader_deny["Action"])
+        self.assertEqual(env["HESTIA_LIVE_MODEL"], "bedrock")
+        self.assertEqual(env["HESTIA_AGENT_SESSION_CAP"], "3")
+        self.assertEqual(env["HESTIA_AGENT_DAILY_CAP"], "200")
+        self.assertEqual(resources["ReaderFunction"]["Properties"]["MemorySize"], 512)
+        self.assertEqual(resources["Function"]["Properties"]["MemorySize"], 1024)
         self.assertEqual(resources["Route"]["Properties"]["Target"],
                          {"Fn::Sub": "integrations/${ReaderIntegration}"})
         writes = [r["Properties"] for name, r in resources.items() if name.startswith("WriteRoute")]

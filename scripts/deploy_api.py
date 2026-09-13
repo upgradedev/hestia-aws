@@ -24,6 +24,7 @@ ACCOUNT = "308857099262"
 DEPLOY_BUCKET = f"hestia-afh-deploy-{ACCOUNT}-{REGION}"
 STACK_NAME = "hestia-afh-api"
 SDK_VERSION = "1.43.93"
+STRANDS_VERSION = "1.53.0"
 
 
 def validate_release(approved_commit: str, secret_arn: str, actual_commit: str) -> None:
@@ -58,12 +59,18 @@ def package():
     dest_hestia = PKG_DIR / "hestia"
     shutil.copytree(src_hestia, dest_hestia, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
-    # The demo does not invoke Strands/Bedrock. Bundle its tested storage SDK so
-    # conditional writes do not depend on the Lambda runtime's changing SDK.
+    # Bundle the tested storage SDK and the pinned Strands SDK so conditional writes
+    # and the bounded review agent do not depend on the Lambda runtime's changing SDK.
     subprocess.run([
         sys.executable, "-m", "pip", "install", "--only-binary=:all:",
-        "--target", str(PKG_DIR), f"boto3=={SDK_VERSION}",
+        "--target", str(PKG_DIR), f"boto3=={SDK_VERSION}", f"strands-agents=={STRANDS_VERSION}",
     ], check=True)
+    subprocess.run([
+        sys.executable, "-S", "-c",
+        "import strands, strands.models; from strands import Agent, tool; "
+        "from strands.models import BedrockModel; print('strands bundled')",
+    ], check=True, env={**os.environ, "PYTHONPATH": str(PKG_DIR),
+                       "AWS_EC2_METADATA_DISABLED": "true"})
     subprocess.run([
         sys.executable, "-c",
         "from botocore.session import Session; "

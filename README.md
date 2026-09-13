@@ -1,96 +1,137 @@
-# Hestia: household review and simulated case follow-up
+# Hestia: the household warranty and subscription sentinel
 
-Hestia turns synthetic household records into a reviewable notice and a saved case timeline, so a visitor can inspect the facts, approve the exact text, and record a next step.
+Hestia reads a household's receipts, subscriptions and repair records with a Strands agent on Amazon Bedrock, and nothing is sent until the household has approved the exact text.
 
-The example household is fictional. Approval records a simulation: it does not send email, cancel a provider subscription, or recover money. A case outcome entered by a visitor is an attestation, not independent merchant confirmation. Independent human UAT is NOT_RUN.
+Built for the AWS "Agents for Humans" hackathon, Everyday Agents track. The household is fictional (Athens Apartment 4B, homeowner Elena Georgiou). Approvals are recorded, never sent. Real recovered money is always EUR 0.00.
 
-[Demo entry point](https://drusjukc9d4oc.cloudfront.net/) · [Backend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml) · [Frontend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml)
+[Live demo](https://drusjukc9d4oc.cloudfront.net/) · [Health check](https://drusjukc9d4oc.cloudfront.net/healthz) · [Backend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml) · [Frontend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml) · [Architecture diagram](docs/architecture.svg) · [Devpost text](docs/DEVPOST_SUBMISSION.md) · [Video script](docs/VIDEO_SCRIPT_150S.md)
 
-The URL is a navigation link, not a deployment receipt. This document describes source; current frontend/backend identity and availability require a release receipt. Source corrections do not authorize deployment.
+## Try it in 90 seconds
 
-## Evidence-bound mode inventory
+The live URL is a navigation link, not a deployment receipt. `GET /healthz` reports the deployed backend revision (`commit`) and whether the Strands agent may call Bedrock there (`live_model`). [PRIMARY: `curl https://drusjukc9d4oc.cloudfront.net/healthz`, 2026-09-13] the endpoint reported `commit` `b9149c77e7eb18b129df7bbfcc5c19d4241ca050` and `live_model` `false`, which is the release before this branch. The release of this branch goes through the workflows in [Deploy and verify](#deploy-and-verify); after it, `/healthz` reports the new commit and `live_model` `true`.
 
-[PRIMARY: repository inspection, 2026-09-12] Implementation baseline: `39e148536080e0957cc36dbd3ca8ea6b74785800`. Inspect the baseline with `git show 39e148536080e0957cc36dbd3ca8ea6b74785800:<path>`. The inventory below includes the subsequent hardening changes in this tree; reproduce them with `git rev-parse HEAD` and `git show HEAD:<path>`. This is repository evidence, not a pipeline result or live measurement. CI receipts must identify the tested revision separately.
+1. Open https://drusjukc9d4oc.cloudfront.net/ and click **Start with the sample household**. One click creates a private demo space (an HMAC capability valid for 30 minutes, `src/hestia/app/access.py:15`) with its own S3 workspace. No account, no login.
+2. On **Home**, click **Ask Hestia to review this household**. A Strands agent calls four tools over the recorded facts and writes a briefing: what it checked, the decisions waiting for you, one suggested next step. The chips under the button show the mode (live model or deterministic checks), the model id, token usage and how many of the 3 model reviews remain for this space. Open **Tool trace** to read every tool call and its output.
+3. Click **Review the exact notice**. The notice to Kotsovolos Megastore is prepared on the server from the recorded facts. You see the recipient, subject, the recorded repair cost (EUR 185.00) and the full text before you click **Approve this notice (recorded, not sent)**.
+4. Click **Continue to the saved case and next step**. The case timeline shows the draft, the approval and the next step. Record a reply, a planning deadline, extra evidence or an outcome; each entry keeps who recorded it, when and from which source.
+5. Open **About** for the list of what runs and what does not, and a read-only console that sends the same `GET /healthz` and `GET /api/state` requests the app sends.
 
-| Surface | Mode and useful behavior | Evidence path | Boundary / next evidence needed |
+What is real: the Lambda functions, the S3 workspace writes, the Bedrock model call through the Strands Agents SDK (when `live_model` is true), the session capability and the single-use approval token.
+What is recorded, not executed: the notice approval (`delivery_status` `SIMULATED`, `ses_message_id` `null`), subscription cancellation requests, utility review requests, case replies (labelled manual or synthetic).
+What is not connected: bank feeds (PSD2), mailbox or retailer sync, receipt OCR, email sending (SES), Bedrock AgentCore, Bedrock Guardrails.
+
+## How Strands Agents is used
+
+One sentence: the Strands agent is the reader. It calls bounded tools over one isolated workspace and writes the briefing; it never prepares, approves or sends the notice, and a guard withholds any sentence the tool outputs do not support.
+
+| Piece | Where | What it does |
+|---|---|---|
+| Agent construction | `src/hestia/agents/household_agent.py:343-354` | `BedrockModel(model_id="eu.anthropic.claude-haiku-4-5-20251001-v1:0", region_name="eu-west-1", max_tokens=700, temperature=0.2, streaming=False)` inside `strands.Agent(model=..., tools=..., system_prompt=SYSTEM_PROMPT, callback_handler=None)` |
+| Tools | `src/hestia/agents/household_agent.py:127-245` | Four plain callables built per workspace, wrapped with `strands.tool` so the schema comes from the signature and docstring: `review_repair_evidence(appliance_id)`, `audit_subscriptions()`, `check_receipts_and_utilities()`, `read_case_timeline()` |
+| Prompt rules | `src/hestia/agents/household_agent.py:35-51` | The system prompt forbids stating entitlement, inventing deadlines or amounts, and drafting the notice; it fixes three headings and a 180-word ceiling. The review prompt names the recorded appliance ids and the review date |
+| Trace and usage | `src/hestia/agents/household_agent.py:298-331` | Tool calls are paired from `agent.messages` (`toolUse` and `toolResult` blocks); token usage comes from `result.metrics.accumulated_usage` |
+| Narrative guard | `src/hestia/agents/household_agent.py:53-75, 255-277` | Withholds the narrative when it matches an entitlement or deadline pattern, names an amount (with a currency mark) that no tool output contains, exceeds 3200 characters or omits the review boundary. The tool trace is shown regardless |
+| Timeout and fallback | `src/hestia/agents/household_agent.py:334-389` | The agent runs in a worker thread with a 20 second limit; a timeout or exception returns the deterministic tools-only outcome with the reason (`model_timeout`, `model_error:<class>`), never invented text |
+| Limits | `src/hestia/app/agent.py:21-84`, `src/hestia/adapters/storage.py:416-459` | 3 model calls per demo space (`state.agent_calls`), 200 per day through a conditional S3 counter at `demo/workspaces/_usage/agent-review-<day>.json` (`If-None-Match` on create, `If-Match` on update); an unconfirmed budget means no model call |
+| Route | `src/hestia/app/api.py:329-330`, `src/hestia/app/api.py:279-292` | `POST /api/agent/review` needs the session capability; `GET /healthz` reports `live_model`, `model_id`, `framework`, `session_cap`, `daily_cap`, `max_output_tokens`; `live_send` is always `false` |
+| IAM scope | `infra/hestia_api_stack.py:77-91, 240-242` | The writer role may call `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on that one inference profile and its foundation model only; the reader role denies `bedrock:*`; both deny `ses:*` and object deletes |
+| Runtime | `scripts/deploy_api.py:26-27, 62-73` | The Lambda package bundles `strands-agents==1.53.0` and `boto3==1.43.93` and proves `from strands import Agent, tool` imports inside the bundle |
+| UI | `frontend/src/components/AgentBriefing.tsx` | The briefing card renders the three sections without trusting model markup, the mode chips, the reason for a deterministic fallback, a withheld notice and the tool trace |
+| Tests | `tests/test_household_agent.py` | Tool outputs without entitlement, Strands tool schemas from signatures, tools-only mode, guard rejections and acceptances, trace extraction, fallback on error and timeout, the conditional daily counter, session cap, daily cap, health reporting |
+
+Directive (EU) 2019/771 is cited as general reference only. The tools return "review required" and never a determination of eligibility (`src/hestia/domain/warranties.py:192-248`).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  B[Browser: React app on CloudFront and S3] --> G[API Gateway HTTP API]
+  G -->|GET| R[Reader Lambda: read-only, Bedrock denied]
+  G -->|POST| W[Writer Lambda: session, review, exact approval, case updates]
+  R --> S[(S3 state: demo/workspaces/id/state.json, conditional writes)]
+  W --> S
+  W --> A[Strands Agent: four workspace tools]
+  A --> M[Amazon Bedrock: Claude Haiku 4.5, 3 per space, 200 per day]
+  W --> H{Human approval: single-use token bound to the exact digest}
+  H --> C[Recorded simulation and case timeline in S3; no SES]
+  X[Not connected: bank feed, mailbox, OCR, SES, AgentCore, Guardrails] -.-> W
+```
+
+The same picture with the boundaries drawn: [docs/architecture.svg](docs/architecture.svg). Narrative and evidence paths: [docs/BEDROCK_AGENTCORE_ARCHITECTURE.md](docs/BEDROCK_AGENTCORE_ARCHITECTURE.md) (the filename is historical; AgentCore is not connected).
+
+## What runs where
+
+[PRIMARY: repository inspection, 2026-09-13] Baseline before this wave: `b9149c77e7eb18b129df7bbfcc5c19d4241ca050`. Inspect the baseline with `git show b9149c77e7eb18b129df7bbfcc5c19d4241ca050:<path>` and this branch with `git show HEAD:<path>`; `git log b9149c77e7eb18b129df7bbfcc5c19d4241ca050..HEAD` lists the agent and UI commits on top of it. This is repository evidence, not a pipeline result or a live measurement.
+
+| Surface | Mode on this branch | Evidence path | Boundary |
 |---|---|---|---|
-| Anonymous preview | Implemented: read-only synthetic household records | `src/hestia/app/api.py` | Reading the preview does not create a private workspace |
-| Demo session | Implemented: explicit start creates an expiring capability for an isolated workspace | `src/hestia/app/access.py`, `src/hestia/app/api.py` | Demo access is not household identity verification |
-| Notice preparation | Implemented: deterministic review template; server binds recipient, subject, text, amount and source revision | `src/hestia/app/claims.py` | Draft language and fixture dates do not establish legal entitlement |
-| Approval and history | Simulated: approval, result and audit entry persist together; stale evidence and altered approval are rejected | `src/hestia/app/claims.py` | No delivery receipt, provider cancellation or recovery follows from approval |
-| Case follow-up | Implemented in source: actor, time, evidence reference, planning deadline, manual/synthetic replies, partial/resolved outcomes and reopen | `src/hestia/app/cases.py`, `src/hestia/domain/cases.py` | Attested amounts are separate from real recovery; evidence references are not independently authenticated |
-| Reader / writer | Implemented in infrastructure source: separate functions and roles; reader denies writes; both deny SES and Bedrock | `infra/hestia_api_stack.py` | Effective deployed IAM needs exact-release verification |
-| Persistence | Implemented S3 adapter: scoped `demo/workspaces/` keys, `If-None-Match` creation and `If-Match` updates; CI uses an in-memory store | `src/hestia/adapters/storage.py`, `scripts/ci_api_server.py` | Conditional writes and SHA-256 digests are not WORM storage or third-party signatures |
-| Household rules | Implemented: date comparisons, subscription deltas, receipt matching and utility baseline comparisons on supplied records | `src/hestia/agents/sentinel.py`, `src/hestia/domain/` | Fixture thresholds are assumptions; legal eligibility and real-world accuracy remain unverified |
-| Manual receipt reference | Implemented: visitor can link a receipt reference to a supplied outflow | `src/hestia/app/api.py` | A typed reference is not OCR or proof of document authenticity |
-| Document / manual import | Implemented in source: bounded PNG/JSON validation or manual facts, saved original/corrected records, exact reviewed subset, conditional commit, dedupe and replay | `src/hestia/app/intake.py`, `src/hestia/domain/intake.py`, `src/hestia/domain/ocr.py` | PNG text is not extracted; OCR stays unavailable. No account connection, appliance creation or document authenticity is inferred. Only hashes and reviewed facts are retained |
-| Bank / mailbox / retailer feeds | Not connected | `src/hestia/app/api.py` | No PSD2 feed, mailbox ingestion or retailer account sync is established |
-| Bedrock / Strands | Disabled in the demo route; optional agent construction exists in source, while consumer review letters are deterministic | `src/hestia/agents/sentinel.py`, `src/hestia/app/claims.py`, `infra/hestia_api_stack.py` | No paid live model result or AI-quality measurement is claimed |
-| AgentCore / Bedrock Guardrails / Action Groups | Proposed, not connected | `docs/BEDROCK_AGENTCORE_ARCHITECTURE.md` | Helper names and API metadata do not prove managed-service deployment |
-| SES | Disabled in the demo route and denied by infrastructure source | `src/hestia/app/claims.py`, `infra/hestia_api_stack.py` | Simulated outbox records are not sent email |
-| Optional MCTS | Toy illustration on explicit request; fixed assumptions, separate from claim preparation | `src/hestia/domain/mcts.py`, `src/hestia/app/api.py` | No empirical settlement probability, legal-route recommendation or measured time-to-resolution |
+| Anonymous preview | Implemented: `GET /api/state` without a token returns the fresh synthetic household | `src/hestia/app/api.py:293-294` | Reading does not create a workspace |
+| Demo space | Implemented: `POST /api/demo/session` issues a 30-minute HMAC capability and creates the workspace with `If-None-Match` | `src/hestia/app/access.py`, `src/hestia/adapters/storage.py:278-304` | A capability is not household identity |
+| Strands review agent | Implemented on the writer Lambda; the stack sets `HESTIA_LIVE_MODEL=bedrock`; tools-only fallback with a visible reason | `src/hestia/agents/household_agent.py`, `src/hestia/app/agent.py`, `infra/hestia_api_stack.py:105-119` | Model output quality is unmeasured; a live call needs the deployed IAM and a confirmed daily budget |
+| Notice preparation | Deterministic template bound to recipient, subject, amount, source revision and workspace | `src/hestia/app/claims.py:77-155`, `src/hestia/agents/tools.py:133-178` | The draft does not establish legal eligibility |
+| Approval | Single-use token hashed server-side, digest compared in constant time, replay returns the same record, changed evidence rejected; result recorded as `SIMULATED` | `src/hestia/app/claims.py:158-224` | No delivery, no seller contact, no recovery |
+| Case lifecycle | draft, review, authorized, pending_response, needs_information, rejected, resolved, reopen; replies labelled manual or synthetic; outcomes attested, capped at the recorded repair amount | `src/hestia/domain/cases.py:13-32`, `src/hestia/app/cases.py` | Attested amounts are not real recovery; `real_recovered_cents` stays 0 |
+| Household rules | Date comparisons, subscription price and trial checks, receipt matching from EUR 50, utility baseline comparison | `src/hestia/agents/tools.py`, `src/hestia/domain/` | Thresholds are fixture assumptions |
+| Manual import | Stage, review and commit of JSON facts or a validated PNG; hashes and reviewed facts retained | `src/hestia/app/intake.py`, `src/hestia/domain/ocr.py` | PNG bytes are validated, no text is extracted; OCR is not connected |
+| Reader and writer | Two Lambda functions and roles; reader denies writes and Bedrock; both deny SES and deletes | `infra/hestia_api_stack.py`, `src/hestia/app/web.py:311-317` | Effective deployed IAM needs a release-bound check |
+| Persistence | S3 adapter with `If-None-Match` creation and `If-Match` updates; CI uses the in-memory mode of the same class | `src/hestia/adapters/storage.py`, `scripts/ci_api_server.py` | Conditional writes and SHA-256 digests are not WORM storage |
+| Health | `GET /healthz` reports commit, mode, `live_send` false, `live_model`, `model_id` and agent limits | `src/hestia/app/api.py:279-292` | A health field is configuration, not a measured call |
+| Legacy toy route | `GET /api/simulation/mcts` still answers with `mode: illustrative`; the UI no longer shows it | `src/hestia/app/api.py:301-304` | No empirical rate behind it |
+| Bank, mailbox, retailer feeds | Not connected | `src/hestia/adapters/storage.py:476-477`, `frontend/src/components/AboutView.tsx` | No PSD2 or mailbox adapter exists |
+| SES | Not connected; direct dispatch route answers 403; IAM denies `ses:*` | `src/hestia/app/api.py:310-311`, `infra/hestia_api_stack.py:87-91` | Recorded approvals are not sent email |
+| Bedrock AgentCore, Guardrails | Not connected | `docs/BEDROCK_AGENTCORE_ARCHITECTURE.md` | The narrative guard is a local pattern check, not a managed guardrail |
 
-## Explore the demo
+## Deploy and verify
 
-1. Open the cockpit and inspect the synthetic preview. Start an isolated demo session explicitly to enable its scoped actions.
-2. Review the household facts and prepare the exact server notice. Inspect its recipient, text, amount and evidence before approving the simulation.
-3. Open the saved case, record a manual or synthetic follow-up, and inspect the timeline. A planning deadline is a user-entered next step, not a verified legal deadline.
-4. Use About / Advanced to inspect illustrative journeys, commercial hypotheses and the read-only API console. Unknown and disabled states are visible beside the feature they limit.
+Every workflow lives in `.github/workflows/`. Their presence is not a passing result: read the run for the tested revision.
 
-Source case follow-up is not a statement that the currently deployed URL includes this revision. A newer frontend must not be published over an incompatible backend.
+| Workflow | Trigger | What it proves |
+|---|---|---|
+| `ci.yml` | pull requests; pushes to `main`, `build/**`, `codex/**`; manual dispatch | `ruff check`, `python tools/prose_gate.py`, `pytest --cov=hestia --cov-branch --cov-fail-under=85 tests/ infra/`, executed synthetic measurement and ablation retained as artifacts, the Lambda package built with the pinned Strands and boto3 versions, a health call inside the bundle without AWS access, and the rendered CloudFormation template with checksums |
+| `frontend-ci.yml` | pull requests; pushes to `main`, `codex/**`; dispatch; reused by the deploy workflow | `tsc` and Vite build, Playwright journeys against `scripts/ci_api_server.py` (the real Lambda handler behind loopback HTTP), acceptance calibration in the frontend phase, Python hosting tests |
+| `frontend-deploy.yml` | manual dispatch on `main` with an approved backend SHA | `infra/check_p0_backend.py` reads the live `/healthz` and requires the approved commit, `live_send` false and a named bounded model before publishing versioned assets to S3 and CloudFront; `infra/frontend_smoke.py` then checks headers, the commit marker, the paired backend SHA and that an anonymous approval is rejected |
+| `production-acceptance.yml` | manual dispatch on `main`, backend phase first, then the paired frontend phase | `frontend/acceptance/p0-live.spec.ts` against the live URL: exact approval, replay, isolation between sessions and fail-closed legacy routes |
 
-## Synthetic examples and measurements
+Backend release: `CI=true python scripts/deploy_api.py --approved-commit <sha> --demo-secret-arn <arn>` packages the runtime, uploads it under `releases/<sha>/` and prepares a CloudFormation change set with `--no-execute-changeset` (`scripts/deploy_api.py:119-136`). Executing the change set is a separate reviewed step; CloudFormation rolls the stack back if the update fails. The state bucket is retained across stack operations.
 
-The amounts in `frontend/src/data/seedData.ts` are synthetic example inputs, not household savings. A repair invoice value is an amount for review; a subscription difference is arithmetic on supplied prices; a missing receipt is an evidence gap. None establishes reimbursement, prevented spending or a real outcome.
-
-`tools/measure.py` and `tools/ablate.py` operate on synthetic fixtures. Historical `docs/measurement.json` and `docs/ablation.json` remain unchanged: their recovery/exposure/delta labels describe synthetic amounts and rule assumptions, not real impact, seller confirmation or avoided household expenditure. They were not regenerated for this correction. Test counts, coverage, model accuracy, hallucination rates, cost, margin, ROI, market size, customer count and merchant settlement rates are unknown or unmeasured for this revision.
-
-Any future measurement must identify its command, input sample, exact SHA, UTC execution time and retained output. Synthetic arithmetic, automated CI, live read-only checks, human attestation and live mutating drills must remain distinguishable.
-
-## Architecture and assurance
-
-The operative source flow is HTTP API to scoped Python handlers to conditional state persistence. Human approval is an application mechanism. It is not evidence of Bedrock Return-of-Control or AgentCore execution. See the [architecture inventory](docs/BEDROCK_AGENTCORE_ARCHITECTURE.md) and [assurance evidence and gaps](docs/assurance.md).
-
-No certification, regulatory risk classification or completed AWS review is claimed. Legal references and jurisdiction-specific applicability require separate verification; these source corrections supply no legal verdict.
+This branch (`claude/final-wave-20260913`) is outside the push triggers above, so its CI results come from a pull request or a manual dispatch. Coverage measured locally on 2026-09-13 with `python -m pytest --cov=hestia --cov-branch tests/ infra/` on Python 3.11 was 96.26%; that is a local measurement, not the CI figure. Read test counts and the CI coverage figure from the CI run, not from this file.
 
 ## Verification and testbook
 
 <a id="integration-testbook"></a>
 
-The table defines the integrated regression testbook. Commands below run only in CI; their existence is not a passing result. Read the workflow checkout SHA and retained artifacts together. Automated checks do not complete deployed acceptance, legal review or independent human UAT (NOT_RUN).
+The table defines the integrated regression testbook. The commands run in CI; their existence is not a passing result. Read the workflow checkout SHA and retained artifacts together. Automated checks do not complete deployed acceptance, legal review or independent human UAT (NOT_RUN).
 
 | Requirement | Targeted regression evidence | Integration receipt |
 |---|---|---|
-| HE5 document bytes and manual correction | `tests/test_ocr.py`; `tests/test_intake.py::test_json_correction_exact_review_commit_and_reload_retain_real_input_provenance`; `frontend/tests/intake.spec.ts` JSON correction/reload journey | Backend JUnit plus browser HTTP state assertions; malformed bytes must fail without a draft |
-| HE6 exact import, partial rows, dedupe and isolation | `tests/test_intake.py` partial-batch, stale/digest/consent, cross-session, concurrent-write and lost-response tests; corresponding `frontend/tests/intake.spec.ts` journeys | Valid rows only after explicit subset consent; one persisted result after retry; no provider call |
-| HE7 separate warranty facts and cautious wording | `tests/test_legal_guards.py` delivery/leap-day, statutory vs commercial, missing/contradictory facts, currency, draft tamper and current redress tests | JUnit proves technical guards, not legal entitlement or a jurisdiction-specific legal opinion |
-| HE8 coherent facts and unknown vs zero | `tests/test_intake.py::test_canonical_metric_projection_ignores_stale_summary_and_uses_inclusive_threshold`; `frontend/tests/display-facts.spec.ts`; `frontend/tests/snapshot-consistency.spec.ts` | Backend record projection plus desktop/mobile presentation fixtures with changed amounts, reload and keyboard navigation; real recovery stays zero |
-| HE9 complete saved case journey | `tests/test_case_api.py`, `tests/test_case_lifecycle.py`, `frontend/tests/case-lifecycle.spec.ts` | Actual CI HTTP journey: review, exact approval, follow-up, partial/rejected/resolved outcome and replay; independent human acceptance remains separate |
-| HE10 truthful detailed claims and read-only console | `tests/test_claims_inventory.py`; `frontend/tests/claims-inventory.spec.ts` | Injected false copy must fail; browser checks every journey, provider limits, unknown metrics and error reporting |
-| HE10 executed synthetic measurement, not financial outcomes | `tests/test_measurement_truthfulness.py`; `tests/test_web.py` | Backend evidence artifact includes CLI measurement/ablation JSON, fixture fingerprints and verification context; altered fixtures and historical overwrite attempts must fail |
-| Preserved P0 authority and deployment contract | Existing `frontend/tests/p0-session.spec.ts`, Python authority/storage tests and `frontend/acceptance/` | Existing negative gates and exact-content acceptance calibration remain required; calibration is not an AWS deployment receipt |
+| HE5 document bytes and manual correction | `tests/test_ocr.py`; `tests/test_intake.py::test_json_correction_exact_review_commit_and_reload_retain_real_input_provenance`; `frontend/tests/intake.spec.ts` JSON correction and reload journey | Backend JUnit plus browser HTTP state assertions; malformed bytes must fail without a draft |
+| HE6 exact import, partial rows, dedupe and isolation | `tests/test_intake.py` partial-batch, stale digest, consent, cross-session, concurrent-write and lost-response tests; matching `frontend/tests/intake.spec.ts` journeys | Valid rows only after explicit subset consent; one persisted result after retry; no provider call |
+| HE7 separate warranty facts and cautious wording | `tests/test_legal_guards.py` delivery and leap-day, statutory versus commercial, missing or contradictory facts, currency, draft tamper and current redress tests | JUnit proves technical guards, not legal eligibility |
+| HE8 coherent facts and unknown versus zero | `tests/test_intake.py::test_canonical_metric_projection_ignores_stale_summary_and_uses_inclusive_threshold`; `frontend/tests/display-facts.spec.ts`; `frontend/tests/snapshot-consistency.spec.ts` | Backend record projection plus presentation fixtures with changed amounts, reload and keyboard navigation; real recovery stays zero |
+| HE9 complete saved case journey | `tests/test_case_api.py`, `tests/test_case_lifecycle.py`, `frontend/tests/case-lifecycle.spec.ts` | CI HTTP journey: review, exact approval, follow-up, partial, rejected and resolved outcomes, replay; independent human acceptance remains separate |
+| HE10 truthful claims and read-only console | `tests/test_claims_inventory.py` (README, docs, narration, the four UI copy files); `frontend/tests/claims-inventory.spec.ts` | Injected false copy must fail the Python guard. The browser spec still targets the previous About and Advanced pages and is being realigned to the rebuilt UI; until that lands, read the frontend CI run before citing it |
+| HE10 executed synthetic measurement, not financial outcomes | `tests/test_measurement_truthfulness.py`; `tests/test_web.py` | The CI artifact holds executed measurement and ablation JSON with fixture fingerprints and a verification context; altered fixtures and historical overwrite attempts must fail |
+| HE14 bounded Strands review | `tests/test_household_agent.py` | Tools-only mode, guard rejections, fallback on error and timeout, conditional daily counter, session cap, health reporting; a live Bedrock call is not exercised in CI |
+| Preserved P0 authority and deployment contract | `frontend/tests/p0-session.spec.ts`, Python authority and storage tests, `frontend/acceptance/` | Negative gates and exact-content acceptance calibration; calibration is not an AWS deployment receipt |
 
-The HE8 snapshot tests intentionally replace GET responses to test presentation and are not backend-write evidence. Intake and case journeys use the actual CI HTTP API and persisted isolated state; the lost-response journey intentionally aborts only after the server has committed. `display-facts.spec.ts` contains pure-function Playwright cases, not browser journeys. Source/PR checks run on each change and on merges to main. The frontend publication step stays owner-gated.
+The HE8 snapshot tests replace GET responses on purpose to test presentation; they are not backend-write evidence. Intake and case journeys use the CI HTTP API and persisted isolated state. `display-facts.spec.ts` holds pure-function Playwright cases, not browser journeys.
 
-| CI scope | Command / workflow | Evidence required before reporting a result |
+| CI scope | Command or workflow | Evidence required before reporting a result |
 |---|---|---|
-| Claims inventory | `python -m pytest tests/test_claims_inventory.py` | Exact SHA, UTC, JUnit and any failures |
-| Browser claims and preserved console | `npm --prefix frontend run test:e2e -- claims-inventory.spec.ts` | Existing CI API/Vite harness, exact SHA, Playwright report and screenshots |
+| Claims inventory and prose | `python -m pytest tests/test_claims_inventory.py`; `python tools/prose_gate.py` | Exact SHA, UTC time, JUnit and any failures |
+| Browser claims | `npm --prefix frontend run test:e2e -- claims-inventory.spec.ts` | CI API and Vite harness, exact SHA, Playwright report |
 | Backend regression | `.github/workflows/ci.yml` | Complete result including lint, tests, coverage and runtime packaging |
-| Frontend regression | `.github/workflows/frontend-ci.yml` | Build, existing journeys, new claims checks and acceptance calibration |
+| Frontend regression | `.github/workflows/frontend-ci.yml` | Build, journeys, acceptance calibration |
 | Independent human UAT | NOT_RUN | Named human protocol and attestation; automated browser work is not a substitute |
 
-These commands belong in CI. Source checks cannot verify a deployed service or a real consumer outcome.
+## Synthetic measurements
 
-## Approval-only rollout and recovery
+`tools/measure.py` and `tools/ablate.py` operate on synthetic fixtures. The historical `docs/measurement.json` and `docs/ablation.json` remain unchanged and were not regenerated for this branch: their recovery, exposure and delta labels describe synthetic amounts and rule assumptions, not real impact, seller confirmation or avoided household spending. `tests/test_measurement_truthfulness.py` pins them and refuses to overwrite them. Model accuracy, hallucination rate, cost per review, latency, time saved and merchant settlement rates are unmeasured for this revision. Any future measurement must name its command, input sample, exact SHA, UTC time and retained output.
 
-1. Review the exact candidate SHA, CI artifacts, IAM diff and stored-state compatibility. A dedicated signing secret is required; provisioning or rotating it needs release authority and its value must not enter source or logs.
-2. Render configuration in CI and inspect the CloudFormation change set before applying it. Retain the state bucket, historical keys and scoped conditional writes. The deployment helper prepares a change set; preparation is not execution.
-3. Backend cutover and frontend publication need separate owner approval. Main CI does not establish deployment. Verify paired frontend/backend identities, narrowed provider permissions, session isolation, changed-draft rejection, replay and reload against the approved revision.
-4. If a cutover fails, retain provider denials and reconcile retained state and release artifacts. Recovery requires a reviewed plan; restoring an unguarded legacy route is not an automatic fallback.
+## Prior work
 
-Source verification performs no production migration, secret creation, real send or paid model activation.
+`infra/frontend_stack.py` (the CloudFront and S3 hosting template, which serves several of the author's products) and the video tooling in `video/`, `web/video/` and `scripts/verify_video_sync.py` were written by the same author for earlier projects and reused here. Everything else in this repository was written for Hestia. Business logic follows the text of Directive (EU) 2019/771 and general household bookkeeping practice; no customer or private data was used.
 
-## Licensing metadata needs owner resolution
+## License
 
-[PRIMARY: repository inspection, 2026-09-12] At baseline `39e148536080e0957cc36dbd3ca8ea6b74785800`, `pyproject.toml` declares MIT while the earlier README asserted Apache-2.0. No LICENSE file is tracked (`git ls-tree -r --name-only 39e148536080e0957cc36dbd3ca8ea6b74785800`; inspect metadata with `git show 39e148536080e0957cc36dbd3ca8ea6b74785800:pyproject.toml`). Public licensing is an unresolved owner decision outside this correction. No license, copyright, ownership or publication change is made here.
+MIT. See [LICENSE](LICENSE). `pyproject.toml` declares the same license.

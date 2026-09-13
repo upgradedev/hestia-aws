@@ -11,7 +11,7 @@ export interface ApplianceWarranty {
   seller_name: string;
   seller_email: string;
   receipt_id: string;
-  legal_statutory_months: number; // 24 months under Directive (EU) 2019/771
+  legal_statutory_months: number; // 24 months under Directive (EU) 2019/771, screening input only
   statutory_warranty_months?: number;
   commercial_warranty_months: number;
   status: 'active' | 'defect_reported' | 'expired';
@@ -20,6 +20,7 @@ export interface ApplianceWarranty {
   statutory_basis: string;
   repair_amount_cents?: number;
   claim_status?: string;
+  case_status?: string;
 }
 
 export interface PaymentOutflow {
@@ -46,6 +47,7 @@ export interface SubscriptionTracker {
   next_billing_date: string;
   renewal_cost_eur: number;
   synthetic_requested?: boolean;
+  status: string;
 }
 
 export interface SentinelAlert {
@@ -58,10 +60,10 @@ export interface SentinelAlert {
   statutory_basis?: string;
   potential_savings_eur: number;
   documented_amount_eur?: number;
-  action_type: 'dispatch_claim' | 'cancel_trial' | 'request_receipt' | 'dispute_bill';
+  action_type: 'dispatch_claim' | 'open_case' | 'cancel_trial' | 'request_receipt' | 'dispute_bill';
   item_id?: string;
   action_label: string;
-  draft_preview?: string;
+  case_status?: string;
 }
 
 export interface DispatchRecord {
@@ -88,41 +90,12 @@ export interface HouseholdSummary {
   potential_recovery_eur: number;
   active_sentinels: number;
   missing_receipts_eur?: number;
+  missing_receipts_count?: number;
   documented_repair_cost_eur?: number;
   real_recovered_eur?: number;
+  monthly_recurring_eur?: number;
+  open_cases_count?: number;
+  closed_cases_count?: number;
 }
 
-export type ActiveTab = 'landing' | 'overview' | 'cases' | 'vault' | 'subscriptions' | 'journeys' | 'gtm' | 'architecture';
-
-export interface JourneyStep {
-  id: string;
-  title: string;
-  description: string;
-  technicalMechanism: string;
-  legalBasis?: string;
-  economicDeltaEur?: number;
-  completed: boolean;
-}
-
-export interface UserJourney {
-  id: string;
-  title: string;
-  badge: string;
-  persona: string;
-  problemStatement: string;
-  resolution: string;
-  financialImpactEur: number;
-  legalCitation: string;
-  steps: JourneyStep[];
-}
-
-export type Locale = 'en' | 'de';
-
-export interface AgentExecutionStep {
-  step: number;
-  name: string;
-  mechanism: string;
-  status: 'completed' | 'in_progress' | 'pending';
-  duration_ms?: number;
-  seal?: string;
-}
+export type ActiveTab = 'landing' | 'home' | 'case' | 'records' | 'about';

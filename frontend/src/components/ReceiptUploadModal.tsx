@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { errorMessage } from '../api';
 import type { PaymentOutflow } from '../types';
 import { IntakePanel } from './IntakePanel';
@@ -9,7 +9,7 @@ interface ReceiptUploadModalProps {
   onReceiptMatched: (outflowId: string, receiptId: string) => Promise<void>;
   intake: Omit<IntakePanelProps, 'route' | 'initialRecords'>;
 }
-export const ReceiptUploadModal: React.FC<ReceiptUploadModalProps> = ({ isOpen, onClose, outflows, enabled, onReceiptMatched, intake }) => {
+export function ReceiptUploadModal({ isOpen, onClose, outflows, enabled, onReceiptMatched, intake }: ReceiptUploadModalProps) {
   const [outflowId, setOutflowId] = useState(() => outflows.find(o => !o.has_receipt)?.id ?? '');
   const [receiptId, setReceiptId] = useState('');
   const [pending, setPending] = useState(false);
@@ -25,34 +25,37 @@ export const ReceiptUploadModal: React.FC<ReceiptUploadModalProps> = ({ isOpen, 
     finally { lock.current = false; setPending(false); }
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-      <div role="dialog" aria-modal="true" aria-labelledby="receipt-title" className="max-w-xl w-full max-h-[90vh] overflow-y-auto bg-[#0d121c] border border-amber-500/30 rounded-2xl shadow-2xl flex flex-col">
-        <div className="px-6 py-4 bg-slate-900 border-b border-white/10 flex items-center justify-between">
-          <h3 id="receipt-title" className="text-sm font-bold text-white">Receipt Anti-Join & Proof Vault</h3>
-          <button onClick={onClose} disabled={pending} aria-label="Close receipt options" className="text-slate-400 hover:text-white p-1 text-lg">&times;</button>
+    <div className="modal-backdrop">
+      <div role="dialog" aria-modal="true" aria-labelledby="receipt-title" className="modal max-w-xl">
+        <div className="modal-head">
+          <div>
+            <h3 id="receipt-title" className="font-bold">Link a receipt</h3>
+            <p className="text-xs muted">Manual reference or document import, reviewed before saving</p>
+          </div>
+          <button onClick={onClose} disabled={pending} aria-label="Close receipt options" className="btn btn-quiet btn-sm text-lg">&times;</button>
         </div>
-        <div className="p-6 space-y-4 text-xs text-slate-300">
-          <p role="status" className="p-3 rounded-xl border border-amber-500/30 text-amber-300">Receipt scanning is not enabled in this demo. Manual document import is available below; no OCR or new appliance creation.</p>
-          <p>For this isolated demo, you can manually record a receipt reference against an existing transaction. This does not verify the receipt.</p>
-          <label className="block">Transaction
-            <select value={outflowId} onChange={event => setOutflowId(event.target.value)} disabled={pending || confirmed || !enabled} className="mt-1 w-full bg-slate-900 border border-white/20 rounded-lg p-2" data-testid="receipt-outflow">
+        <div className="modal-body space-y-4 text-sm">
+          <p role="status" className="note">Receipt scanning is not enabled in this demo. Manual document import is available below; no OCR or new appliance creation.</p>
+          <p className="muted">Record a receipt reference against an existing transaction. This links the reference; it does not verify the receipt.</p>
+          <label className="block font-medium">Transaction
+            <select value={outflowId} onChange={event => setOutflowId(event.target.value)} disabled={pending || confirmed || !enabled} className="field" data-testid="receipt-outflow">
               <option value="">Select a transaction</option>
               {outflows.filter(o => !o.has_receipt).map(o => <option key={o.id} value={o.id}>{o.merchant} · €{o.amount_eur.toFixed(2)} · {o.timestamp}</option>)}
             </select>
           </label>
-          <label className="block">Receipt reference
-            <input value={receiptId} onChange={event => setReceiptId(event.target.value)} disabled={pending || confirmed || !enabled} maxLength={100} data-testid="receipt-reference" className="mt-1 w-full bg-slate-900 border border-white/20 rounded-lg p-2" />
+          <label className="block font-medium">Receipt reference
+            <input value={receiptId} onChange={event => setReceiptId(event.target.value)} disabled={pending || confirmed || !enabled} maxLength={100} data-testid="receipt-reference" className="field" />
           </label>
-          {!enabled && <p className="text-amber-300">Begin or recover your isolated demo session to record a manual reference.</p>}
-          {error && <p role="alert" className="text-rose-300">{error}</p>}
-          {confirmed && <p role="status" data-testid="receipt-result" className="text-emerald-300">Manual demo reference recorded. Not OCR verified; no new appliance was created.</p>}
+          {!enabled && <p className="note-alert">Start or refresh your demo space to record a manual reference.</p>}
+          {error && <p role="alert" className="note-alert">{error}</p>}
+          {confirmed && <p role="status" data-testid="receipt-result" className="note-ok">Manual demo reference recorded. Not OCR verified; no new appliance was created.</p>}
           <IntakePanel {...intake} route="/api/receipt/scan" initialRecords={outflows.filter(o => !o.has_receipt).slice(0, 1).map(o => ({ kind: 'receipt', transaction_id: o.id, merchant: o.merchant, amount_cents: Math.round(o.amount_eur * 100), date: o.timestamp, receipt_id: 'YOUR-RECEIPT-ID' }))} />
         </div>
-        <div className="px-6 py-4 bg-slate-900 border-t border-white/10 flex items-center justify-between">
-          <button onClick={onClose} disabled={pending} className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs">Close</button>
-          <button onClick={() => { void submit(); }} disabled={!enabled || pending || confirmed || !outflowId || !receiptId.trim()} data-testid="link-receipt" className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-bold text-xs disabled:opacity-50">{pending ? 'Recording...' : 'Record Manual Demo Reference'}</button>
+        <div className="modal-foot">
+          <button onClick={onClose} disabled={pending} className="btn btn-quiet btn-sm">Close</button>
+          <button onClick={() => { void submit(); }} disabled={!enabled || pending || confirmed || !outflowId || !receiptId.trim()} data-testid="link-receipt" className="btn btn-primary">{pending ? 'Recording…' : 'Record the reference'}</button>
         </div>
       </div>
     </div>
   );
-};
+}

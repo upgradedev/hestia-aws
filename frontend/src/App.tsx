@@ -1,41 +1,43 @@
-import React, { useState } from 'react';
-import { Header } from './components/Header';
-import { ConsumerDashboard } from './components/ConsumerDashboard';
-import { AssetVaultView } from './components/AssetVaultView';
-import { SubscriptionsView } from './components/SubscriptionsView';
-import { UserJourneysView } from './components/UserJourneysView';
-import { GtmInvestorView } from './components/GtmInvestorView';
-import { ArchitectureView } from './components/ArchitectureView';
+import { useState } from 'react';
+import { TopBar } from './components/TopBar';
+import { Landing } from './components/Landing';
+import { SentinelHome } from './components/SentinelHome';
+import { CaseWorkspace } from './components/CaseWorkspace';
+import { RecordsView } from './components/RecordsView';
+import { AboutView } from './components/AboutView';
 import { FormalNoticeModal } from './components/FormalNoticeModal';
 import { ReceiptUploadModal } from './components/ReceiptUploadModal';
 import { UtilityDisputeModal } from './components/UtilityDisputeModal';
-import { LandingPage } from './components/LandingPage';
 import { EmailSyncModal } from './components/EmailSyncModal';
-import { CaseWorkspace } from './components/CaseWorkspace';
 import type { CaseUpdate } from './cases';
-import { api, ApiError } from './api';
+import { api, ApiError, errorMessage } from './api';
 import type { ClaimDraft, IntakeRoute } from './api';
-import { EMPTY_SUMMARY, mapState } from './stateMapping';
+import { mapState } from './stateMapping';
 import { useDemoSession } from './useDemoSession';
-import type { ActiveTab, Locale } from './types';
+import type { ActiveTab } from './types';
 
-export const App: React.FC = () => {
+export function App() {
   const demo = useDemoSession();
   const [activeTab, setActiveTab] = useState<ActiveTab>('landing');
-  const [locale, setLocale] = useState<Locale>('en');
   const [selection, setSelection] = useState<string | null>(null);
-  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
-  const [isUtilityModalOpen, setIsUtilityModalOpen] = useState(false);
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [modal, setModal] = useState<'receipt' | 'utility' | 'import' | null>(null);
+  const [agentBusy, setAgentBusy] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
   const view = demo.state ? mapState(demo.state) : null;
   const enabled = demo.status === 'active' && !demo.busy;
   const selectedAppliance = view?.appliances.find(a => a.id === selection) ?? null;
   const utilityBill = demo.state?.utility_bills.find(bill => bill.status === 'spike_alert') ?? null;
+  const returning = demo.status === 'active';
 
+  const start = async () => {
+    if (demo.status === 'active') { setActiveTab('home'); return; }
+    setSelection(null);
+    if (await demo.begin()) setActiveTab('home');
+  };
   const openNotice = (id?: string) => {
     const item = view?.appliances.find(a => a.id === id);
     if (!enabled || !item) {
-      demo.reportError(new ApiError('Begin or recover your isolated session and select a valid appliance.'));
+      demo.reportError(new ApiError('Start or refresh your demo space and select a valid appliance.'));
       return;
     }
     setSelection(item.id);
@@ -67,71 +69,76 @@ export const App: React.FC = () => {
     const result = await api.intake(token, route, body);
     return { state: result.state, value: result.intake };
   });
+  const agentReview = async () => {
+    if (agentBusy) return;
+    setAgentBusy(true); setAgentError(null);
+    try {
+      await demo.mutate(async token => {
+        const result = await api.agentReview(token);
+        return { state: result.state, value: result.briefing };
+      });
+    } catch (error) { setAgentError(errorMessage(error)); }
+    finally { setAgentBusy(false); }
+  };
   const intakeProps = { enabled, stateVersion: demo.state?.version_seq ?? 0, drafts: demo.state?.intakes ?? [], onIntake: importIntake };
   const reset = async () => {
     await demo.mutate(async token => ({ state: await api.reset(token), value: undefined }));
-    setSelection(null); setIsUtilityModalOpen(false); setIsReceiptModalOpen(false);
+    setSelection(null); setModal(null);
   };
+  const select = (tab: ActiveTab) => { setActiveTab(tab); if (tab === 'case' || tab === 'home') void demo.refresh(); };
+  const showStrip = activeTab !== 'landing' || !!demo.error || demo.status === 'expired';
 
   return (
-    <div className="min-h-screen bg-[#07090e] flex flex-col text-slate-100">
-      <Header summary={view?.summary ?? EMPTY_SUMMARY} liveApiOnline={!!demo.state}
-        householdName={demo.state?.household_name ?? 'Synthetic household preview'}
-        activeTab={activeTab} pendingActionsCount={view?.alerts.length ?? 0} locale={locale}
-        onToggleLocale={() => setLocale(previous => previous === 'en' ? 'de' : 'en')}
-        onResetDemo={() => { void reset().catch(demo.reportError); }} resetDisabled={!enabled || !!selection}
-        onSelectTab={tab => { setActiveTab(tab); if (tab === 'cases') void demo.refresh(); }} onOpenSyncModal={() => setIsSyncModalOpen(true)} />
+    <div className="min-h-screen flex flex-col">
+      <TopBar householdName={demo.state?.household_name ?? 'Sample household'} activeTab={activeTab} onSelectTab={select}
+        sessionStatus={demo.status} expiresAt={demo.session ? demo.session.expires_at * 1000 : undefined}
+        onReset={() => { void reset().catch(demo.reportError); }} resetDisabled={!enabled || !!selection} onOpenImport={() => setModal('import')} />
 
-      <div className={`${activeTab === 'landing' && !demo.error && demo.status !== 'expired' ? 'hidden' : ''} w-full max-w-[1500px] mx-auto px-4 lg:px-8 py-3 border-b border-amber-500/20 bg-amber-950/10 text-xs`} data-testid="session-panel">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p data-testid="session-status">{demo.status === 'active' ? 'Isolated demo session active' : demo.status === 'expired' ? 'Demo session expired' : 'Synthetic preview'} · Simulation only. No model inference, email send, or real recovery.</p>
-          <div className="flex gap-3">
+      <div className={`${showStrip ? '' : 'hidden'} w-full max-w-[1400px] mx-auto px-4 lg:px-8 py-2 text-xs`} data-testid="session-panel">
+        <div className="card-muted px-4 py-2 flex flex-wrap items-center justify-between gap-3">
+          <p data-testid="session-status" className="muted">
+            {demo.status === 'active' ? 'Isolated demo session active' : demo.status === 'expired' ? 'Demo session expired' : demo.status === 'loading' ? 'Loading the sample household…' : 'Synthetic preview'}
+            {' · '}recorded approvals only; no email, provider action or real recovery.
+          </p>
+          <div className="flex gap-2">
             {demo.status !== 'active' && <button data-testid="begin-demo" disabled={demo.busy || demo.status === 'loading'}
-              onClick={() => { setSelection(null); void demo.begin(); }}
-              className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold disabled:opacity-50">
-              {demo.busy ? 'Starting...' : demo.status === 'expired' ? 'Restart Isolated Demo Session' : 'Begin Isolated Demo Session'}
+              onClick={() => { setSelection(null); void demo.begin(); }} className="btn btn-primary btn-sm">
+              {demo.busy ? 'Starting…' : demo.status === 'expired' ? 'Start a new demo space' : 'Start demo space'}
             </button>}
-            <button data-testid="refresh-state" disabled={demo.busy || demo.status === 'expired' || !!selection} onClick={() => { void demo.refresh(); }} className="px-3 py-2 rounded-xl border border-white/20 disabled:opacity-50">Recover / Refresh State</button>
+            <button data-testid="refresh-state" disabled={demo.busy || demo.status === 'expired' || !!selection} onClick={() => { void demo.refresh(); }} className="btn btn-secondary btn-sm">Refresh</button>
           </div>
         </div>
-        {demo.status === 'loading' && <p role="status">Loading server preview...</p>}
-        {demo.error && <p role="alert" className="mt-2 text-rose-300">{demo.error}</p>}
-        {demo.storageWarning && <p role="status" className="mt-2 text-amber-300">{demo.storageWarning}</p>}
+        {demo.status === 'loading' && <p role="status" className="px-4 pt-2">Loading server preview...</p>}
+        {demo.error && <p role="alert" className="note-alert px-4 pt-2">{demo.error}</p>}
+        {demo.storageWarning && <p role="status" className="note px-4 pt-2">{demo.storageWarning}</p>}
       </div>
 
-      <main id="main-content" tabIndex={-1} className={activeTab === 'landing' ? 'flex-1 w-full mx-auto' : 'flex-1 w-full mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8'}>
-        {activeTab === 'landing' && <LandingPage locale={locale} returning={!!demo.state?.cases.length} onLaunchCockpit={() => setActiveTab('overview')} onOpenSyncModal={() => setIsSyncModalOpen(true)} />}
-        {(activeTab === 'overview' || activeTab === 'cases') && demo.state && <CaseWorkspace key={demo.session?.token ?? 'preview'} state={demo.state} enabled={enabled} onPrepare={openNotice} onUpdate={updateCase} onRefresh={demo.refresh} />}
-        {activeTab === 'overview' && view && <ConsumerDashboard summary={view.summary} alerts={view.alerts} dispatchHistory={demo.state?.dispatch_records ?? []}
-          householdName={demo.state?.household_name ?? ''} actionsDisabled={!enabled}
-          {...{ snapshotVersion: demo.state?.version_seq, snapshotObservedAt: demo.state?.last_updated }}
-          onOpenNoticeModal={openNotice} onCancelTrial={cancelTrial} onOpenReceiptModal={() => setIsReceiptModalOpen(true)}
-          onOpenUtilityDisputeModal={() => setIsUtilityModalOpen(true)} onViewAllAssets={() => setActiveTab('vault')} onViewAllSubscriptions={() => setActiveTab('subscriptions')} />}
-        {activeTab === 'vault' && view && <AssetVaultView appliances={view.appliances} snapshotDate={demo.state!.last_updated} actionsDisabled={!enabled} onOpenClaimModal={a => openNotice(a.id)} />}
-        {activeTab === 'subscriptions' && view && <SubscriptionsView subscriptions={view.subscriptions} outflows={view.outflows} actionsDisabled={!enabled} onCancelTrial={cancelTrial} onOpenReceiptModal={() => setIsReceiptModalOpen(true)} />}
-        {!view && activeTab !== 'landing' && <p role="status">Household state is unavailable. Recover the server preview to continue.</p>}
-        {activeTab === 'journeys' && <UserJourneysView onSelectJourneyToSimulate={id => {
-          setActiveTab('overview');
-          if (id === 'journey-warranty-recovery') openNotice(view?.alerts.find(a => a.category === 'warranty_claim')?.item_id);
-          else if (id === 'journey-receipt-antijoin') setIsReceiptModalOpen(true);
-          else if (id === 'journey-utility-surge') setIsUtilityModalOpen(true);
-        }} />}
-        {activeTab === 'gtm' && <GtmInvestorView />}
-        {activeTab === 'architecture' && <ArchitectureView key={demo.session?.token ?? 'preview'} token={demo.session?.token ?? ''} onError={demo.reportError} />}
+      <main id="main-content" tabIndex={-1} className={activeTab === 'landing' ? 'flex-1 w-full' : 'flex-1 w-full mx-auto max-w-[1400px] p-4 sm:p-6 lg:p-8'}>
+        {activeTab === 'landing' && <Landing preview={demo.state} returning={returning} expired={demo.status === 'expired'} busy={demo.busy} error={demo.status !== 'active' ? demo.error : null} onStart={() => { void start(); }} />}
+        {activeTab === 'home' && view && demo.state && <SentinelHome state={demo.state} summary={view.summary} alerts={view.alerts} enabled={enabled}
+          briefings={demo.state.agent_briefings} agentBusy={agentBusy} agentError={agentError} onAgentReview={agentReview}
+          onOpenNotice={openNotice} onOpenCase={() => select('case')} onCancelTrial={cancelTrial}
+          onOpenReceiptModal={() => setModal('receipt')} onOpenUtilityModal={() => setModal('utility')} onOpenRecords={() => select('records')} />}
+        {activeTab === 'case' && demo.state && <CaseWorkspace key={demo.session?.token ?? 'preview'} state={demo.state} enabled={enabled} onPrepare={openNotice} onUpdate={updateCase} onRefresh={demo.refresh} />}
+        {activeTab === 'records' && view && demo.state && <RecordsView appliances={view.appliances} subscriptions={view.subscriptions} outflows={view.outflows} caseByItem={view.caseByItem}
+          snapshotDate={demo.state.last_updated} actionsDisabled={!enabled} onOpenClaimModal={a => openNotice(a.id)} onOpenCase={() => select('case')}
+          onCancelTrial={cancelTrial} onOpenReceiptModal={() => setModal('receipt')} />}
+        {!view && activeTab !== 'landing' && activeTab !== 'about' && <p role="status" className="note">Household state is unavailable. Refresh the server preview to continue.</p>}
+        {activeTab === 'about' && <AboutView key={demo.session?.token ?? 'preview'} token={demo.session?.token ?? ''} onError={demo.reportError} />}
       </main>
 
       {selection && demo.session && <FormalNoticeModal key={demo.session.token + ':' + selection} appliance={selectedAppliance} isOpen
         token={demo.session.token} enabled={enabled} onClose={() => setSelection(null)} onError={demo.reportError} onDispatch={approve}
-        onViewCase={() => { setSelection(null); setActiveTab('cases'); void demo.refresh(); }} />}
-      {isReceiptModalOpen && <ReceiptUploadModal key={'receipt-' + (demo.session?.token ?? 'preview')} isOpen onClose={() => setIsReceiptModalOpen(false)}
+        onViewCase={() => { setSelection(null); select('case'); }} />}
+      {modal === 'receipt' && <ReceiptUploadModal key={'receipt-' + (demo.session?.token ?? 'preview')} isOpen onClose={() => setModal(null)}
         outflows={view?.outflows ?? []} enabled={enabled} onReceiptMatched={linkReceipt} intake={intakeProps} />}
-      {isUtilityModalOpen && <UtilityDisputeModal key={'utility-' + (demo.session?.token ?? 'preview')} isOpen onClose={() => setIsUtilityModalOpen(false)}
+      {modal === 'utility' && <UtilityDisputeModal key={'utility-' + (demo.session?.token ?? 'preview')} isOpen onClose={() => setModal(null)}
         bill={utilityBill} homeownerName={demo.state?.homeowner_name ?? ''} enabled={enabled} onDispute={dispute} />}
-      <EmailSyncModal key={'sync-' + (demo.session?.token ?? 'preview')} isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} intake={intakeProps} />
-      <footer className="border-t border-white/5 py-4 px-6 text-xs text-slate-500 font-mono flex flex-col sm:flex-row items-center justify-between gap-2 max-w-[1500px] mx-auto w-full">
-        <div>Hestia &bull; Household Sentinel &bull; Directive (EU) 2019/771</div>
-        <div>Synthetic demo &bull; Explicit approval &bull; Simulated history</div>
+      <EmailSyncModal key={'sync-' + (demo.session?.token ?? 'preview')} isOpen={modal === 'import'} onClose={() => setModal(null)} intake={intakeProps} />
+      <footer className="border-t border-[var(--line)] py-4 px-6 text-xs faint flex flex-col sm:flex-row items-center justify-between gap-2 max-w-[1400px] mx-auto w-full">
+        <div>Hestia · household sentinel · Directive (EU) 2019/771 as general reference</div>
+        <div>Fictional household · recorded approvals · Strands agent on Amazon Bedrock</div>
       </footer>
     </div>
   );
-};
+}

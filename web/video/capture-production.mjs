@@ -3,12 +3,16 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-const root = process.env.HESTIA_VIDEO_ROOT || process.env.ARCHON_VIDEO_ROOT;
-const releaseSha = process.env.HESTIA_RELEASE_SHA || process.env.ARCHON_RELEASE_SHA;
+// Drives the deployed product through the seven narration beats and records the screen.
+// Requires HESTIA_VIDEO_ROOT (where narration/timing.json lives and capture/ is written)
+// and HESTIA_RELEASE_SHA (the 40-character released commit written into the receipt).
+const root = process.env.HESTIA_VIDEO_ROOT;
+const releaseSha = process.env.HESTIA_RELEASE_SHA;
 if (!root || !/^[a-f0-9]{40}$/u.test(releaseSha ?? "")) {
   throw new Error("The exact video root and release SHA are required.");
 }
 
+const appOrigin = "https://drusjukc9d4oc.cloudfront.net";
 const captureDir = path.join(root, "capture");
 mkdirSync(captureDir, { recursive: true });
 const timing = JSON.parse(
@@ -40,7 +44,7 @@ const page = await context.newPage();
 const video = page.video();
 if (!video) throw new Error("Playwright did not create a video recorder.");
 const errors = [];
-const onOwnedOrigin = () => page.url().startsWith("https://drusjukc9d4oc.cloudfront.net");
+const onOwnedOrigin = () => page.url().startsWith(appOrigin);
 page.on("pageerror", (error) => {
   if (onOwnedOrigin()) errors.push(`page:${error.name}`);
 });
@@ -48,9 +52,10 @@ page.on("console", (message) => {
   if (onOwnedOrigin() && message.type() === "error") errors.push("console:error");
 });
 const captureStarted = Date.now();
-const appUrl = `https://drusjukc9d4oc.cloudfront.net/?release=${releaseSha}`;
+const appUrl = `${appOrigin}/?release=${releaseSha}`;
 await page.goto(appUrl, { waitUntil: "networkidle", timeout: 60_000 });
-await page.waitForSelector("text=HESTIA", { timeout: 30_000 });
+// The landing H1 is the first frame of the timeline.
+await page.locator("h1#welcome-title").waitFor({ state: "visible", timeout: 30_000 });
 const timelineStarted = Date.now();
 
 async function holdScene(id, action) {
@@ -63,59 +68,56 @@ async function holdScene(id, action) {
   }
 }
 
-// 1. Hook: Focus on Elena's Bosch washer warranty card with 24-month statutory guarantee
+// 1. Hook: the landing page with the sample repair card stays on screen.
 await holdScene("hook", async () => {
-  const washerCard = page.locator("text=Bosch Serie 8").first();
-  if (await washerCard.isVisible()) {
-    await washerCard.scrollIntoViewIfNeeded();
-  }
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
 });
 
-// 2. Surface: 3-column cockpit overview
+// 2. Surface: one click creates the demo space and opens Home.
 await holdScene("surface", async () => {
-  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  await page.locator('[data-testid="launch-cockpit"]').click();
+  await page.locator('[data-testid="agent-review"]').waitFor({ state: "visible", timeout: 30_000 });
 });
 
-// 3. Trigger: Active Sentinel Radar alerts
+// 3. Trigger: the Strands agent reviews the household; the mode chips and the tool trace appear.
 await holdScene("trigger", async () => {
-  const radar = page.locator("text=Sentinel Radar").first();
-  if (await radar.isVisible()) {
-    await radar.scrollIntoViewIfNeeded();
-  }
-  const breach = page.locator("text=Statutory Breach").first();
-  if (await breach.isVisible()) {
-    await breach.click();
+  await page.locator('[data-testid="agent-review"]').click();
+  await page.locator('[data-testid="agent-mode"]').waitFor({ state: "visible", timeout: 45_000 });
+  const trace = page.locator('[data-testid="agent-trace"] summary').first();
+  if (await trace.isVisible()) {
+    await trace.click();
   }
 });
 
-// 4. Live: Return-of-Control approval action
+// 4. Live: the exact server notice is reviewed and approved; the approval is recorded, not sent.
 await holdScene("live", async () => {
-  const approveBtn = page.locator("button:has-text('Approve & Dispatch Notice')").first();
-  if (await approveBtn.isVisible()) {
-    await approveBtn.click();
-    await page.waitForTimeout(1_000);
-  }
+  await page.locator('[data-testid="review-claim"]').click();
+  await page.locator('[data-testid="server-notice"]').waitFor({ state: "visible", timeout: 30_000 });
+  await page.waitForTimeout(4_000);
+  await page.locator('[data-testid="approve-claim"]').click();
+  await page.locator('[data-testid="claim-result"]').waitFor({ state: "visible", timeout: 30_000 });
 });
 
-// 5. Sponsor: Bedrock AgentCore & serverless cryptographic receipt
+// 5. Sponsor: the saved case timeline is on screen while the narration names the AWS pieces.
 await holdScene("sponsor", async () => {
-  const sealedBadge = page.locator("text=SEALED").first();
-  if (await sealedBadge.isVisible()) {
-    await sealedBadge.scrollIntoViewIfNeeded();
-  }
+  await page.locator('[data-testid="open-persisted-case"]').click();
+  await page.locator('[data-testid="case-status"]').waitFor({ state: "visible", timeout: 30_000 });
 });
 
-// 6. Evidence: Tests, invariants and coverage
+// 6. Evidence: the About page lists the modes; the read-only console shows the live health check.
 await holdScene("evidence", async () => {
-  const headerBadge = page.locator("text=37 Tests").first();
-  if (await headerBadge.isVisible()) {
-    await headerBadge.scrollIntoViewIfNeeded();
+  await page.getByRole("button", { name: "About", exact: true }).click();
+  await page.locator('[data-testid="architecture-tiers"]').waitFor({ state: "visible", timeout: 30_000 });
+  const request = page.locator('[data-testid="console-request"]');
+  if (await request.isVisible()) {
+    await request.click();
   }
 });
 
-// 7. Close: Final clean overview
+// 7. Close: back to the landing page for the closing sentence and the URL.
 await holdScene("close", async () => {
-  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  await page.getByRole("button", { name: "Hestia home", exact: true }).click();
+  await page.locator("h1#welcome-title").waitFor({ state: "visible", timeout: 30_000 });
 });
 
 await context.close();
@@ -125,7 +127,7 @@ const finalPath = path.join(captureDir, "production.webm");
 renameSync(rawPath, finalPath);
 const bytes = readFileSync(finalPath);
 const receipt = {
-  schemaVersion: "archon.submission-video-capture/v1",
+  schemaVersion: "hestia.submission-video-capture/v1",
   releaseSha,
   sceneCount: expectedScenes.length,
   trimLeadSeconds: Math.max(0, (timelineStarted - captureStarted) / 1000),

@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Compose the CI browser capture, measured narration, and captions.
+"""Compose the browser capture, the measured narration and the captions into the demo video.
 
-Copied from upgradedev/archon-datahub, master a1feb16, file video/build-video.py.
-The pristine copy is kept at ../../upstream/archon-datahub/build-video.py, so `diff`
-shows every change the kit made. Those changes are:
+Inputs, all under HESTIA_VIDEO_ROOT:
+  narration/timing.json and narration/*.mp3   from video/generate-narration.py
+  narration/captions.en.srt                   from video/generate-narration.py
+  capture/production.webm                     from web/video/capture-production.mjs
+  capture/capture-receipt.json                from web/video/capture-production.mjs
 
-  1. OUTPUT.mkdir(exist_ok=True). The original refused to compose twice into the same
-     directory, which made re-rendering one beat impossible.
-  2. The two evidence run ids in the receipt are written only when the environment
-     supplies them. They bind two DataHub-specific workflows that a new project does
-     not have. The release SHA stays required.
-  3. The composed length must equal the measured narration length within one frame. The
-     original checked only that the result was 90 to 179 seconds, so a capture shorter
-     than the trim lead plus the narration produced a short video with the last beats of
-     speech missing, and it passed.
+Output: output/hestia-demo.mp4 and output/video-receipt.json.
 
-Everything else is unchanged.
+Contract:
+  1. The output directory may already exist, so one beat can be re-rendered in place.
+  2. The receipt always carries the release SHA (HESTIA_RELEASE_SHA). The two CI run ids
+     (HESTIA_BACKEND_RUN_ID, HESTIA_FRONTEND_RUN_ID) are written only when supplied.
+  3. The composed length must equal the measured narration length within one frame. A
+     capture shorter than the trim lead plus the narration would otherwise produce a short
+     video with the last beats of speech missing.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import os
 import pathlib
 import subprocess
 
-ROOT = pathlib.Path(os.environ.get("HESTIA_VIDEO_ROOT", os.environ.get("ARCHON_VIDEO_ROOT", ".")))
+ROOT = pathlib.Path(os.environ.get("HESTIA_VIDEO_ROOT", "."))
 NARRATION = ROOT / "narration"
 CAPTURE = ROOT / "capture" / "production.webm"
 OUTPUT = ROOT / "output"
@@ -97,7 +97,7 @@ def main() -> None:
         f"{''.join(labels)}amix=inputs={len(labels)}:duration=longest:normalize=0,"
         f"loudnorm=I=-16:LRA=7:TP=-1.5,atrim=0:{total}[a]"
     )
-    final = OUTPUT / "archon-datahub-demo.mp4"
+    final = OUTPUT / "hestia-demo.mp4"
     args.extend(
         [
             "-filter_complex",
@@ -143,8 +143,8 @@ def main() -> None:
     captions_out.write_bytes((NARRATION / "captions.en.srt").read_bytes())
     digest = hashlib.sha256(final.read_bytes()).hexdigest()
     receipt = {
-        "schemaVersion": "archon.submission-video-receipt/v1",
-        "releaseSha": os.environ["ARCHON_RELEASE_SHA"],
+        "schemaVersion": "hestia.submission-video-receipt/v1",
+        "releaseSha": os.environ["HESTIA_RELEASE_SHA"],
         "durationSeconds": round(duration, 3),
         "width": 1920,
         "height": 1080,
@@ -153,8 +153,8 @@ def main() -> None:
         "bytes": final.stat().st_size,
     }
     for field, name in (
-        ("hostedRunId", "ARCHON_HOSTED_RUN_ID"),
-        ("governedRunId", "ARCHON_GOVERNED_RUN_ID"),
+        ("backendRunId", "HESTIA_BACKEND_RUN_ID"),
+        ("frontendRunId", "HESTIA_FRONTEND_RUN_ID"),
     ):
         value = os.environ.get(name, "").strip()
         if value:

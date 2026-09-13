@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14">
+  <title>Hestia architecture: browser to API Gateway to reader and writer Lambdas, S3 state, Strands agent on Bedrock, human approval gate</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4a3f35"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9a8f84"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="700" fill="#f6f2ea"/>
+  <text x="40" y="44" font-size="22" font-weight="700" fill="#2b2420">Hestia on AWS: what runs, where, and where it stops</text>
+  <text x="40" y="66" fill="#5c534b">Everyday Agents track. Fictional household. Approvals are recorded, never sent. Real recovered money: EUR 0.00.</text>
+
+  <!-- Browser -->
+  <rect x="40" y="110" width="200" height="96" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <text x="140" y="138" text-anchor="middle" font-weight="700" fill="#2b2420">Browser</text>
+  <text x="140" y="160" text-anchor="middle" fill="#5c534b">React app</text>
+  <text x="140" y="180" text-anchor="middle" fill="#5c534b">CloudFront + S3 static site</text>
+
+  <!-- API Gateway -->
+  <rect x="300" y="110" width="200" height="96" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <text x="400" y="138" text-anchor="middle" font-weight="700" fill="#2b2420">API Gateway</text>
+  <text x="400" y="160" text-anchor="middle" fill="#5c534b">HTTP API, same origin</text>
+  <text x="400" y="180" text-anchor="middle" fill="#5c534b">GET to reader, POST to writer</text>
+
+  <line x1="240" y1="158" x2="298" y2="158" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Reader Lambda -->
+  <rect x="560" y="60" width="230" height="86" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <text x="675" y="86" text-anchor="middle" font-weight="700" fill="#2b2420">Reader Lambda (hestia-afh-reader)</text>
+  <text x="675" y="108" text-anchor="middle" fill="#5c534b">GET only, read-only role</text>
+  <text x="675" y="128" text-anchor="middle" fill="#a03d2c">Bedrock denied, SES denied, deletes denied</text>
+
+  <!-- Writer Lambda -->
+  <rect x="560" y="172" width="230" height="130" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <text x="675" y="198" text-anchor="middle" font-weight="700" fill="#2b2420">Writer Lambda (hestia-afh-api)</text>
+  <text x="675" y="220" text-anchor="middle" fill="#5c534b">POST: demo session, agent review,</text>
+  <text x="675" y="240" text-anchor="middle" fill="#5c534b">exact notice, single-use approval,</text>
+  <text x="675" y="260" text-anchor="middle" fill="#5c534b">case updates, manual import</text>
+  <text x="675" y="284" text-anchor="middle" fill="#a03d2c">SES denied, deletes denied</text>
+
+  <line x1="500" y1="140" x2="558" y2="104" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="520" y="112" fill="#5c534b" font-size="12">GET</text>
+  <line x1="500" y1="176" x2="558" y2="214" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="520" y="206" fill="#5c534b" font-size="12">POST</text>
+
+  <!-- S3 state -->
+  <rect x="860" y="96" width="300" height="118" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
+  <text x="1010" y="122" text-anchor="middle" font-weight="700" fill="#2b2420">Amazon S3 state bucket</text>
+  <text x="1010" y="144" text-anchor="middle" fill="#5c534b">demo/workspaces/&lt;id&gt;/state.json</text>
+  <text x="1010" y="164" text-anchor="middle" fill="#5c534b">create: If-None-Match  update: If-Match</text>
+  <text x="1010" y="184" text-anchor="middle" fill="#5c534b">daily model counter: _usage/agent-review-&lt;day&gt;.json</text>
+  <text x="1010" y="204" text-anchor="middle" fill="#5c534b">versioned, TLS only, private</text>
+
+  <line x1="790" y1="104" x2="858" y2="132" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="800" y="108" fill="#5c534b" font-size="12">read</text>
+  <line x1="790" y1="214" x2="858" y2="178" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="800" y="208" fill="#5c534b" font-size="12">conditional write</text>
+
+  <!-- Strands agent inside the writer -->
+  <rect x="560" y="340" width="300" height="150" rx="10" fill="#fff8ec" stroke="#b0722a" stroke-width="1.5"/>
+  <text x="710" y="366" text-anchor="middle" font-weight="700" fill="#2b2420">Strands Agent (inside the writer)</text>
+  <text x="710" y="388" text-anchor="middle" fill="#5c534b">strands-agents 1.53.0, system prompt with review rules</text>
+  <text x="580" y="412" fill="#2b2420">tools: review_repair_evidence(appliance_id)</text>
+  <text x="580" y="432" fill="#2b2420">       audit_subscriptions()</text>
+  <text x="580" y="452" fill="#2b2420">       check_receipts_and_utilities()</text>
+  <text x="580" y="472" fill="#2b2420">       read_case_timeline()</text>
+
+  <line x1="675" y1="302" x2="675" y2="338" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="684" y="326" fill="#5c534b" font-size="12">POST /api/agent/review</text>
+
+  <!-- Bedrock -->
+  <rect x="900" y="340" width="260" height="150" rx="10" fill="#fff8ec" stroke="#b0722a" stroke-width="1.5"/>
+  <text x="1030" y="366" text-anchor="middle" font-weight="700" fill="#2b2420">Amazon Bedrock</text>
+  <text x="1030" y="388" text-anchor="middle" fill="#5c534b">Claude Haiku 4.5 (eu inference profile)</text>
+  <text x="1030" y="410" text-anchor="middle" fill="#5c534b">max 700 output tokens, temperature 0.2</text>
+  <text x="1030" y="432" text-anchor="middle" fill="#5c534b">3 calls per demo space, 200 per day</text>
+  <text x="1030" y="454" text-anchor="middle" fill="#5c534b">20 s timeout, then tools-only fallback</text>
+  <text x="1030" y="476" text-anchor="middle" fill="#5c534b">narrative guard withholds unsupported text</text>
+
+  <line x1="860" y1="415" x2="898" y2="415" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Human approval gate -->
+  <rect x="300" y="340" width="220" height="150" rx="10" fill="#eef4ee" stroke="#4f7a4f" stroke-width="1.5"/>
+  <text x="410" y="366" text-anchor="middle" font-weight="700" fill="#2b2420">Human approval gate</text>
+  <text x="410" y="388" text-anchor="middle" fill="#5c534b">deterministic notice from</text>
+  <text x="410" y="408" text-anchor="middle" fill="#5c534b">recorded facts (no model)</text>
+  <text x="410" y="430" text-anchor="middle" fill="#5c534b">household reads the exact text</text>
+  <text x="410" y="450" text-anchor="middle" fill="#5c534b">single-use token bound to the digest</text>
+  <text x="410" y="472" text-anchor="middle" fill="#5c534b">changed evidence: rejected</text>
+
+  <line x1="558" y1="415" x2="522" y2="415" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="470" y="332" fill="#5c534b" font-size="12">briefing points; person decides</text>
+
+  <!-- Recorded simulation -->
+  <rect x="40" y="340" width="220" height="150" rx="10" fill="#eef4ee" stroke="#4f7a4f" stroke-width="1.5"/>
+  <text x="150" y="366" text-anchor="middle" font-weight="700" fill="#2b2420">Recorded simulation</text>
+  <text x="150" y="388" text-anchor="middle" fill="#5c534b">delivery_status: SIMULATED</text>
+  <text x="150" y="408" text-anchor="middle" fill="#5c534b">ses_message_id: null</text>
+  <text x="150" y="430" text-anchor="middle" fill="#5c534b">case timeline: draft, review,</text>
+  <text x="150" y="450" text-anchor="middle" fill="#5c534b">authorized, replies, outcome</text>
+  <text x="150" y="472" text-anchor="middle" fill="#5c534b">real_recovered_cents: 0</text>
+
+  <line x1="298" y1="415" x2="262" y2="415" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Not connected row -->
+  <text x="40" y="540" font-weight="700" fill="#2b2420">Not connected (dashed): nothing here executes on this branch</text>
+  <g stroke="#9a8f84" stroke-width="1.5" stroke-dasharray="6 4" fill="#f6f2ea">
+    <rect x="40" y="556" width="200" height="64" rx="10"/>
+    <rect x="260" y="556" width="200" height="64" rx="10"/>
+    <rect x="480" y="556" width="200" height="64" rx="10"/>
+    <rect x="700" y="556" width="200" height="64" rx="10"/>
+    <rect x="920" y="556" width="240" height="64" rx="10"/>
+  </g>
+  <g fill="#6b6159" text-anchor="middle">
+    <text x="140" y="582" font-weight="700">Bank feed (PSD2)</text>
+    <text x="140" y="604">no transaction adapter</text>
+    <text x="360" y="582" font-weight="700">Mailbox / retailer sync</text>
+    <text x="360" y="604">manual import only</text>
+    <text x="580" y="582" font-weight="700">Receipt OCR</text>
+    <text x="580" y="604">PNG validated, no text read</text>
+    <text x="800" y="582" font-weight="700">SES email</text>
+    <text x="800" y="604">IAM deny, route answers 403</text>
+    <text x="1040" y="582" font-weight="700">AgentCore, Guardrails</text>
+    <text x="1040" y="604">local guard only</text>
+  </g>
+
+  <text x="40" y="660" fill="#5c534b" font-size="12">Sources: infra/hestia_api_stack.py, src/hestia/agents/household_agent.py, src/hestia/app/agent.py, src/hestia/app/claims.py, src/hestia/domain/cases.py, src/hestia/adapters/storage.py.</text>
+  <text x="40" y="680" fill="#5c534b" font-size="12">Region eu-west-1. Session capability: HMAC, 30 minutes. This diagram describes source on branch claude/final-wave-20260913; read GET /healthz for the deployed revision.</text>
+</svg>

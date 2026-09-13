@@ -78,6 +78,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload Built Frontend Artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist

@@ -18,6 +18,7 @@ from hestia.adapters.storage import (
     preserve_intake,
 )
 from hestia.app.access import APIError, authorize_demo, issue_demo_access
+from hestia.app.agent import agent_config, agent_review
 from hestia.app.cases import update_case
 from hestia.app.claims import (
     approve_claim,
@@ -58,6 +59,7 @@ PROTECTED_POST = {
     "/api/receipt/scan", "/api/ingest/sync", "/api/outbox/dispatch",
     "/api/outbox/status",
     "/api/case/update",
+    "/api/agent/review",
 }
 
 
@@ -141,8 +143,9 @@ def _record_local_action(
     if path == "/api/action/reset":
         require_fields(body, set())
         fresh = fresh_demo_state()
-        for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count"):
-            fresh[key] = state[key]
+        for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count",
+                    "agent_calls", "agent_briefings"):
+            fresh[key] = state.get(key, fresh.get(key))
         fresh["cases"] = state.get("cases", [])
         preserve_intake(state, fresh)
         fresh["generation"] = state.get("generation", 0) + 1
@@ -274,10 +277,14 @@ def _handle_api(event: dict[str, Any]) -> dict[str, Any]:
     if method == "OPTIONS":
         return response(200, {})
     if method == "GET" and path == "/healthz":
+        config = agent_config()
         return response(200, {
-            "status": "ok", "service": "hestia-aws", "version": "0.3.0",
+            "status": "ok", "service": "hestia-aws", "version": "0.4.0",
             "commit": os.environ.get("HESTIA_COMMIT_SHA"), "mode": "simulated",
-            "live_send": False, "live_model": False,
+            "live_send": False, "live_model": config["live_model"],
+            "model_id": config["model_id"],
+            "agent": {key: config[key] for key in
+                      ("framework", "session_cap", "daily_cap", "max_output_tokens")},
             "storage_configured": bool(os.environ.get("HESTIA_STATE_BUCKET")),
             "demo_sessions_configured": len(
                 os.environ.get("HESTIA_DEMO_SECRET", "").encode(),
@@ -319,4 +326,6 @@ def _handle_api(event: dict[str, Any]) -> dict[str, Any]:
         return response(200, approve_claim(store, body))
     if path == "/api/case/update":
         return response(200, update_case(store, body))
+    if path == "/api/agent/review":
+        return response(200, agent_review(store, body))
     return response(200, _record_local_action(store, path, body))

@@ -81,8 +81,8 @@ export function useDemoSession() {
     }
   }, [expire]);
 
-  const begin = async () => {
-    if (operation.current) return;
+  const begin = async (): Promise<boolean> => {
+    if (operation.current) return false;
     operation.current = true;
     setBusy(true);
     try {
@@ -97,7 +97,8 @@ export function useDemoSession() {
       setStatus('active');
       setError(null);
       setStorageWarning(saveSession(credential) ? null : 'Browser session storage is unavailable. This demo works in memory; reloading may require a new isolated session.');
-    } catch (error) { reportError(error); }
+      return true;
+    } catch (error) { reportError(error); return false; }
     finally { operation.current = false; setBusy(false); }
   };
 

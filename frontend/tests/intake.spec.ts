@@ -4,24 +4,50 @@ import type { BackendState, IntakeDraft, IntakeRecord } from '../src/api';
 
 const backend = 'http://127.0.0.1:8000';
 const route = '/api/receipt/scan';
+type NavTab = 'Home' | 'Case' | 'Records' | 'About' | 'Import records';
 const receipt: IntakeRecord = { kind: 'receipt', transaction_id: 'out-001', merchant: 'Leroy Merlin DIY', amount_cents: 8550, date: '2026-09-04', receipt_id: 'DOCUMENT-REF' };
 const headers = (token: string) => ({ Authorization: `Bearer ${token}` });
+const nav = (page: Page, name: NavTab) =>
+  page.getByRole('navigation', { name: 'Household navigation' }).getByRole('button', { name, exact: true });
 async function state(request: APIRequestContext, token: string): Promise<BackendState> {
   const response = await request.get(`${backend}/api/state`, { headers: headers(token) });
   expect(response.status()).toBe(200);
   return response.json();
 }
-async function open(page: Page) {
+// One click: the landing CTA creates the isolated session itself and opens Home.
+async function launch(page: Page): Promise<string> {
   await page.goto('/');
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Start with the sample household/);
+  const creating = page.waitForResponse(r => r.url().endsWith('/api/demo/session') && r.request().method() === 'POST');
   await page.getByTestId('launch-cockpit').click();
-  const creating = page.waitForResponse(r => r.url().endsWith('/api/demo/session'));
-  await page.getByTestId('begin-demo').click();
-  const session = await (await creating).json();
+  const response = await creating;
+  expect(response.status()).toBe(201);
+  const session = await response.json();
   await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
-  await page.getByRole('button', { name: 'Receipt Options (Scanning Unavailable)', exact: true }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(1);
-  await expect(page.getByTestId('intake-file')).toHaveCount(1);
+  await expect(page.getByTestId('begin-demo')).toHaveCount(0);
   return session.token as string;
+}
+// A stored session resumes without another POST: the CTA only opens Home.
+async function resume(page: Page) {
+  await page.reload();
+  await expect(page.getByTestId('launch-cockpit')).toHaveText(/Continue your household case/);
+  await page.getByTestId('launch-cockpit').click();
+  await expect(page.getByTestId('session-status')).toContainText('Isolated demo session active');
+}
+async function open(page: Page) {
+  const token = await launch(page);
+  await page.getByTestId('open-receipt-options').click();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await expect(page.getByRole('dialog')).toContainText('Link a receipt');
+  await expect(page.getByTestId('intake-file')).toHaveCount(1);
+  return token;
+}
+async function reopenSaved(page: Page, intakeId: string) {
+  await resume(page);
+  await nav(page, 'Records').click();
+  await page.getByTestId('open-intake').click();
+  await expect(page.getByRole('dialog')).toContainText('Link a receipt');
+  await page.getByTestId('intake-history').selectOption(intakeId);
 }
 async function upload(page: Page, records: IntakeRecord[]) {
   const pending = page.waitForResponse(r => r.url().endsWith(route));
@@ -72,10 +98,7 @@ test('real JSON bytes, correction, exact review, commit and reload retain receip
   expect(saved.summary.missing_receipt_cents).toBe(0);
   expect(saved.summary.real_recovered_cents).toBe(0);
   expect(saved.appliances).toHaveLength(3);
-  await page.reload();
-  await page.getByRole('button', { name: 'Subscriptions', exact: true }).click();
-  await page.getByTestId('open-intake').click();
-  await page.getByTestId('intake-history').selectOption(draft.id);
+  await reopenSaved(page, draft.id);
   await expect(page.getByTestId('intake-result')).toContainText('Saved: 1 changes');
   await expect(page.getByTestId('intake-provenance')).toContainText(draft.input_sha256);
   await test.info().attach('intake-persisted-review', { body: await page.getByRole('dialog').screenshot(), contentType: 'image/png' });
@@ -160,10 +183,7 @@ test('lost response after actual import is recovered by reload and exact replay 
   expect((await replay.json()).replayed).toBe(true);
   expect(await state(request, token)).toEqual(saved);
   await page.unroute(`**${route}`);
-  await page.reload();
-  await page.getByRole('button', { name: 'Subscriptions', exact: true }).click();
-  await page.getByTestId('open-intake').click();
-  await page.getByTestId('intake-history').selectOption(draft.id);
+  await reopenSaved(page, draft.id);
   await expect(page.getByTestId('intake-result')).toContainText('Saved: 1 changes');
 });
 
@@ -172,8 +192,8 @@ test('mobile sync import and exact synthetic subscription request persist withou
   const token = await open(page);
   await page.getByRole('button', { name: 'Close receipt options', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.getByText('About / Advanced', { exact: true }).click();
-  await page.getByRole('button', { name: 'Sync Invoices', exact: true }).click();
+  await nav(page, 'Import records').click();
+  await expect(page.getByRole('dialog')).toContainText('Invoice sync is not enabled');
   const rows = [{ kind: 'subscription', subscription_id: 'imported-sub', service_name: 'My Imported Plan', monthly_cents: 1750, category: 'Productivity', last_billed: '2026-09-12', is_trial: true, trial_end_date: '2026-09-20' }];
   const staging = page.waitForResponse(r => r.url().endsWith('/api/ingest/sync'));
   await page.getByTestId('intake-file').setInputFiles({ name: 'subscription.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ records: rows })) });
@@ -188,19 +208,21 @@ test('mobile sync import and exact synthetic subscription request persist withou
   await expect(page.getByTestId('intake-result')).toContainText('Saved: 1 changes');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Close invoice sync', exact: true }).click();
-  await page.getByRole('button', { name: 'Subscriptions', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await nav(page, 'Records').click();
   const before = await state(request, token);
   const posted = page.waitForRequest(r => r.url().endsWith('/api/action/cancel'));
-  await page.getByTestId('subscription-imported-sub').getByRole('button', { name: 'Simulate Cancellation Request' }).click();
+  await page.getByTestId('subscription-imported-sub').getByRole('button', { name: 'Record a cancellation request', exact: true }).click();
   expect((await posted).postDataJSON()).toEqual({ service_name: 'My Imported Plan', subscription_id: 'imported-sub', expected_monthly_cents: 1750 });
-  await expect(page.getByTestId('subscription-imported-sub').getByRole('button', { name: 'Synthetic Request Saved' })).toBeDisabled();
-  await page.reload();
-  await page.getByRole('button', { name: 'Subscriptions', exact: true }).click();
-  await expect(page.getByTestId('subscription-imported-sub').getByRole('button', { name: 'Synthetic Request Saved' })).toBeDisabled();
+  await expect(page.getByTestId('subscription-imported-sub').getByRole('button', { name: 'Request recorded', exact: true })).toBeDisabled();
+  await resume(page);
+  await nav(page, 'Records').click();
+  await expect(page.getByTestId('subscription-imported-sub').getByRole('button', { name: 'Request recorded', exact: true })).toBeDisabled();
   const saved = await state(request, token);
   expect(saved.subscriptions.find(s => s.id === 'imported-sub')).toMatchObject({ status: 'expiring_trial', monthly_cents: 1750, cancellation_request: { status: 'synthetic_requested', subscription_id: 'imported-sub', monthly_cents: 1750 } });
   expect(saved.summary.monthly_recurring_cents).toBe(before.summary.monthly_recurring_cents);
   expect(saved.summary.real_recovered_cents).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await test.info().attach('mobile-intake-synthetic-request', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
 });
 
@@ -243,10 +265,7 @@ test('simple form converts exact EUR cents, distinguishes missing and zero, and 
   expect(corrected.review?.original_records[0].amount_cents).toBe(5025);
   expect(corrected.review?.corrected_records[0].amount_cents).toBe(7391);
   await confirm(page);
-  await page.reload();
-  await page.getByRole('button', { name: 'Subscriptions', exact: true }).click();
-  await page.getByTestId('open-intake').click();
-  await page.getByTestId('intake-history').selectOption(draft.id);
+  await reopenSaved(page, draft.id);
   await expect(page.getByTestId('intake-result')).toContainText('Saved: 1 changes');
   await expect(page.getByTestId('intake-simple-form').getByLabel('Amount (EUR)', { exact: true })).toHaveValue('73.91');
   await expect(page.getByTestId('intake-records')).toBeHidden();

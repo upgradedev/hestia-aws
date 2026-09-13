@@ -28,7 +28,10 @@ jobs:
 
       - name: ruff check
         run: |
-          python -m ruff check src tests infra scripts/ci_api_server.py scripts/deploy_api.py tools/measure.py tools/ablate.py
+          python -m ruff check src tests infra scripts/ci_api_server.py scripts/deploy_api.py tools/measure.py tools/ablate.py tools/prose_gate.py
+
+      - name: judge-facing prose gate (em dashes, banned words, stale claims)
+        run: python tools/prose_gate.py
 
       - name: run test suite with coverage
         run: |

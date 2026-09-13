@@ -228,6 +228,12 @@ def test_case_route_is_writer_only_and_retains_explicit_denials():
     for name in ["Role", "ReaderRole"]:
         statements = resources[name]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
         denied = [s for s in statements if s["Effect"] == "Deny"]
-        assert any("ses:*" in s["Action"] and "bedrock:*" in s["Action"] for s in denied)
+        assert any("ses:*" in s["Action"] for s in denied)
     reader = resources["ReaderRole"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
     assert any(s["Effect"] == "Deny" and "s3:PutObject" in s["Action"] for s in reader)
+    assert any(s["Effect"] == "Deny" and "bedrock:*" in s["Action"] for s in reader)
+    writer = resources["Role"]["Properties"]["Policies"][0]["PolicyDocument"]["Statement"]
+    # Owner-approved bounded model access (2026-09-13): the writer may invoke one profile.
+    assert not any(s["Effect"] == "Deny" and "bedrock:*" in s["Action"] for s in writer)
+    assert any(s["Effect"] == "Allow" and s["Action"] == [
+        "bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"] for s in writer)
