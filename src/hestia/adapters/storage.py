@@ -438,11 +438,20 @@ class S3HouseholdStore:
                 try:
                     response = s3.get_object(Bucket=self.bucket, Key=key)
                 except Exception as exc:
-                    if self._error_code(exc) != "NoSuchKey":
+                    # Without ListBucket a missing key reads as AccessDenied; only an atomic
+                    # create proves absence. A collision means it exists: read it again.
+                    if self._error_code(exc) not in ("NoSuchKey", "AccessDenied"):
                         raise
-                    s3.put_object(Bucket=self.bucket, Key=key, ContentType="application/json",
-                                  Body=json.dumps({"count": 1, "day": day}).encode("utf-8"),
-                                  IfNoneMatch="*")
+                    try:
+                        s3.put_object(Bucket=self.bucket, Key=key, ContentType="application/json",
+                                      Body=json.dumps({"count": 1, "day": day}).encode("utf-8"),
+                                      IfNoneMatch="*")
+                    except Exception as create_exc:
+                        if self._error_code(create_exc) in (
+                            "PreconditionFailed", "ConditionalRequestConflict",
+                        ):
+                            continue
+                        raise
                     return True, 1
                 stored = json.loads(response["Body"].read(4096).decode("utf-8"))
                 count = int(stored.get("count", 0))
