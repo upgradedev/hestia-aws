@@ -44,8 +44,17 @@ def result(tool_id, text, status="success"):
         "toolUseId": tool_id, "status": status, "content": [{"text": text}]}}]}
 
 
+class FixedDate(date):
+    """The review route stamps its prompt with the current date; pin it to the fixture date."""
+
+    @classmethod
+    def today(cls):
+        return cls(TODAY.year, TODAY.month, TODAY.day)
+
+
 @pytest.fixture
 def session(monkeypatch):
+    monkeypatch.setattr(agent_app, "date", FixedDate)
     monkeypatch.setenv("HESTIA_DEMO_SECRET", "x" * 40)
     monkeypatch.delenv("HESTIA_LIVE_MODEL", raising=False)
     monkeypatch.setattr(api, "store_for",

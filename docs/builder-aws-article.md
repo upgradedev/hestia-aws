@@ -1,4 +1,4 @@
-# Agents for Humans: a Strands agent that reads a household's records and waits for the person
+# Agents for Humans: Strands agents that read a household's records and wait for the person
 
 *Draft for builder.aws.com. Live demo: https://drusjukc9d4oc.cloudfront.net/ (fictional household, no login). Source: https://github.com/upgradedev/hestia-aws, MIT.*
 
@@ -6,7 +6,7 @@ Households lose small amounts in boring ways. A washing machine fails in month 2
 
 ## The shape of the product
 
-The visitor opens one URL, clicks once, and gets a private demo space for a fictional Athens household. On Home, "Ask Hestia to review this household" runs a Strands agent that reads the recorded appliances, subscriptions, transactions, utility bills and saved case through four tools and writes a briefing with three fixed headings: what I checked, decisions waiting for you, suggested next step. The decision that matters most is the repair: a Bosch washing machine, a recorded repair of EUR 185.00, a seller called Kotsovolos Megastore. The notice to the seller is prepared on the server by deterministic Python, the person reads the exact text, and approval consumes a single-use token bound to that draft. The approval is recorded as a simulation and opens a case timeline. Nothing is emailed.
+The visitor opens one URL, clicks once, and gets a 30-minute private copy of a fictional Athens household. Home opens with a Start here block: report a repair, add an appliance the household owns, or paste a receipt or order email for a second, tool-less agent to read. Below it, "Ask Hestia to review this household" runs a Strands agent that reads the recorded appliances, subscriptions, transactions, utility bills and saved case through four tools and writes a briefing with three fixed headings: what I checked, decisions waiting for you, suggested next step. The decision that matters most is the repair: a Bosch washing machine, a recorded repair of EUR 185.00, a seller called Kotsovolos Megastore. The notice to the seller is prepared on the server by deterministic Python, and reviewing it opens the case file. The person reads the exact text, approval consumes a single-use token bound to that draft, and the approval is recorded as a simulation that moves the case to Authorized. Nothing is emailed.
 
 ## The tools are plain functions over one workspace
 
@@ -28,7 +28,7 @@ def strands_tools(state: dict[str, Any], today: date) -> list[Any]:
     return [tool(func) for func in tool_functions(state, today).values()]
 ```
 
-Every tool output ends in "review required" language. The warranty tool returns recorded dates and screening boundaries, never a determination of coverage, and the statutory reference to Directive (EU) 2019/771 is general reference only.
+The repair tool's output opens with "REVIEW REQUIRED. No legal entitlement determined." and closes with the legal limits of any remedy. It returns recorded dates and screening boundaries, never a determination of coverage, and it cites Directive (EU) 2019/771 as general reference only. The other tools return recorded flags with a suggested action, and the case tool ends by stating that real recovered money is EUR 0.00.
 
 ## The agent is built per request, with a bounded model
 
@@ -45,13 +45,13 @@ return Agent(
 )
 ```
 
-The model is `eu.anthropic.claude-haiku-4-5-20251001-v1:0` in eu-west-1 with 700 output tokens. The call runs in a worker thread with a 20 second limit. On timeout or any exception the route returns the deterministic tools-only outcome, with a reason the page shows: `model_timeout`, `model_error:<class>`, `session_cap`, `daily_cap` or `budget_unconfirmed`. No text is invented on that path.
+The model is `eu.anthropic.claude-haiku-4-5-20251001-v1:0` in eu-west-1 with 700 output tokens. The call runs in a worker thread with a 20 second limit. On a timeout or any exception, the route returns the deterministic tools-only outcome with `model_timeout` or `model_error:<class>`. Before any call it does the same with `model_not_configured`, `session_cap`, `daily_cap` or `budget_unconfirmed`, and the page turns each reason into a plain sentence. No text is invented on that path.
 
 After the call, the tool trace is paired from `agent.messages` (the `toolUse` and `toolResult` blocks) and token usage is read from `result.metrics.accumulated_usage`. Both are stored with the briefing and shown in the UI.
 
 ## The guard reads the narrative against the tool outputs
 
-The system prompt already forbids entitlement claims, invented deadlines and amounts that no tool returned. The guard enforces it after the fact:
+The system prompt already forbids entitlement claims, invented deadlines and amounts that no tool returned. The guard backs part of that up after the fact, with a pattern check for listed phrases and for any euro amount that no tool returned:
 
 ```python
 def guard_narrative(narrative: str, tool_outputs: list[str]) -> list[str]:
@@ -79,27 +79,29 @@ def guard_narrative(narrative: str, tool_outputs: list[str]) -> list[str]:
     return reasons
 ```
 
-`_canonical` folds `1,399.00`, `1399,00` and `1399` into one spelling, so the comparison survives the several ways a tool and a model each write the same number, and the date strip stops `2024-11-08` from lending its digits to an invented amount.
+`_canonical` folds `1,399.00`, `1399,00` and `1399` into one spelling, so the comparison survives the several ways a tool and a model each write the same number, and the date strip stops `2024-11-08` from lending its digits to an invented amount. The guard does not check dates or amounts written without a currency.
 
 When the guard returns reasons, the briefing is withheld and the page says so; the tool findings underneath are unaffected, because they never came from the model.
 
 ## The records are the household's, and a second agent only proposes them
 
-A sentinel with nothing to watch is a demo. So the household keeps its own registry: two intake kinds, `appliance` and `repair`, put the person's real washing machine, fridge and laptop beside the sample ones, with the receipt reference, seller, guarantee months and whatever product, manual or quick start link they saved. Reporting a repair sets the claim open and drops that appliance into the same notice, approval and case file flow the sample repair uses, and a second repair is refused while one is still open. Both kinds run through the intake contract that was already there: stage a draft, show the exact fields, take consent for the exact subset, then commit.
+A sentinel with nothing to watch is a demo. So the household keeps its own registry: two intake kinds, `appliance` and `repair`, put the household's own appliances, a fridge or a laptop, say, beside the three sample ones, with the receipt reference, seller, guarantee months and whatever product, manual or quick start link they saved. Reporting a repair marks that appliance's claim open, so the household can prepare the same notice, approval and case file the sample repair uses, and a second repair on it is refused while the claim is open. Both kinds run through the intake contract that was already there: stage a draft, show the exact fields, take consent for the exact subset, then commit.
 
-Typing a receipt is tedious, so there is a second Strands agent with no tools at all. Paste the text of an order confirmation, at most 6000 characters, and one `BedrockModel` call at `temperature=0.0` answers with a JSON object of records. The prompt tells it to include a field only when the text states it and never to guess a date, price, email or model number; an allow-list of kinds, keys and value types then drops everything else before a person sees it. What comes back is a staged draft, labelled `model_text_extraction` and `ocr_status: model_text`, sitting in the same review form as a hand-typed one. Nothing is saved until the household corrects it and commits. The route has no deterministic equivalent to fall back to, so it fails closed instead: no model configured, a spent daily budget or a model failure all return an error, save nothing, and point at manual entry. The pasted text is not kept either, only its SHA-256, its byte count and the proposed records, which is enough to replay an identical paste without paying for a second call. How well it reads a receipt is unmeasured; the control is that a person confirms every fact.
+Typing a receipt is tedious, so there is a second Strands agent with no tools at all. Paste the text of an order confirmation, at most 6000 characters, and one `BedrockModel` call at `temperature=0.0` answers with a JSON object of records. The prompt tells it to include a field only when the text states it and never to guess a date, price, email or model number; an allow-list of three kinds, their keys and plain value types then drops everything else before a person sees it. What comes back is a staged draft, labelled `model_text_extraction` and `ocr_status: model_text`, sitting in the same review form as a hand-typed one. Nothing reaches the household records until the household corrects it and commits.
+
+The route has no deterministic equivalent to fall back to, so it fails closed. A missing model, used-up readings for this copy, a spent or unconfirmed daily budget, a model error, a timeout or an unreadable reply all return an error, save no records, and point at manual entry. When the model call itself raises an error, throttled or unreachable for example, the reading is handed back and the household is told the attempt was not counted; a timeout or an unreadable reply stays counted. The pasted text is not kept either, only its SHA-256, its byte count and the proposed records, which is enough to replay an identical paste without paying for a second call. How well it reads a receipt is unmeasured; the control is that a person confirms every fact.
 
 ## Cost limits on a public URL
 
-Both routes are public behind a 30-minute demo capability, so the limits live on the server. Each private copy may make 3 review calls and 3 text readings, counted separately in the workspace document. The shared budget behind them is 200 calls per day, reserved with a conditional write to one small S3 object per day: `If-None-Match` creates it, `If-Match` increments it, and a lost race retries. If the budget cannot be confirmed, the model is not called. `GET /healthz` reports `live_model`, `model_id` and the limits, and the frontend release gate refuses to publish over a backend whose health does not name a bounded model.
+Both routes sit behind a 30-minute demo capability, so the limits live on the server. Each private copy may make 3 review calls and 3 text readings, counted separately in the workspace document. The shared budget behind them is 200 calls per day, reserved with a conditional write to one small S3 object per day: `If-None-Match` creates it, `If-Match` increments it, and a lost race retries. If the budget cannot be confirmed, the model is not called. A text reading whose model call raised an error is handed back to the copy, but its unit of the daily budget stays spent. `GET /healthz` reports `live_model`, `model_id` and the limits, and the frontend release gate refuses to publish unless that health reports the approved commit, `live_model` true with a model id, and `live_send` false.
 
 ## What the IAM policy says
 
-The writer function may call `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on that one inference profile and its foundation model, nothing else. The reader function, which serves every GET, denies `bedrock:*`. Both deny `ses:*` and object deletes. The stack is rendered by `infra/hestia_api_stack.py` and prepared as a CloudFormation change set that a person executes.
+The writer function may call `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on that one inference profile and its foundation model, nothing else. The reader function, which answers every GET, denies `bedrock:*`. Both deny `ses:*` and object deletes. The stack is rendered by `infra/hestia_api_stack.py`, and a release prepares a CloudFormation change set that a person reads before executing it.
 
 ## The honest limits
 
-The bank feed, mailbox sync and retailer sync are not connected; the household adds facts by hand or by pasting text, and either way through a stage, review and commit flow. Receipt PNGs are validated for structure, checksums and size, but no text is extracted from an image, and pasting the text of an order email reads no mailbox. Email is not sent; approvals are recorded with `delivery_status` `SIMULATED`. Bedrock AgentCore and Bedrock Guardrails are not connected; the guard above is a local pattern check and covers the briefing only. Briefing quality and extraction quality are both unmeasured, and independent human testing has not been run. The docs say all of this beside the feature it limits, and a claims test fails the build if someone writes otherwise.
+The bank feed, mailbox sync and retailer sync are not connected; the household adds facts by hand or by pasting text, and either way through a stage, review and commit flow. Receipt PNGs are validated for structure, checksums and size, but no text is extracted from an image, and pasting the text of an order email reads no mailbox. Email is not sent; approvals are recorded with `delivery_status` `SIMULATED`. Bedrock AgentCore and Bedrock Guardrails are not connected; the guard above is a local pattern check and covers the briefing only. Briefing quality and extraction quality are both unmeasured, and independent human testing has not been run. The docs say all of this beside the feature it limits. CI fails the build if these files bring back any phrase from a fixed list of retired or unsupported claims, or if the About page drops its not-connected labels.
 
 ## Why this shape
 
