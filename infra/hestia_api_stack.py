@@ -14,7 +14,8 @@ except ImportError:
 
 
 BEDROCK_MODEL_ID = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
-AGENT_LIMITS = {"session_cap": "3", "daily_cap": "200", "max_output_tokens": "700"}
+AGENT_LIMITS = {"session_cap": "3", "extract_session_cap": "3", "daily_cap": "200",
+                "max_output_tokens": "700"}
 
 
 def template():
@@ -111,6 +112,7 @@ def template():
             "HESTIA_BEDROCK_MODEL_ID": BEDROCK_MODEL_ID,
             "HESTIA_BEDROCK_REGION": "eu-west-1",
             "HESTIA_AGENT_SESSION_CAP": AGENT_LIMITS["session_cap"],
+            "HESTIA_AGENT_EXTRACT_SESSION_CAP": AGENT_LIMITS["extract_session_cap"],
             "HESTIA_AGENT_DAILY_CAP": AGENT_LIMITS["daily_cap"],
             "HESTIA_AGENT_MAX_TOKENS": AGENT_LIMITS["max_output_tokens"],
             "HESTIA_DEMO_SECRET": sub(
@@ -276,7 +278,7 @@ def template():
         "/action/utility_dispute", "/api/action/reset", "/action/reset", "/api/action/receipt",
         "/api/receipt/scan", "/receipt/scan", "/api/ingest/sync", "/ingest/sync",
         "/api/outbox/dispatch", "/outbox/dispatch", "/api/outbox/status", "/outbox/status",
-        "/api/case/update", "/api/agent/review",
+        "/api/case/update", "/api/agent/review", "/api/agent/extract",
     )
     for number, path in enumerate(write_paths):
         resources[f"WriteRoute{number}"] = {

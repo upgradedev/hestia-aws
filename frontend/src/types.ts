@@ -6,6 +6,10 @@ export interface ApplianceWarranty {
   brand: string;
   model: string;
   serial_number?: string;
+  product_url?: string;
+  manual_url?: string;
+  quickstart_url?: string;
+  source?: string;
   purchase_date: string;
   price_eur: number;
   seller_name: string;

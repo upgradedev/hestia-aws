@@ -5,7 +5,7 @@ import type { BackendState, ClaimDraft } from '../src/api';
 import type { CaseAction, HouseholdCase } from '../src/cases';
 
 const backend = 'http://127.0.0.1:8000';
-type NavTab = 'Home' | 'Case' | 'Records' | 'About' | 'Import records';
+type NavTab = 'Home' | 'Case file' | 'Records' | 'About' | 'Add records';
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 const nav = (page: Page, name: NavTab) =>
   page.getByRole('navigation', { name: 'Household navigation' }).getByRole('button', { name, exact: true });
@@ -42,7 +42,7 @@ async function resume(page: Page) {
 async function openCase(page: Page) {
   const token = await launch(page);
   await expect(page.getByTestId('home-case-status')).toHaveCount(0);
-  await nav(page, 'Case').click();
+  await nav(page, 'Case file').click();
   await expect(page.getByTestId('case-empty')).toContainText('No case saved yet');
   await expect(page.getByTestId('reviewed-facts')).toContainText('REC-2024-BOSCH-88');
   const prepared = page.waitForResponse(r => r.url().endsWith('/api/action/claim/prepare'));
@@ -339,7 +339,7 @@ test('HE8 resolved case leaves the queue while the recorded repair cost stays a 
   await expect(page.getByTestId('prepare-case-notice')).toHaveCount(0);
   await nav(page, 'Records').click();
   await expect(page.getByTestId('repair-cost-app-001')).toContainText('€185.00 recorded repair cost');
-  await expect(page.getByTestId('review-appliance-app-001')).toHaveText('Open the saved case');
+  await expect(page.getByTestId('review-appliance-app-001')).toHaveText('Open the saved case file');
   await page.getByTestId('review-appliance-app-001').click();
   await expect(page.getByTestId('case-status')).toHaveText('Resolved');
   const persisted = await savedState(request, token);

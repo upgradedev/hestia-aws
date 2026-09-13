@@ -5,6 +5,7 @@ import { CASE_STATUS } from '../cases';
 import type { HouseholdCase } from '../cases';
 import type { HouseholdSummary, SentinelAlert } from '../types';
 import { AgentBriefingCard } from './AgentBriefing';
+import type { RegistryMode } from './RegistryModal';
 
 interface SentinelHomeProps {
   state: BackendState; summary: HouseholdSummary; alerts: SentinelAlert[]; enabled: boolean;
@@ -12,6 +13,7 @@ interface SentinelHomeProps {
   onAgentReview: () => Promise<void>;
   onOpenNotice: (itemId?: string) => void; onOpenCase: () => void; onCancelTrial: (id: string) => Promise<boolean>;
   onOpenReceiptModal: () => void; onOpenUtilityModal: () => void; onOpenRecords: () => void;
+  onOpenRegistry: (mode: RegistryMode) => void;
 }
 
 const euro = (value: number) => `€${value.toFixed(2)}`;
@@ -19,7 +21,7 @@ const euro = (value: number) => `€${value.toFixed(2)}`;
 function CaseSummary({ c, onOpenCase }: { c: HouseholdCase | undefined; onOpenCase: () => void }) {
   return (
     <section className="card p-5 space-y-3" aria-labelledby="case-summary-title">
-      <p className="eyebrow">Your case</p>
+      <p className="eyebrow">Your case file</p>
       {c ? <>
         <h3 id="case-summary-title" className="font-bold text-lg leading-snug">{c.title}</h3>
         <div className="flex flex-wrap items-center gap-2">
@@ -27,10 +29,10 @@ function CaseSummary({ c, onOpenCase }: { c: HouseholdCase | undefined; onOpenCa
           <span className="faint text-xs">revision {c.revision}</span>
         </div>
         <p className="text-sm">{c.next_action}</p>
-        <button className="btn btn-secondary btn-sm" onClick={onOpenCase} data-testid="home-open-case">Open the case</button>
+        <button className="btn btn-secondary btn-sm" onClick={onOpenCase} data-testid="home-open-case">Open the case file</button>
       </> : <>
-        <h3 id="case-summary-title" className="font-bold text-lg leading-snug">No case saved yet</h3>
-        <p className="note">Review the exact notice for the recorded repair and approve it. The case timeline starts there.</p>
+        <h3 id="case-summary-title" className="font-bold text-lg leading-snug">No case file yet</h3>
+        <p className="note">Report a repair, or review the exact notice for the sample repair and approve it. The case file starts there.</p>
       </>}
     </section>
   );
@@ -38,13 +40,14 @@ function CaseSummary({ c, onOpenCase }: { c: HouseholdCase | undefined; onOpenCa
 
 export function SentinelHome({
   state, summary, alerts, enabled, briefings, agentBusy, agentError, onAgentReview,
-  onOpenNotice, onOpenCase, onCancelTrial, onOpenReceiptModal, onOpenUtilityModal, onOpenRecords,
+  onOpenNotice, onOpenCase, onCancelTrial, onOpenReceiptModal, onOpenUtilityModal, onOpenRecords, onOpenRegistry,
 }: SentinelHomeProps) {
   const [pendingSub, setPendingSub] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const warranty = alerts.find(a => a.category === 'warranty_claim');
+  const warranties = alerts.filter(a => a.category === 'warranty_claim');
   const others = alerts.filter(a => a.category !== 'warranty_claim');
+  const own = state.appliances.filter(a => a.source === 'household_registry').length;
   const primaryCase = state.cases[0];
   const cancel = async (id: string) => {
     if (pendingSub || !enabled) return;
@@ -64,9 +67,37 @@ export function SentinelHome({
         </div>
         <p className="faint text-sm">Records as of {snapshotDate.toLocaleDateString()} · snapshot v{state.version_seq}</p>
       </div>
-      {!enabled && <p className="note" data-testid="home-disabled-note">Start or refresh the demo space to take actions. Reading is always available.</p>}
+      {!enabled && <p className="note" data-testid="home-disabled-note">Start or refresh your private copy to take actions. Reading is always available.</p>}
       {error && <p role="alert" className="note-alert">{error}</p>}
       {message && <p role="status" className="note-ok">{message}</p>}
+
+      <section className="card-accent p-5 sm:p-6 space-y-4" aria-labelledby="start-here-title" data-testid="start-here">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="eyebrow">Start here</p>
+            <h2 id="start-here-title" className="text-xl font-bold mt-1">What do you want to do?</h2>
+            <p className="note mt-1">{own ? `${own} appliance${own === 1 ? '' : 's'} added by you so far.` : 'This is your private copy. Add what you own; the sample facts stay as an example.'}</p>
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <button className="card p-4 text-left space-y-1 hover:border-[var(--hearth)]" disabled={!enabled} onClick={() => onOpenRegistry({ tab: 'repair' })} data-testid="start-repair">
+            <span className="chip chip-clay">Something broke</span>
+            <span className="block font-bold mt-2">Report a repair</span>
+            <span className="block text-xs muted">Date, invoice amount, what broke. Hestia prepares the exact notice for you to approve.</span>
+          </button>
+          <button className="card p-4 text-left space-y-1 hover:border-[var(--hearth)]" disabled={!enabled} onClick={() => onOpenRegistry({ tab: 'appliance' })} data-testid="start-appliance">
+            <span className="chip chip-sky">New purchase</span>
+            <span className="block font-bold mt-2">Add an appliance you own</span>
+            <span className="block text-xs muted">Receipt, guarantee months, seller, and links to the product page, manual and quick start.</span>
+          </button>
+          <button className="card p-4 text-left space-y-1 hover:border-[var(--hearth)]" disabled={!enabled} onClick={() => onOpenRegistry({ tab: 'paste' })} data-testid="start-paste">
+            <span className="chip chip-sage">Got an email</span>
+            <span className="block font-bold mt-2">Paste a receipt or order email</span>
+            <span className="block text-xs muted">Hestia's model reads the text and proposes the facts. You check them before anything is saved.</span>
+          </button>
+        </div>
+        <p className="text-xs faint">Or explore the sample below: a washing machine repair waiting for a decision, a trial ending, a price change and a missing receipt.</p>
+      </section>
 
       <AgentBriefingCard briefings={briefings} enabled={enabled} busy={agentBusy} error={agentError} onReview={onAgentReview} />
 
@@ -74,7 +105,7 @@ export function SentinelHome({
         <div className="card p-4">
           <p className="text-xs muted">Recorded repair cost</p>
           <p data-testid="recovery-amount" className="text-2xl font-extrabold mono mt-1">{summary.documented_repair_cost_eur === undefined ? 'Not available' : euro(summary.documented_repair_cost_eur)}</p>
-          <p className="text-xs faint mt-1">{warranty ? 'Evidence to review, not money recovered' : primaryCase ? `Case ${CASE_STATUS[primaryCase.status].toLowerCase()} · not money recovered` : 'No open repair in this snapshot'}</p>
+          <p className="text-xs faint mt-1">{warranties.length ? 'Evidence to review, not money recovered' : primaryCase ? `Case ${CASE_STATUS[primaryCase.status].toLowerCase()} · not money recovered` : 'No open repair in this snapshot'}</p>
         </div>
         <button className="card p-4 text-left" onClick={onOpenCase} data-testid="metric-cases">
           <p className="text-xs muted">Saved cases</p>
@@ -99,8 +130,8 @@ export function SentinelHome({
             <h2 id="queue-title" className="text-lg font-bold">Decisions waiting for you <span className="chip chip-hearth ml-2">{alerts.length}</span></h2>
             <span className="faint text-xs">Nothing happens without your click</span>
           </div>
-          {warranty && (
-            <article className="card-accent p-5 space-y-3" data-testid="alert-warranty">
+          {warranties.map((warranty, index) => (
+            <article key={warranty.id} className="card-accent p-5 space-y-3" data-testid={index === 0 ? 'alert-warranty' : 'alert-warranty-' + warranty.item_id}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="eyebrow">Repair · {warranty.case_status ? CASE_STATUS[warranty.case_status as keyof typeof CASE_STATUS] : 'eligibility requires review'}</p>
@@ -111,12 +142,12 @@ export function SentinelHome({
               <p className="text-sm muted">{warranty.description}</p>
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 {warranty.action_type === 'open_case'
-                  ? <button className="btn btn-primary" onClick={onOpenCase} data-testid="review-claim">{warranty.action_label}</button>
-                  : <button className="btn btn-primary" onClick={() => onOpenNotice(warranty.item_id)} disabled={!enabled || !warranty.item_id || !(warranty.documented_amount_eur ?? 0)} data-testid="review-claim">{warranty.action_label}</button>}
+                  ? <button className="btn btn-primary" onClick={onOpenCase} data-testid={index === 0 ? 'review-claim' : 'review-claim-' + warranty.item_id}>{warranty.action_label}</button>
+                  : <button className="btn btn-primary" onClick={() => onOpenNotice(warranty.item_id)} disabled={!enabled || !warranty.item_id || !(warranty.documented_amount_eur ?? 0)} data-testid={index === 0 ? 'review-claim' : 'review-claim-' + warranty.item_id}>{warranty.action_label}</button>}
                 <span className="faint text-xs">{warranty.action_type === 'open_case' ? 'Record replies, evidence and the outcome' : (warranty.documented_amount_eur ?? 0) > 0 ? 'Exact text before approval; recorded as a simulation' : 'A documented positive repair amount is required'}</span>
               </div>
             </article>
-          )}
+          ))}
           {others.map(alert => (
             <article key={alert.id} className="card p-5 space-y-3" data-testid={`alert-${alert.category}`}>
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -150,7 +181,7 @@ export function SentinelHome({
         <aside className="space-y-4">
           <CaseSummary c={primaryCase} onOpenCase={onOpenCase} />
           <section className="card p-5 space-y-3" aria-labelledby="approvals-title">
-            <div className="flex items-center justify-between"><p className="eyebrow">Approvals in this space</p><span className="faint text-xs">Server records</span></div>
+            <div className="flex items-center justify-between"><p className="eyebrow">Approvals in your copy</p><span className="faint text-xs">Server records</span></div>
             <h3 id="approvals-title" className="sr-only">Approval history</h3>
             <div className="space-y-2" data-testid="dispatch-history">
               {state.dispatch_records.length === 0 && <p className="note">No recorded approvals yet.</p>}

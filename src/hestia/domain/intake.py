@@ -38,6 +38,103 @@ def _cents(row: dict[str, Any], key: str) -> int:
     return value
 
 
+def _optional_text(row: dict[str, Any], key: str, limit: int = 200) -> str:
+    value = row.get(key)
+    if value is None:
+        return ""
+    if not isinstance(value, str) or len(value) > limit:
+        raise ValueError(f"Invalid {key}")
+    return value.strip()
+
+
+def _optional_url(row: dict[str, Any], key: str) -> str:
+    value = _optional_text(row, key, 500)
+    if value and not re.fullmatch(r"https?://[^\s]+", value):
+        raise ValueError(f"{key} must be an http(s) link")
+    return value
+
+
+def _months(row: dict[str, Any], key: str, default: int) -> int:
+    value = row.get(key, default)
+    if type(value) is not int or not 0 <= value <= 120:
+        raise ValueError(f"{key} must be 0 to 120 months")
+    return value
+
+
+EMAIL = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+APPLIANCE_REQUIRED = {"kind", "appliance_id", "item_name", "purchase_date", "seller_name",
+                      "seller_email", "receipt_reference"}
+APPLIANCE_OPTIONAL = {"brand", "model_number", "serial_number", "purchase_price_cents",
+                      "statutory_months", "commercial_months", "product_url", "manual_url",
+                      "quickstart_url"}
+REPAIR_REQUIRED = {"kind", "appliance_id", "repair_date", "repair_amount_cents", "repair_issue"}
+REPAIR_OPTIONAL = {"seller_email", "receipt_reference"}
+OPEN_CASE = {"draft", "review", "authorized", "pending_response", "needs_information"}
+
+
+def _email(row: dict[str, Any], key: str) -> str:
+    value = _text(row, key)
+    if not EMAIL.fullmatch(value):
+        raise ValueError(f"{key} must be a valid email address")
+    return value
+
+
+def _plan_appliance(state: dict[str, Any], row: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
+    allowed = APPLIANCE_REQUIRED | APPLIANCE_OPTIONAL
+    if not APPLIANCE_REQUIRED <= row.keys() or not row.keys() <= allowed:
+        raise ValueError("Appliance fields are incomplete or unsupported")
+    identity = _id(row, "appliance_id")
+    existing = next((a for a in state["appliances"] if a["id"] == identity), None)
+    price = row.get("purchase_price_cents", 0)
+    if type(price) is not int or not 0 <= price <= 10000000:
+        raise ValueError("purchase_price_cents must be integer cents (0 when unknown)")
+    facts = {
+        "id": identity, "item_name": _text(row, "item_name"),
+        "brand": _optional_text(row, "brand"), "model_number": _optional_text(row, "model_number"),
+        "serial_number": _optional_text(row, "serial_number"),
+        "purchase_date": _date(row, "purchase_date"),
+        "statutory_months": _months(row, "statutory_months", 24),
+        "commercial_months": _months(row, "commercial_months", 0),
+        "receipt_reference": _text(row, "receipt_reference"),
+        "purchase_price_cents": price, "seller_name": _text(row, "seller_name"),
+        "seller_email": _email(row, "seller_email"),
+        "product_url": _optional_url(row, "product_url"),
+        "manual_url": _optional_url(row, "manual_url"),
+        "quickstart_url": _optional_url(row, "quickstart_url"),
+        "source": (existing or {}).get("source", "household_registry"),
+    }
+    repair = {"has_repair_claim": False, "repair_date": None, "repair_amount_cents": 0,
+              "repair_issue": None, "claim_status": "none"}
+    if existing is not None:
+        repair = {key: existing.get(key, value) for key, value in repair.items()}
+    return existing, {**facts, **repair}
+
+
+def _plan_repair(state: dict[str, Any], row: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
+    if not REPAIR_REQUIRED <= row.keys() or not row.keys() <= REPAIR_REQUIRED | REPAIR_OPTIONAL:
+        raise ValueError("Repair fields are incomplete or unsupported")
+    identity = _id(row, "appliance_id")
+    existing = next((a for a in state["appliances"] if a["id"] == identity), None)
+    if existing is None:
+        raise ValueError("Appliance not found; add the appliance first")
+    open_case = any(c.get("item_id") == identity and c.get("status") in OPEN_CASE
+                    for c in state.get("cases", []))
+    if open_case or (existing.get("has_repair_claim") and existing.get("claim_status") == "open"):
+        raise ValueError("This appliance already has an open repair or open case file; "
+                         "continue it there instead of reporting it again")
+    repair_date = _date(row, "repair_date")
+    if repair_date < existing.get("purchase_date", ""):
+        raise ValueError("Repair date is before the recorded purchase date")
+    after = {**existing, "has_repair_claim": True, "repair_date": repair_date,
+             "repair_amount_cents": _cents(row, "repair_amount_cents"),
+             "repair_issue": _text(row, "repair_issue"), "claim_status": "open"}
+    if "seller_email" in row:
+        after["seller_email"] = _email(row, "seller_email")
+    if "receipt_reference" in row:
+        after["receipt_reference"] = _text(row, "receipt_reference")
+    return existing, after
+
+
 def plan_records(state: dict[str, Any], records: Any) -> list[dict[str, Any]]:
     records = validate_records(records)
     candidate = copy.deepcopy(state)
@@ -104,8 +201,18 @@ def _plan_row(state: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("Non-trial subscription must not include a trial date")
         collection = "subscriptions"
         existing = next((s for s in state[collection] if s["id"] == identity), None)
+    elif kind in ("appliance", "repair"):
+        planner = _plan_appliance if kind == "appliance" else _plan_repair
+        existing, after = planner(state, row)
+        identity = after["id"]
+        collection = "appliances"
     else:
-        raise ValueError("Supported kinds are receipt, transaction and subscription")
+        raise ValueError("Supported kinds: receipt, transaction, subscription, appliance, repair")
+    if kind in ("appliance", "repair"):
+        duplicate = existing == after
+        return {"status": "duplicate" if duplicate else "ready", "collection": collection,
+                "record_id": identity, "before": copy.deepcopy(existing),
+                "after": copy.deepcopy(after)}
     if kind != "receipt" and existing is not None:
         # Dedupe compares imported facts, retaining receipt links and action history.
         ignored = {"has_receipt", "receipt_id", "status"}

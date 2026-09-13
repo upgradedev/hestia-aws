@@ -61,13 +61,17 @@ def guard_narrative(narrative: str, tool_outputs: list[str]) -> list[str]:
     for pattern in BANNED_PATTERNS:
         if re.search(pattern, narrative, re.I):
             reasons.append(f"unsupported claim matched {pattern!r}")
-    evidence = " ".join(tool_outputs)
-    known = {digits.replace(",", "") for digits in AMOUNT_PATTERN.findall(evidence)}
-    known |= {re.sub(r"[.,]00$", "", value) for value in known}
+    # Tool outputs write amounts bare ("13.99"), with a currency ("EUR 185.00") or in cents
+    # ("18500 minor units"); a narrative amount must match one of those spellings exactly.
+    known: set[str] = set()
+    evidence = re.sub(r"\d{4}-\d{2}-\d{2}", " ", " ".join(tool_outputs))  # dates are not amounts
+    for digits in NUMBER_PATTERN.findall(evidence):
+        known.add(_canonical(digits))
+        if digits.isdigit():
+            known.add(_canonical(f"{int(digits) / 100:.2f}"))
     for digits in AMOUNT_PATTERN.findall(narrative):
-        value = digits.replace(",", "")
-        if value not in known and re.sub(r"[.,]00$", "", value) not in known:
-            reasons.append(f"amount {value} does not appear in tool outputs")
+        if _canonical(digits) not in known:
+            reasons.append(f"amount {digits} does not appear in tool outputs")
     if len(narrative) > MAX_NARRATIVE_CHARS:
         reasons.append("narrative exceeds the length limit")
     if "requires review" not in lowered and "review" not in lowered:
@@ -75,11 +79,19 @@ def guard_narrative(narrative: str, tool_outputs: list[str]) -> list[str]:
     return reasons
 ```
 
+`_canonical` folds `1,399.00`, `1399,00` and `1399` into one spelling, so the comparison survives the several ways a tool and a model each write the same number, and the date strip stops `2024-11-08` from lending its digits to an invented amount.
+
 When the guard returns reasons, the briefing is withheld and the page says so; the tool findings underneath are unaffected, because they never came from the model.
+
+## The records are the household's, and a second agent only proposes them
+
+A sentinel with nothing to watch is a demo. So the household keeps its own registry: two intake kinds, `appliance` and `repair`, put the person's real washing machine, fridge and laptop beside the sample ones, with the receipt reference, seller, guarantee months and whatever product, manual or quick start link they saved. Reporting a repair sets the claim open and drops that appliance into the same notice, approval and case file flow the sample repair uses, and a second repair is refused while one is still open. Both kinds run through the intake contract that was already there: stage a draft, show the exact fields, take consent for the exact subset, then commit.
+
+Typing a receipt is tedious, so there is a second Strands agent with no tools at all. Paste the text of an order confirmation, at most 6000 characters, and one `BedrockModel` call at `temperature=0.0` answers with a JSON object of records. The prompt tells it to include a field only when the text states it and never to guess a date, price, email or model number; an allow-list of kinds, keys and value types then drops everything else before a person sees it. What comes back is a staged draft, labelled `model_text_extraction` and `ocr_status: model_text`, sitting in the same review form as a hand-typed one. Nothing is saved until the household corrects it and commits. The route has no deterministic equivalent to fall back to, so it fails closed instead: no model configured, a spent daily budget or a model failure all return an error, save nothing, and point at manual entry. The pasted text is not kept either, only its SHA-256, its byte count and the proposed records, which is enough to replay an identical paste without paying for a second call. How well it reads a receipt is unmeasured; the control is that a person confirms every fact.
 
 ## Cost limits on a public URL
 
-The route is public behind a 30-minute demo capability, so the limits live on the server. Each demo space may make 3 model calls, counted in the workspace document. The shared budget is 200 calls per day, reserved with a conditional write to one small S3 object per day: `If-None-Match` creates it, `If-Match` increments it, and a lost race retries. If the budget cannot be confirmed, the model is not called. `GET /healthz` reports `live_model`, `model_id` and the limits, and the frontend release gate refuses to publish over a backend whose health does not name a bounded model.
+Both routes are public behind a 30-minute demo capability, so the limits live on the server. Each private copy may make 3 review calls and 3 text readings, counted separately in the workspace document. The shared budget behind them is 200 calls per day, reserved with a conditional write to one small S3 object per day: `If-None-Match` creates it, `If-Match` increments it, and a lost race retries. If the budget cannot be confirmed, the model is not called. `GET /healthz` reports `live_model`, `model_id` and the limits, and the frontend release gate refuses to publish over a backend whose health does not name a bounded model.
 
 ## What the IAM policy says
 
@@ -87,7 +99,7 @@ The writer function may call `bedrock:InvokeModel` and `bedrock:InvokeModelWithR
 
 ## The honest limits
 
-The bank feed, mailbox sync and retailer sync are not connected; the household imports facts by hand through a stage, review and commit flow. Receipt PNGs are validated for structure, checksums and size, but no text is extracted. Email is not sent; approvals are recorded with `delivery_status` `SIMULATED`. Bedrock AgentCore and Bedrock Guardrails are not connected; the guard above is a local pattern check. Model output quality is unmeasured, and independent human testing has not been run. The docs say all of this beside the feature it limits, and a claims test fails the build if someone writes otherwise.
+The bank feed, mailbox sync and retailer sync are not connected; the household adds facts by hand or by pasting text, and either way through a stage, review and commit flow. Receipt PNGs are validated for structure, checksums and size, but no text is extracted from an image, and pasting the text of an order email reads no mailbox. Email is not sent; approvals are recorded with `delivery_status` `SIMULATED`. Bedrock AgentCore and Bedrock Guardrails are not connected; the guard above is a local pattern check and covers the briefing only. Briefing quality and extraction quality are both unmeasured, and independent human testing has not been run. The docs say all of this beside the feature it limits, and a claims test fails the build if someone writes otherwise.
 
 ## Why this shape
 

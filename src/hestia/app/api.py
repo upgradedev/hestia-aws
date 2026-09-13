@@ -18,7 +18,7 @@ from hestia.adapters.storage import (
     preserve_intake,
 )
 from hestia.app.access import APIError, authorize_demo, issue_demo_access
-from hestia.app.agent import agent_config, agent_review
+from hestia.app.agent import agent_config, agent_extract, agent_review
 from hestia.app.cases import update_case
 from hestia.app.claims import (
     approve_claim,
@@ -60,6 +60,7 @@ PROTECTED_POST = {
     "/api/outbox/status",
     "/api/case/update",
     "/api/agent/review",
+    "/api/agent/extract",
 }
 
 
@@ -144,7 +145,7 @@ def _record_local_action(
         require_fields(body, set())
         fresh = fresh_demo_state()
         for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count",
-                    "agent_calls", "agent_briefings"):
+                    "agent_calls", "agent_briefings", "agent_extracts"):
             fresh[key] = state.get(key, fresh.get(key))
         fresh["cases"] = state.get("cases", [])
         preserve_intake(state, fresh)
@@ -284,7 +285,8 @@ def _handle_api(event: dict[str, Any]) -> dict[str, Any]:
             "live_send": False, "live_model": config["live_model"],
             "model_id": config["model_id"],
             "agent": {key: config[key] for key in
-                      ("framework", "session_cap", "daily_cap", "max_output_tokens")},
+                      ("framework", "session_cap", "extract_session_cap", "daily_cap",
+                       "max_output_tokens")},
             "storage_configured": bool(os.environ.get("HESTIA_STATE_BUCKET")),
             "demo_sessions_configured": len(
                 os.environ.get("HESTIA_DEMO_SECRET", "").encode(),
@@ -328,4 +330,6 @@ def _handle_api(event: dict[str, Any]) -> dict[str, Any]:
         return response(200, update_case(store, body))
     if path == "/api/agent/review":
         return response(200, agent_review(store, body))
+    if path == "/api/agent/extract":
+        return response(200, agent_extract(store, body))
     return response(200, _record_local_action(store, path, body))

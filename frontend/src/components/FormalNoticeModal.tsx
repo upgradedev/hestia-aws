@@ -102,9 +102,9 @@ export function FormalNoticeModal({ appliance, isOpen, token, enabled, onClose, 
             <h3 id="formal-notice-title" className="font-bold">Repair notice for your review</h3>
             <p className="text-xs muted">Prepared on the server from the recorded facts · recorded on approval, never sent</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handleCopy} disabled={!draft || loading || !!error} title="Copy to clipboard" className="btn btn-quiet btn-sm">{copied ? 'Copied' : 'Copy text'}</button>
-            <button onClick={handleDownload} disabled={!draft || loading || !!error} title="Download notice as text" className="btn btn-quiet btn-sm">Export .txt</button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={handleCopy} disabled={!draft || loading || !!error} title="Copy to clipboard" className="btn btn-quiet btn-sm whitespace-nowrap">{copied ? 'Copied' : 'Copy text'}</button>
+            <button onClick={handleDownload} disabled={!draft || loading || !!error} title="Download notice as text" className="btn btn-quiet btn-sm whitespace-nowrap">Export .txt</button>
             <button onClick={onClose} disabled={isDispatching} aria-label="Close notice" className="btn btn-quiet btn-sm text-lg">&times;</button>
           </div>
         </div>

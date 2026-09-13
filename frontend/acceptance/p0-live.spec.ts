@@ -8,7 +8,7 @@ const live = process.env.HESTIA_ACCEPTANCE_URL!.startsWith('https:');
 const pause = () => new Promise<void>(resolve => setTimeout(resolve, 1_100));
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 const NARRATIVE_HEADINGS = ['What I checked', 'Decisions waiting for you', 'Suggested next step'];
-type NavTab = 'Home' | 'Case' | 'Records' | 'About' | 'Import records';
+type NavTab = 'Home' | 'Case file' | 'Records' | 'About' | 'Add records';
 const nav = (page: Page, name: NavTab) =>
   page.getByRole('navigation', { name: 'Household navigation' }).getByRole('button', { name, exact: true });
 
@@ -23,7 +23,7 @@ async function health(request: APIRequestContext) {
     mode: 'simulated', live_send: false, live_model: live, demo_sessions_configured: true,
     agent: {
       framework: expect.stringContaining('strands-agents'), session_cap: expect.any(Number),
-      daily_cap: expect.any(Number), max_output_tokens: expect.any(Number),
+      extract_session_cap: expect.any(Number), daily_cap: expect.any(Number), max_output_tokens: expect.any(Number),
     },
   });
   if (live) {
@@ -298,6 +298,79 @@ test('deployed subscriptions: a synthetic cancellation request is recorded exact
   });
 });
 
+test('deployed registry: a household appliance with links, its repair, the notice for it, reset survival and bounded text reading', async ({ request }) => {
+  await health(request);
+  const call = caller(request);
+  const session = await call('/api/demo/session', 201, undefined, {});
+  const appliance = {
+    kind: 'appliance', appliance_id: 'acceptance-fridge', item_name: 'Fridge freezer', brand: 'Liebherr', model_number: 'CNsdd 5223',
+    purchase_date: '2025-11-02', purchase_price_cents: 89900, seller_name: 'Local Store', seller_email: 'service@localstore.example',
+    receipt_reference: 'paper receipt 2 Nov 2025', statutory_months: 24, commercial_months: 0, manual_url: 'https://example.com/cnsdd-5223-manual.pdf',
+  };
+  async function save(records: object[]) {
+    const staged = await call('/api/ingest/sync', 200, session.token, { operation: 'stage', records });
+    const reviewed = await call('/api/ingest/sync', 200, session.token, { operation: 'review', intake_id: staged.intake.id, records });
+    expect(reviewed.intake.review.changes[0]).toMatchObject({ status: 'ready', collection: 'appliances', record_id: 'acceptance-fridge' });
+    const committed = await call('/api/ingest/sync', 200, session.token, { operation: 'commit', intake_id: staged.intake.id, digest: reviewed.intake.review.digest, confirmed: true });
+    expect(committed.intake.result).toEqual({ ready: 1, duplicate: 0, error: 0 });
+    return committed.state;
+  }
+  const added = await save([appliance]);
+  expect(added.appliances).toHaveLength(4);
+  expect(added.appliances.find((a: { id: string }) => a.id === 'acceptance-fridge')).toMatchObject({
+    item_name: 'Fridge freezer', brand: 'Liebherr', manual_url: 'https://example.com/cnsdd-5223-manual.pdf', product_url: '',
+    has_repair_claim: false, claim_status: 'none', source: 'household_registry',
+  });
+  await call('/api/action/claim/prepare', 422, session.token, { item_id: 'acceptance-fridge' });
+  const repaired = await save([{ kind: 'repair', appliance_id: 'acceptance-fridge', repair_date: '2026-09-10', repair_amount_cents: 12000, repair_issue: 'Compressor stopped, technician replaced it' }]);
+  expect(repaired.appliances.find((a: { id: string }) => a.id === 'acceptance-fridge')).toMatchObject({ has_repair_claim: true, repair_amount_cents: 12000, claim_status: 'open' });
+  expect(repaired.summary.unclaimed_recovery_cents).toBe(18500 + 12000);
+  const draft: ClaimDraft = (await call('/api/action/claim/prepare', 200, session.token, { item_id: 'acceptance-fridge' })).draft;
+  expect(draft).toMatchObject({ item_id: 'acceptance-fridge', amount_cents: 12000, seller_email: 'service@localstore.example', mode: 'simulated' });
+  expect(draft.notice).toContain('Compressor stopped');
+  expect(draft.notice).toContain('Fridge freezer');
+  // A second repair is refused while the first is open; the reset keeps the household's own appliance.
+  const again = await call('/api/ingest/sync', 200, session.token, { operation: 'stage', records: [{ kind: 'repair', appliance_id: 'acceptance-fridge', repair_date: '2026-09-11', repair_amount_cents: 500, repair_issue: 'Second fault' }] });
+  const refused = await call('/api/ingest/sync', 200, session.token, { operation: 'review', intake_id: again.intake.id, records: again.intake.records });
+  expect(refused.intake.review.changes[0].status).toBe('error');
+  const reset = await call('/api/action/reset', 200, session.token, {});
+  expect(reset.state.appliances.find((a: { id: string }) => a.id === 'acceptance-fridge')).toMatchObject({ manual_url: 'https://example.com/cnsdd-5223-manual.pdf' });
+  // Pasted text is read by the bounded model only where one is configured; nothing is saved without review.
+  await call('/api/agent/extract', 401, undefined, { text: 'Order 4711' });
+  await call('/api/agent/extract', 400, session.token, { text: '' });
+  const text = 'Order 4711 confirmed\nLiebherr CNsdd 5223 fridge freezer, EUR 899.00\nDelivered 2 November 2025\nSeller: Local Store, service@localstore.example';
+  let extraction: { mode: string; records: number; replayed?: boolean } = { mode: 'unavailable', records: 0 };
+  if (live) {
+    const read = await call('/api/agent/extract', 200, session.token, { text, hint: 'order' });
+    expect(read.status).toBe('simulated');
+    expect(read.intake).toMatchObject({ source: 'model_text_extraction', ocr_status: 'model_text', status: 'staged', route: '/api/ingest/sync', confidence_score: null });
+    expect(typeof read.intake.model_id).toBe('string');
+    expect(Array.isArray(read.intake.records)).toBe(true);
+    expect(read.state.agent_extracts).toBe(1);
+    expect(read.state.appliances.filter((a: { id: string }) => a.id !== 'acceptance-fridge')).toHaveLength(3);
+    const replay = await call('/api/agent/extract', 200, session.token, { text, hint: 'order' });
+    expect(replay.replayed).toBe(true);
+    expect(replay.intake.id).toBe(read.intake.id);
+    expect(replay.state.agent_extracts).toBe(1);
+    extraction = { mode: 'live_model', records: read.intake.records.length, replayed: true };
+  } else {
+    const refusedText = await call('/api/agent/extract', 503, session.token, { text, hint: 'order' });
+    expect(refusedText.message).toContain('not configured');
+    expect((await call('/api/state', 200, session.token)).agent_extracts).toBe(0);
+  }
+  const persisted = await call('/api/state', 200, session.token);
+  expect(persisted.appliances).toHaveLength(4);
+  expect(persisted.summary.real_recovered_cents).toBe(0);
+  expect(persisted.dispatch_records).toHaveLength(0);
+  await health(request);
+  await test.info().attach('sanitized-registry-acceptance.json', {
+    body: JSON.stringify({ commit: sha, target: live ? 'aws' : 'ci-calibration',
+      appliance_id: 'acceptance-fridge', repair_amount_cents: 12000, notice_digest: draft.digest, reset_kept_appliance: true,
+      text_extraction: extraction, real_recovered_cents: 0, independent_human_uat: 'NOT_RUN',
+    }, null, 2), contentType: 'application/json',
+  });
+});
+
 if (process.env.HESTIA_ACCEPTANCE_PHASE === 'frontend') {
   // Serialize unmodified same-origin API requests to respect the 2 RPS demo limit.
   async function paced(page: Page) {
@@ -387,7 +460,7 @@ if (process.env.HESTIA_ACCEPTANCE_PHASE === 'frontend') {
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Keep the whole case together');
     await test.info().attach(`${sha}-cold-start`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
     await start(page);
-    await nav(page, 'Case').click();
+    await nav(page, 'Case file').click();
     await expect(page.getByTestId('case-empty')).toContainText('No case saved yet');
     await expect(page.getByTestId('reviewed-facts')).toContainText('REC-2024-BOSCH-88');
     await page.getByTestId('prepare-case-notice').click();

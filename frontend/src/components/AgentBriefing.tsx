@@ -20,6 +20,12 @@ function reasonText(reason: string | null): string {
   return REASONS[reason] ?? reason;
 }
 
+/** Bold the model's **emphasis** as text nodes; no other markup is interpreted. */
+function Inline({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return <>{parts.map((part, index) => index % 2 === 1 ? <strong key={index}>{part}</strong> : <span key={index}>{part}</span>)}</>;
+}
+
 /** Render the three-section briefing without trusting any markup from the model. */
 function Narrative({ text }: { text: string }) {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -29,8 +35,8 @@ function Narrative({ text }: { text: string }) {
       {lines.map((line, index) => {
         const bare = line.replace(/^[#*\-\s]+|[:*\s]+$/g, '').toLowerCase();
         if (headings.has(bare)) return <h4 key={index}>{line.replace(/^[#*\-\s]+|[:*\s]+$/g, '')}</h4>;
-        if (/^[-*•]\s+/.test(line)) return <ul key={index}><li>{line.replace(/^[-*•]\s+/, '')}</li></ul>;
-        return <p key={index}>{line}</p>;
+        if (/^(?:[-*•]|\d+[.)])\s+/.test(line)) return <ul key={index}><li><Inline text={line.replace(/^(?:[-*•]|\d+[.)])\s+/, '')} /></li></ul>;
+        return <p key={index}><Inline text={line} /></p>;
       })}
     </div>
   );

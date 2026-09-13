@@ -77,7 +77,7 @@
   <text x="1030" y="366" text-anchor="middle" font-weight="700" fill="#2b2420">Amazon Bedrock</text>
   <text x="1030" y="388" text-anchor="middle" fill="#5c534b">Claude Haiku 4.5 (eu inference profile)</text>
   <text x="1030" y="410" text-anchor="middle" fill="#5c534b">max 700 output tokens, temperature 0.2</text>
-  <text x="1030" y="432" text-anchor="middle" fill="#5c534b">3 calls per demo space, 200 per day</text>
+  <text x="1030" y="432" text-anchor="middle" fill="#5c534b">3 reviews and 3 text readings per copy, 200 per day shared</text>
   <text x="1030" y="454" text-anchor="middle" fill="#5c534b">20 s timeout, then tools-only fallback</text>
   <text x="1030" y="476" text-anchor="middle" fill="#5c534b">narrative guard withholds unsupported text</text>
 

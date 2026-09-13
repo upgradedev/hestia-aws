@@ -40,12 +40,13 @@ def validate_records(records: Any) -> list[dict[str, Any]]:
     if not isinstance(records, list) or not 1 <= len(records) <= MAX_RECORDS:
         raise ValueError("Provide 1 to 20 records")
     for record in records:
-        if not isinstance(record, dict) or len(record) > 14:
-            raise ValueError("Each record must be a flat object with at most 14 fields")
+        if not isinstance(record, dict) or len(record) > 20:
+            raise ValueError("Each record must be a flat object with at most 20 fields")
         for key, value in record.items():
             if len(key) > 80 or not isinstance(value, (str, int, bool, type(None))):
                 raise ValueError("Record facts must be text, integer cents or booleans")
-            if isinstance(value, str) and (len(value) > 200 or any(ord(c) < 32 for c in value)):
+            limit = 500 if key.endswith("_url") else 200
+            if isinstance(value, str) and (len(value) > limit or any(ord(c) < 32 for c in value)):
                 raise ValueError("Record text exceeds bounds or contains control characters")
     if len(canonical_bytes(records)) > MAX_DOCUMENT_BYTES:
         raise ValueError("Records exceed the 16000 byte limit")

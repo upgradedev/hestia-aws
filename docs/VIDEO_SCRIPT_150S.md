@@ -14,7 +14,7 @@ Caption: Elena Georgiou's washing machine failed 22 months after purchase, and t
 
 ### 2. surface (about 21 s): one click, then Home
 
-Screen: click **Start with the sample household** (`data-testid="launch-cockpit"`), which creates the 30-minute demo space. Home appears: the review card, the four fact tiles and "Decisions waiting for you" with the repair, the trial, the price change, the missing receipt and the utility bill.
+Screen: click **Start with the sample household** (`data-testid="launch-cockpit"`), which creates the 30-minute private copy. Home appears, in this order: the "Start here" block (`data-testid="start-here"`) with its three doors into the household's own records, the review card, the four fact tiles and "Decisions waiting for you" with the repair, the trial, the price change, the missing receipt and the utility bill. Scroll past "Start here" to keep the beat on the decisions queue the caption names; beat 3 begins from the review card just below it.
 
 Caption: One click on the landing page opens a private demo space with a fictional Athens household: no account, no login, a 30-minute limit. Home shows what needs a decision this week: the recorded repair, a trial ending, a price change from 9.99 to 13.99 EUR, and a receipt missing for 85.50 EUR.
 

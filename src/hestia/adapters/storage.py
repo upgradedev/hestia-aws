@@ -37,6 +37,8 @@ DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
         {
             "id": "app-001",
             "item_name": "Bosch Series 6 Washing Machine",
+            "brand": "Bosch",
+            "model_number": "WAU28T64GB",
             "serial_number": "WAU28T64GB/01",
             "purchase_date": "2024-10-15",
             "statutory_months": 24,
@@ -54,6 +56,8 @@ DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
         {
             "id": "app-002",
             "item_name": "Sony Bravia 55 OLED TV",
+            "brand": "Sony",
+            "model_number": "XR-55A80K",
             "serial_number": "XR-55A80K-902",
             "purchase_date": "2025-03-20",
             "statutory_months": 24,
@@ -71,6 +75,8 @@ DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
         {
             "id": "app-003",
             "item_name": "Daikin Inverter AC 12000 BTU",
+            "brand": "Daikin",
+            "model_number": "FTXM35R",
             "serial_number": "FTXM35R-2025",
             "purchase_date": "2025-06-10",
             "statutory_months": 24,
@@ -490,7 +496,7 @@ class S3HouseholdStore:
         fresh = fresh_demo_state()
         # Preserve receipts, consumed tokens, revisions and quotas across a demo reset.
         for key in ("version_seq", "drafts", "dispatch_records", "audit_events", "action_count",
-                    "agent_calls", "agent_briefings"):
+                    "agent_calls", "agent_briefings", "agent_extracts"):
             fresh[key] = copy.deepcopy(state.get(key, fresh.get(key)))
         fresh["cases"] = copy.deepcopy(state.get("cases", []))
         preserve_intake(state, fresh)
@@ -506,7 +512,7 @@ def fresh_demo_state() -> dict[str, Any]:
     state["dispatch_records"] = []
     state.update(
         mode="simulated", drafts={}, cases=[], audit_events=[], action_count=0, generation=0,
-        agent_calls=0, agent_briefings=[],
+        agent_calls=0, agent_briefings=[], agent_extracts=0,
     )
     state["summary"] = summary_from_records(state)
     return state
@@ -517,3 +523,7 @@ def preserve_intake(state: dict[str, Any], fresh: dict[str, Any]) -> None:
     for key in ("outflows", "subscriptions", "saved_receipts", "intakes", "intake_provenance"):
         if key in state:
             fresh[key] = copy.deepcopy(state[key])
+    # Sample appliances return to their sample facts; the household's own appliances stay.
+    sample_ids = {a["id"] for a in fresh["appliances"]}
+    fresh["appliances"].extend(copy.deepcopy(a) for a in state.get("appliances", [])
+                               if a.get("id") not in sample_ids)
