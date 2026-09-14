@@ -14,7 +14,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 # The release evidence lives in exactly one document; the others link to it.
 EVIDENCE_DOC = "docs/deployment.md"
-EVIDENCE_SHA = "f8694a0e2e95df688e46e53c9a3e2e9da090e401"
+EVIDENCE_SHA = "f58934736ec3e1a2a31995f2ecba82aaa8bd19ec"
 EVIDENCE_DATE = "2026-09-14"
 TESTBOOK_DOC = "docs/testing.md"
 LIMIT_DOCS = ("docs/architecture.md", "docs/assurance.md", "docs/testing.md", "docs/deployment.md")
