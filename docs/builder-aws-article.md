@@ -1,6 +1,6 @@
 # Agents for Humans: Strands agents that read a household's records and wait for the person
 
-*Draft for builder.aws.com. Live demo: https://drusjukc9d4oc.cloudfront.net/ (fictional household, no login). Source: https://github.com/upgradedev/hestia-aws, MIT.*
+*Published on [builder.aws.com](https://builder.aws.com/content/3JK3oFE0xQzbGUaEAm6e5pwirq3/agents-for-humans-two-strands-agents-on-aws-that-read-a-households-paperwork-and-wait-for-a-person). Live demo: https://drusjukc9d4oc.cloudfront.net/ (fictional household, no login). Source: https://github.com/upgradedev/hestia-aws, MIT.*
 
 Households lose small amounts in boring ways. A washing machine fails in month 22 and the repair is paid without asking the seller to review it. A free trial ends three days after this demo space opens. A backup plan goes from 9.99 to 13.99 without anyone noticing. A receipt for a hardware-store purchase is gone by the time it matters. The Everyday Agents brief for the AWS Agents for Humans hackathon asked for agents that run quietly and only ping you when there is a real decision to make. Hestia is our answer, and this article is about the one design decision that shaped it: the agent reads and points, the person decides, and calculations, notices, approvals and state changes stay in deterministic code.
 
