@@ -162,7 +162,7 @@ DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
         },
         {
             "id": "out-003",
-            "merchant": "Plaisio Electronics",
+            "merchant": "Marousi Electronics",
             "amount_cents": 4200,
             "date": "2026-09-07",
             "has_receipt": False,

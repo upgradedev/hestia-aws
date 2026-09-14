@@ -92,7 +92,7 @@ SCENARIOS: dict[str, dict[str, Any]] = {
             {"merchant": "Piraeus DIY Supplies", "amount_cents": 8550, "date": date(2026, 9, 4)},
             {"merchant": "Neighbourhood Supermarket", "amount_cents": 14230,
              "date": date(2026, 9, 6)},
-            {"merchant": "Plaisio Electronics", "amount_cents": 4200, "date": date(2026, 9, 7)},
+            {"merchant": "Marousi Electronics", "amount_cents": 4200, "date": date(2026, 9, 7)},
         ],
         "saved_receipts": {"Neighbourhood Supermarket"},
         "utility_bills": [

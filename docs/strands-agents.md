@@ -39,7 +39,7 @@ The defaults are `eu.anthropic.claude-haiku-4-5-20251001-v1:0`, `eu-west-1` and 
 
 Each tool output is clipped to 1600 characters.
 
-**Prompt** (`household_agent.py:35-51`). The system prompt tells the agent to use the tools instead of guessing, never to state or imply entitlement to a refund, repair or amount, never to invent deadlines, statutory periods or attachments, to use only amounts and dates from tool outputs, and not to draft the notice. It asks for fewer than 180 words under exactly three headings: What I checked, Decisions waiting for you, Suggested next step. The review prompt names the recorded appliance ids and the review date. The word ceiling is an instruction; the code enforces a 3200-character limit.
+**Prompt** (`household_agent.py:34-51`). The system prompt tells the agent to use the tools instead of guessing, never to state or imply entitlement to a refund, repair or amount, never to invent deadlines, statutory periods or attachments, to use only amounts and dates from tool outputs, and not to draft the notice. It asks for fewer than 180 words under exactly three headings: What I checked, Decisions waiting for you, Suggested next step. The review prompt names the recorded appliance ids and the review date. The word ceiling is an instruction; the code enforces a 3200-character limit.
 
 **Trace and usage** (`household_agent.py:326-345, 451-462`). Tool calls are paired from the `toolUse` and `toolResult` blocks in `agent.messages`, and token usage comes from `result.metrics.accumulated_usage`. Both are stored with the briefing; the private copy keeps its last five briefings.
 
