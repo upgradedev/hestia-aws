@@ -31,7 +31,6 @@ MAX_OUTPUT_TOKENS = 700
 MAX_NARRATIVE_CHARS = 3200
 MODEL_TIMEOUT_SECONDS = 20.0
 TOOL_OUTPUT_CHARS = 1600
-
 SYSTEM_PROMPT = (
     "You are Hestia, a household evidence review assistant running inside an isolated demo "
     "workspace. Use the tools to read recorded facts; do not guess facts that a tool did not "
@@ -40,10 +39,11 @@ SYSTEM_PROMPT = (
     "say 'requires review' where a tool says so; (2) never invent deadlines, statutory "
     "periods or attachments; (3) use only amounts and dates that appear in tool outputs; "
     "(4) do not draft the notice yourself: the household reviews an exact server-prepared "
-    "draft in Hestia and approves it explicitly; (5) keep the whole briefing under 180 words. "
-    "Format exactly three sections with these headings: 'What I checked', "
-    "'Decisions waiting for you' (at most three bullets, each an action available in "
-    "Hestia), 'Suggested next step' (one sentence)."
+    "draft in Hestia and approves it explicitly; (5) keep the whole briefing under 180 words; (6) "
+    "do not use dashes as punctuation. Format exactly three sections with these headings: 'What I "
+    "checked', 'Decisions waiting for you' (at most three bullets, each an action available in "
+    "Hestia; when a tool reports a recorded repair with no approved notice yet, the first bullet "
+    "is to review that repair's exact notice in Hestia), 'Suggested next step' (one sentence)."
 )
 REVIEW_PROMPT = (
     "Review this household using every tool once, then write the briefing. Recorded "

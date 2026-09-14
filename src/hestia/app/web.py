@@ -89,14 +89,14 @@ SCENARIOS: dict[str, dict[str, Any]] = {
             ("Cloud Backup Vault", 999, 1399),  # 40% creep
         ],
         "bank_transactions": [
-            {"merchant": "Leroy Merlin DIY", "amount_cents": 8550, "date": date(2026, 9, 4)},
-            {"merchant": "Sklavenitis Supermarket", "amount_cents": 14230,
+            {"merchant": "Piraeus DIY Supplies", "amount_cents": 8550, "date": date(2026, 9, 4)},
+            {"merchant": "Neighbourhood Supermarket", "amount_cents": 14230,
              "date": date(2026, 9, 6)},
             {"merchant": "Plaisio Electronics", "amount_cents": 4200, "date": date(2026, 9, 7)},
         ],
-        "saved_receipts": {"Sklavenitis Supermarket"},
+        "saved_receipts": {"Neighbourhood Supermarket"},
         "utility_bills": [
-            ("PPC Electricity", 11000, 16800, date(2026, 9, 1)),  # 52% surge
+            ("City Electricity Supply", 11000, 16800, date(2026, 9, 1)),  # 52% surge
         ],
         "homeowner_name": "Elena Georgiou",
         "repair_issue": "Drum bearing seizure and drain pump motor failure",

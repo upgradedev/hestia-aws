@@ -45,7 +45,7 @@ The sample household is fictional. The product also invites visitors to add thei
 
 | Surface | Behavior | Open question |
 |---|---|---|
-| Sample records | a fictional household with real retailer names and `.example.gr` contact addresses | not a representative household cohort |
+| Sample records | a fictional household with invented retailer names and `.example.gr` contact addresses | not a representative household cohort |
 | Browser session | the capability is kept in session storage under `hestia.demo-session.v1` | session expiry ends access, not storage |
 | What a private copy stores | registry appliances with brand, model, serial, purchase date and price, seller name and email, receipt reference and saved links; repairs with date, amount and issue; transactions, subscriptions and receipt links; staged drafts with proposed, original and corrected records; intake provenance; case notes, evidence references, planning dates and attested outcomes; the last five briefings with their tool traces. All of it sits in the copy's `state.json` | user-entered content is not authenticated or screened for personal data |
 | Model input for a review | the system prompt, the review prompt (appliance ids with item names, and the review date), the four tool schemas and tool outputs clipped to 1600 characters each, sent through the Bedrock client in `eu-west-1` to the EU inference profile | Bedrock data handling, and where the EU profile processes a request, need separate confirmation; no local PII filter runs first |

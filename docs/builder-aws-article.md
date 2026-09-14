@@ -10,7 +10,7 @@ The visitor opens one URL, clicks once, and gets a 30-minute private copy of a f
 
 Below it, the button "Ask Hestia to review this household" runs a Strands agent. The agent reads the recorded appliances, subscriptions, transactions, utility bills and saved case through four tools. It then writes a briefing under three fixed headings: what I checked, decisions waiting for you, suggested next step.
 
-The decision that matters most is the repair: a Bosch washing machine, a recorded repair of EUR 185.00, and a seller called Kotsovolos Megastore. Deterministic Python on the server prepares the notice to the seller, and reviewing it opens the case file. The person reads the exact text and approves it. Approval consumes a single-use token bound to that draft, is recorded as a simulation, and moves the case to Authorized. Nothing is emailed.
+The decision that matters most is the repair: a Bosch washing machine, a recorded repair of EUR 185.00, and a seller called Acropolis Appliance Store. Deterministic Python on the server prepares the notice to the seller, and reviewing it opens the case file. The person reads the exact text and approves it. Approval consumes a single-use token bound to that draft, is recorded as a simulation, and moves the case to Authorized. Nothing is emailed.
 
 ## The tools are plain functions over one workspace
 
