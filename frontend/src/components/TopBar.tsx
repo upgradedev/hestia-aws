@@ -41,7 +41,7 @@ export function TopBar({ householdName, activeTab, onSelectTab, sessionStatus, e
             </summary>
             <div className="absolute right-0 top-full mt-2 z-40 w-72 card p-4 text-sm space-y-2">
               <p className="font-bold">What you are looking at</p>
-              <p className="muted">A private copy of a fictional Athens household, valid for 30 minutes. Add your own appliances and repairs to it; the sample facts are synthetic.</p>
+              <p className="muted">Access to this stored demo space lasts 30 minutes; its data is not automatically deleted. Use only fictional, non-sensitive details.</p>
               <p className="muted">Approvals are recorded, never sent. No email, no bank or mailbox connection, no photo scanning, and no money moves.</p>
               <p className="muted">Hestia's review and text reading use two Strands agents on Amazon Bedrock, each with a small per-copy limit.</p>
             </div>

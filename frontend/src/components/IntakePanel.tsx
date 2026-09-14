@@ -183,9 +183,9 @@ export function IntakePanel({ route, enabled, stateVersion, drafts, initialRecor
   const idLabel = form.kind === 'subscription' ? 'Subscription ID' : registry ? 'Appliance ID' : 'Transaction ID';
   return <section aria-label={heading ?? 'Manual document import'} className="space-y-3 border-t border-[var(--line)] pt-4 text-sm">
     <h4 className="font-bold">{heading ?? 'Add records with review'}</h4>
-    <p className="muted">{intro ?? 'Choose what you want to add, enter the facts from your receipt or statement, then review and confirm. Nothing is saved until you confirm.'}</p>
+    <p className="muted">{intro ?? 'Choose what you want to add and enter the facts from your receipt or statement. Hestia stores a draft for review; only confirmed changes enter the household records.'}</p>
     {allowFile && <>
-      <p className="text-xs faint">OCR is unavailable. Simple PNG (8-bit, no interlacing or metadata chunks, up to 1 million pixels) and JSON are validated up to 16000 bytes. Keep your original document open to transcribe its facts. Only its SHA-256 and reviewed facts are saved; the file is not retained. Records stay in this isolated synthetic session.</p>
+      <p className="text-xs faint">OCR is unavailable. Simple PNG (8-bit, no interlacing or metadata chunks, up to 1 million pixels) and JSON are validated up to 16000 bytes. Keep your original document open to transcribe its facts. Its SHA-256 and staged facts are stored, but the file is not retained; only confirmed changes enter the household records.</p>
       <label className="block font-medium">Document bytes (PNG or JSON)
         <input data-testid="intake-file" type="file" accept="image/png,application/json,.json" disabled={!enabled || pending} onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} className="block w-full py-2 text-sm" />
       </label>
@@ -290,7 +290,7 @@ export function IntakePanel({ route, enabled, stateVersion, drafts, initialRecor
         setForm(formFrom(rows[0]));
       } catch { setError('Correct the JSON before returning to the simple form.'); return; }
     } setAdvanced(!advanced); }} className="font-semibold">Advanced: JSON and batch records</summary>
-      <p className="text-xs faint mt-2">Use an array for manual entry. A JSON file must contain an object with a records array. Corrections are reviewed before saving. Supported kinds: transaction, receipt, subscription, appliance, repair. IDs must be stable, unique identifiers; matching never guesses by merchant.</p>
+      <p className="text-xs faint mt-2">Use an array for manual entry. A JSON file must contain an object with a records array. Corrections are reviewed before they enter household records. Supported kinds: transaction, receipt, subscription, appliance, repair. IDs must be stable, unique identifiers; matching never guesses by merchant.</p>
       <pre className="whitespace-pre-wrap break-all text-xs mono inset p-2 mt-2">{'{"records":[{"kind":"receipt","transaction_id":"out-001","merchant":"Piraeus DIY Supplies","amount_cents":8550,"date":"2026-09-04","receipt_id":"MY-RECEIPT"}]}'}</pre>
       <pre className="whitespace-pre-wrap break-all text-xs mono inset p-2 mt-2">{'{"kind":"appliance","appliance_id":"fridge-kitchen","item_name":"Fridge freezer","brand":"Liebherr","purchase_date":"2025-11-02","purchase_price_cents":89900,"seller_name":"Local store","seller_email":"service@store.example","receipt_reference":"paper receipt","manual_url":"https://example.com/manual.pdf"}'}</pre>
     <label className="block font-medium mt-2">Reviewed records (JSON array; amount_cents uses integer cents)

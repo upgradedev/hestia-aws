@@ -62,7 +62,7 @@ export function RegistryModal({ isOpen, mode, onClose, appliances, extractsUsed,
         <div className="modal-head">
           <div>
             <h3 id="registry-title" className="font-bold">Add to your household records</h3>
-            <p className="text-xs muted">Your own appliances, repairs and receipts. Everything is reviewed by you before it is saved.</p>
+            <p className="text-xs muted">Public demo: use only fictional, non-sensitive appliances, repairs and receipts. A staged draft is stored before you confirm; only confirmed changes enter the household records.</p>
           </div>
           <button onClick={onClose} aria-label="Close add records" className="btn btn-quiet btn-sm text-lg">&times;</button>
         </div>
@@ -82,7 +82,7 @@ export function RegistryModal({ isOpen, mode, onClose, appliances, extractsUsed,
             heading="Report what broke" intro="Choose the appliance, enter the repair date and cost from the invoice, and describe the fault. Hestia then puts it in your decision queue, checks the recorded facts, and prepares the exact notice for you to approve." />}
           {tab === 'paste' && <section aria-label="Paste a receipt or order email" className="space-y-3 border-t border-[var(--line)] pt-4">
             <h4 className="font-bold">Paste the text of a receipt, order confirmation or statement line</h4>
-            <p className="muted">Hestia's model reads the pasted text and proposes the facts: the appliance, the seller, the date, the price. You check and correct every field before anything is saved. The pasted text itself is not stored, only its hash and the facts you confirm.</p>
+            <p className="muted">The pasted text is sent to Hestia's model on Amazon Bedrock. Hestia stores its hash, model metadata and proposed facts as a draft, but not the raw text. You correct the draft, and only confirmed changes enter the household records.</p>
             <p className="text-xs faint">Paid with cash and no email? Use <button type="button" className="underline" onClick={() => setTab('appliance')}>Add an appliance</button> and type the facts from the paper receipt. Photo scanning (OCR) is not part of this demo.</p>
             {model && !model.live && <p role="status" className="note-alert" data-testid="paste-unavailable">The model is not configured in this environment, so pasted text cannot be read here. Enter the facts manually instead.</p>}
             {model?.live && remaining !== null && <p className="text-xs muted" data-testid="paste-budget">{remaining} of {model.cap} text readings left in this private copy. Model: bounded Claude Haiku 4.5 on Amazon Bedrock through the Strands Agents SDK.</p>}
@@ -102,7 +102,7 @@ export function RegistryModal({ isOpen, mode, onClose, appliances, extractsUsed,
             {!intake.enabled && <p className="note">Start or refresh your private copy to paste text.</p>}
             {readError && <p role="alert" className="note-alert" data-testid="paste-error">{readError} You can still <button type="button" className="underline" onClick={() => setTab('appliance')}>enter the facts manually</button>.</p>}
             {draftId && <IntakePanel key={'paste-' + draftId} {...intake} route="/api/ingest/sync" initialDraftId={draftId} kinds={['appliance', 'transaction', 'subscription', 'receipt', 'repair']} allowFile={false}
-              applianceOptions={repairable} heading="Check what Hestia read" intro="Every field below was proposed by the model from your text. Correct anything that is wrong or missing, then check the facts and confirm. Nothing is saved until you do." />}
+              applianceOptions={repairable} heading="Check what Hestia read" intro="Every field below was proposed by the model from your text and stored as a staged draft. Correct anything that is wrong or missing, then check and confirm the exact changes that may enter the household records." />}
           </section>}
           {tab === 'file' && <>
             <p role="status" className="note">Mailbox and bank sync are not connected in this demo. Import a bounded JSON file of records, a simple PNG, or enter facts manually below.</p>
@@ -111,7 +111,7 @@ export function RegistryModal({ isOpen, mode, onClose, appliances, extractsUsed,
         </div>
         <div className="modal-foot">
           <button onClick={onClose} className="btn btn-quiet btn-sm">Close</button>
-          <span className="faint text-xs">Nothing is saved until you confirm the reviewed changes</span>
+          <span className="faint text-xs">Review drafts are stored; only confirmed changes enter household records</span>
         </div>
       </div>
     </div>

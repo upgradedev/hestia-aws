@@ -1,30 +1,35 @@
-[
-  {
-    "rule": "Statutory 2-year warranty window (Directive 2019/771/EU)",
-    "with_rule": "185 EUR repair invoice recognized as reimbursable by seller; formal notice prepared",
-    "without_rule": "Consumer pays 185 EUR out-of-pocket, assuming commercial 1-year guarantee expired",
-    "economic_delta_eur": 185.0,
-    "held": true
-  },
-  {
-    "rule": "Subscription month-over-month price creep detector",
-    "with_rule": "Flags +4.00 EUR/mo stealth increase on CloudVault within 24 hours of statement post",
-    "without_rule": "Silent ongoing fee increase totaling 48.00 EUR annually unnoticed",
-    "economic_delta_eur": 48.0,
-    "held": true
-  },
-  {
-    "rule": "7-day trial conversion horizon alert",
-    "with_rule": "Warns user 3 days prior to non-refundable annual conversion (34.99 EUR)",
-    "without_rule": "Converts automatically into 34.99 EUR non-refundable charge",
-    "economic_delta_eur": 34.99,
-    "held": true
-  },
-  {
-    "rule": "Receipt anti-join on outlays > 50 EUR",
-    "with_rule": "Flags 85.00 EUR furniture purchase missing digital proof before paper receipt fades",
-    "without_rule": "Receipt discarded; warranty proof lost for future statutory claims",
-    "economic_delta_eur": 85.0,
-    "held": true
-  }
-]
+{
+  "artifact_status": "superseded_historical_synthetic_output",
+  "warning": "The historical output below is retained verbatim for audit history. It is not current release evidence and does not establish legal entitlement, seller acceptance, money recovered, avoided spending or model quality.",
+  "current_evidence": "Use the synthetic ablation and verification-context artifacts generated together by .github/workflows/ci.yml.",
+  "historical_output": [
+    {
+      "rule": "Statutory 2-year warranty window (Directive 2019/771/EU)",
+      "with_rule": "185 EUR repair invoice recognized as reimbursable by seller; formal notice prepared",
+      "without_rule": "Consumer pays 185 EUR out-of-pocket, assuming commercial 1-year guarantee expired",
+      "economic_delta_eur": 185.0,
+      "held": true
+    },
+    {
+      "rule": "Subscription month-over-month price creep detector",
+      "with_rule": "Flags +4.00 EUR/mo stealth increase on CloudVault within 24 hours of statement post",
+      "without_rule": "Silent ongoing fee increase totaling 48.00 EUR annually unnoticed",
+      "economic_delta_eur": 48.0,
+      "held": true
+    },
+    {
+      "rule": "7-day trial conversion horizon alert",
+      "with_rule": "Warns user 3 days prior to non-refundable annual conversion (34.99 EUR)",
+      "without_rule": "Converts automatically into 34.99 EUR non-refundable charge",
+      "economic_delta_eur": 34.99,
+      "held": true
+    },
+    {
+      "rule": "Receipt anti-join on outlays > 50 EUR",
+      "with_rule": "Flags 85.00 EUR furniture purchase missing digital proof before paper receipt fades",
+      "without_rule": "Receipt discarded; warranty proof lost for future statutory claims",
+      "economic_delta_eur": 85.0,
+      "held": true
+    }
+  ]
+}

@@ -93,7 +93,7 @@ export function SentinelHome({
           <button className="card p-4 text-left space-y-1 hover:border-[var(--hearth)]" disabled={!enabled} onClick={() => onOpenRegistry({ tab: 'paste' })} data-testid="start-paste">
             <span className="chip chip-sage">Got an email</span>
             <span className="block font-bold mt-2">Paste a receipt or order email</span>
-            <span className="block text-xs muted">Hestia's model reads the text and proposes the facts. You check them before anything is saved.</span>
+            <span className="block text-xs muted">Hestia stores the model's proposal as a draft for review. Only confirmed changes enter your records.</span>
           </button>
         </div>
         <p className="text-xs faint">Or explore the sample below: a washing machine repair waiting for a decision, a trial ending, a price change and a missing receipt.</p>

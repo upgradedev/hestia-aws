@@ -10,7 +10,7 @@
 [![Strands Agents 1.53.0](https://img.shields.io/badge/Strands%20Agents-1.53.0-b4520a)](docs/strands-agents.md)
 [![Amazon Bedrock: Claude Haiku 4.5](https://img.shields.io/badge/Amazon%20Bedrock-Claude%20Haiku%204.5-01A88D)](docs/architecture.md)
 
-Hestia is an everyday agent for the paperwork a household never keeps together: receipts, guarantees, subscriptions and repair bills. A Strands agent on Amazon Bedrock reads the household's records and points at the decisions waiting. The household reads the exact notice and approves it, and nothing is ever sent.
+Hestia is an everyday agent for the paperwork a household never keeps together: receipts, guarantees, subscriptions and repair bills. A Strands agent on Amazon Bedrock reads the household's records and points at the decisions waiting. The household reads the exact notice and approves it, and no notice or email is sent.
 
 **[Open the live demo](https://drusjukc9d4oc.cloudfront.net/)** · [Watch the demo video](https://youtu.be/k6SHxtytY80) · [Judge walkthrough](docs/devpost-submission.md#testing-instructions-for-judges) · [Architecture](docs/architecture.md) · [Strands Agents](docs/strands-agents.md)
 
@@ -22,8 +22,8 @@ Built for the AWS Agents for Humans hackathon, Everyday Agents track.
 
 ## Try it
 
-1. Open the [live demo](https://drusjukc9d4oc.cloudfront.net/) and choose **Start with the sample household**. You get a private copy for 30 minutes, with no account.
-2. Under **Start here**, report a repair, add an appliance, or paste a receipt or order email. Nothing is saved until you check and confirm it.
+1. Open the [live demo](https://drusjukc9d4oc.cloudfront.net/) and choose **Start with the sample household**. Access to the stored demo space lasts 30 minutes, with no account. Its data is not automatically deleted, so use only fictional, non-sensitive details.
+2. Under **Start here**, report a repair, add an appliance, or paste a receipt or order email. Hestia stores a staged draft for review; only the exact changes you confirm enter the household records.
 3. Choose **Ask Hestia to review this household**. The agent reads the records through four tools and writes a short briefing. **Tool trace** shows every call.
 4. Choose **Review the exact notice**, read it, then choose **Approve this notice (recorded, not sent)**.
 5. Follow the saved case through replies, deadlines, evidence and outcomes. **About** lists what runs and what does not.
@@ -48,7 +48,7 @@ Built with React 19 and Vite, Amazon CloudFront, Amazon API Gateway, AWS Lambda 
 | Capability | Status |
 |---|---|
 | Strands review and reading agents on Amazon Bedrock | Live |
-| Appliances, repairs and imported records | Live; saved only after the household confirms |
+| Appliances, repairs and imported records | Live; drafts are stored for review, and only confirmed changes enter the household records |
 | Notice preparation and approval | Live; the approval is recorded as a simulation |
 | Case file with replies, deadlines and outcomes | Live; outcomes are reported by the household |
 | One private copy per visitor, stored in Amazon S3 | Live |
