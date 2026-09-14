@@ -1,6 +1,6 @@
 # Hestia demo video: script and production notes
 
-The published video is [VIDEO_URL]. It runs 3:32 (the hackathon limit is 5 minutes), at 1920 by 1080 with a narrated voice track. The demo scenes are a screen recording of the live URL, https://drusjukc9d4oc.cloudfront.net/, while it served the released revision `f8694a0` recorded in [deployment.md](deployment.md).
+The published video is https://youtu.be/k6SHxtytY80. It runs 3:32 (the hackathon limit is 5 minutes), at 1920 by 1080 with a narrated voice track. The demo scenes are a screen recording of the live URL, https://drusjukc9d4oc.cloudfront.net/, while it served the released revision `f8694a0` recorded in [deployment.md](deployment.md).
 
 ## Structure
 

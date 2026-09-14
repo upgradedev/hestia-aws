@@ -1,7 +1,7 @@
 {
   "_comment": "Fifteen scenes in the order of the published video. speechText is what the voice says (acronyms spelled for the voice); captionText is the same sentence as written text. The pipeline in video/ reads this file; see docs/video-script.md.",
   "schemaVersion": "hestia.submission-video/v2",
-  "videoUrl": "[VIDEO_URL]",
+  "videoUrl": "https://youtu.be/k6SHxtytY80",
   "capturedRevision": "f8694a0e2e95df688e46e53c9a3e2e9da090e401",
   "voice": {
     "provider": "elevenlabs",
