@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import json
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -256,5 +257,9 @@ def test_client_initialization_failure_is_not_memory_fallback():
         ).load_state()
 
 
-
-
+def test_sample_trial_ends_three_days_after_the_copy_opens():
+    opened = fresh_demo_state(date(2026, 12, 1))
+    [trial] = [s for s in opened["subscriptions"] if s["id"] == "sub-001"]
+    assert trial["is_trial"] is True and trial["trial_end_date"] == "2026-12-04"
+    [today] = [s for s in fresh_demo_state()["subscriptions"] if s["id"] == "sub-001"]
+    assert date.fromisoformat(today["trial_end_date"]) - date.today() == timedelta(days=3)

@@ -13,7 +13,7 @@ import os
 import re
 import threading
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from hestia.domain.metrics import summary_from_records
@@ -100,7 +100,7 @@ DEFAULT_HOUSEHOLD_STATE: dict[str, Any] = {
             "monthly_cents": 1999,
             "last_billed": "2026-08-20",
             "is_trial": True,
-            "trial_end_date": "2026-09-14",
+            "trial_end_date": None,  # fresh_demo_state sets it relative to the day a copy opens
             "status": "expiring_trial",
             "notes": "Auto-charges €19.99/mo in 3 days. Zero usage detected in 10 days.",
         },
@@ -506,8 +506,17 @@ class S3HouseholdStore:
         return fresh
 
 
-def fresh_demo_state() -> dict[str, Any]:
+SAMPLE_TRIAL_DAYS_LEFT = 3
+
+
+def fresh_demo_state(today: date | None = None) -> dict[str, Any]:
     state = copy.deepcopy(DEFAULT_HOUSEHOLD_STATE)
+    # The sample trial always ends a few days after the copy opens, so the agent review and
+    # Home both show it as a decision on any day, not only in the week of a fixed date.
+    trial_end = (today or date.today()) + timedelta(days=SAMPLE_TRIAL_DAYS_LEFT)
+    for sub in state["subscriptions"]:
+        if sub["id"] == "sub-001":
+            sub["trial_end_date"] = trial_end.isoformat()
     # Historical seed text is an illustration, not a provider delivery receipt.
     state["dispatch_records"] = []
     state.update(

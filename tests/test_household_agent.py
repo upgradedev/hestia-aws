@@ -67,7 +67,7 @@ def session(monkeypatch):
 
 
 def test_workspace_tools_read_recorded_facts_without_entitlement():
-    state = fresh_demo_state()
+    state = fresh_demo_state(TODAY)
     tools = ha.tool_functions(state, TODAY)
     assert set(tools) == {"review_repair_evidence", "audit_subscriptions",
                           "check_receipts_and_utilities", "read_case_timeline"}
@@ -84,7 +84,7 @@ def test_workspace_tools_read_recorded_facts_without_entitlement():
 
 
 def test_strands_tool_wrappers_expose_schemas_from_signatures():
-    tools = ha.strands_tools(fresh_demo_state(), TODAY)
+    tools = ha.strands_tools(fresh_demo_state(TODAY), TODAY)
     specs = {t.tool_spec["name"]: t.tool_spec for t in tools}
     assert specs["review_repair_evidence"]["inputSchema"]["json"]["required"] == ["appliance_id"]
     assert "never determines legal entitlement" in specs["review_repair_evidence"]["description"]
@@ -92,7 +92,7 @@ def test_strands_tool_wrappers_expose_schemas_from_signatures():
 
 
 def test_tools_only_mode_runs_every_tool_and_has_no_narrative():
-    outcome = ha.run_tools_only(fresh_demo_state(), TODAY, "model_not_configured")
+    outcome = ha.run_tools_only(fresh_demo_state(TODAY), TODAY, "model_not_configured")
     assert outcome.mode == "tools_only" and outcome.narrative is None
     assert [c.tool for c in outcome.tool_calls] == [
         "review_repair_evidence", "audit_subscriptions",
@@ -169,7 +169,7 @@ def fake_factory(text, **kwargs):
 
 
 def test_live_runner_returns_narrative_trace_and_usage():
-    outcome = ha.run_live_agent(fresh_demo_state(), TODAY, agent_factory=fake_factory(GOOD))
+    outcome = ha.run_live_agent(fresh_demo_state(TODAY), TODAY, agent_factory=fake_factory(GOOD))
     assert outcome.mode == "live_model" and outcome.model_id == ha.DEFAULT_MODEL_ID
     assert outcome.narrative == GOOD and outcome.withheld is False
     assert outcome.usage == {"input_tokens": 1200, "output_tokens": 210}
@@ -179,7 +179,7 @@ def test_live_runner_returns_narrative_trace_and_usage():
 
 def test_live_runner_withholds_unsupported_narrative_but_keeps_trace():
     bad = "You are entitled to €185.00 back."
-    outcome = ha.run_live_agent(fresh_demo_state(), TODAY, agent_factory=fake_factory(bad))
+    outcome = ha.run_live_agent(fresh_demo_state(TODAY), TODAY, agent_factory=fake_factory(bad))
     assert outcome.mode == "live_model" and outcome.narrative is None and outcome.withheld
     assert any("unsupported claim" in r for r in outcome.withheld_reasons)
     assert outcome.tool_calls and outcome.usage["output_tokens"] == 210
@@ -187,12 +187,12 @@ def test_live_runner_withholds_unsupported_narrative_but_keeps_trace():
 
 def test_live_runner_failure_and_timeout_fall_back_to_deterministic_tools():
     failed = ha.run_live_agent(
-        fresh_demo_state(), TODAY, agent_factory=fake_factory(GOOD, fail=True),
+        fresh_demo_state(TODAY), TODAY, agent_factory=fake_factory(GOOD, fail=True),
     )
     assert failed.mode == "tools_only" and failed.reason == "model_error:RuntimeError"
     assert failed.model_id == ha.DEFAULT_MODEL_ID and len(failed.tool_calls) == 4
     slow = ha.run_live_agent(
-        fresh_demo_state(), TODAY, timeout_seconds=0.05,
+        fresh_demo_state(TODAY), TODAY, timeout_seconds=0.05,
         agent_factory=fake_factory(GOOD, hang=True),
     )
     assert slow.mode == "tools_only" and slow.reason == "model_timeout"
@@ -291,7 +291,7 @@ def test_health_reports_model_configuration(monkeypatch):
 
 
 def test_guard_accepts_amounts_written_bare_or_in_cents_by_the_tools():
-    tools = ha.tool_functions(fresh_demo_state(), TODAY)
+    tools = ha.tool_functions(fresh_demo_state(TODAY), TODAY)
     outputs = [tools["audit_subscriptions"](), tools["check_receipts_and_utilities"](),
                tools["review_repair_evidence"]("app-001")]
     text = ("What I checked\nCloud Backup Vault rose from €9.99 to €13.99; the trial renews at "
@@ -316,3 +316,8 @@ def test_daily_counter_treats_access_denied_on_missing_key_as_absent_and_creates
     other = S3HouseholdStore(bucket_name="bucket", workspace_id="c" * 32, s3_client=s3)
     s3.write_error = RuntimeError("AccessDenied")
     assert other.increment_daily_counter("agent-review", 3, day="2026-09-14") == (None, 0)
+
+
+def test_sample_trial_is_a_decision_on_the_day_a_copy_opens():
+    output = ha.tool_functions(fresh_demo_state(TODAY), TODAY)["audit_subscriptions"]()
+    assert "Fitness Stream Pro" in output and "expires in 3 days" in output
