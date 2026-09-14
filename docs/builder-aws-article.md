@@ -97,7 +97,7 @@ The route has no deterministic equivalent to fall back to, so it fails closed. A
 
 ## Cost limits on a public URL
 
-Both routes sit behind a 30-minute demo capability, so the limits live on the server. Each private copy may make 3 review calls and 3 text readings, counted separately in the workspace document. The shared budget behind them is 200 calls per day, reserved with a conditional write to one small S3 object per day: `If-None-Match` creates it, `If-Match` increments it, and a lost race retries. If the budget cannot be confirmed, the model is not called. A text reading whose model call raised an error is handed back to the copy, but its unit of the daily budget stays spent. `GET /healthz` reports `live_model`, `model_id` and the limits, and the frontend release gate refuses to publish unless that health reports the approved commit, `live_model` true with a model id, and `live_send` false.
+Both routes sit behind a 30-minute demo capability, so the limits live on the server. Each private copy may make 3 review calls and 3 text readings, counted separately in the workspace document. The shared budget behind them is 200 reviews and readings per day, reserved with a conditional write to one small S3 object per day: `If-None-Match` creates it, `If-Match` increments it, and a lost race retries. If the budget cannot be confirmed, the model is not called. A text reading whose model call raised an error is handed back to the copy, but its unit of the daily budget stays spent. `GET /healthz` reports `live_model`, `model_id` and the limits, and the frontend release gate refuses to publish unless that health reports the approved commit, `live_model` true with a model id, and `live_send` false.
 
 ## What the IAM policy says
 
