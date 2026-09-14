@@ -6,15 +6,15 @@ Hestia runs on AWS as two CloudFormation stacks: `hestia-frontend` serves the we
 
 ## Deployed revision
 
-Checked on 2026-09-14 against `GET https://drusjukc9d4oc.cloudfront.net/healthz` and the workflow runs below: the web app and both Lambda functions run `489b9366b4dc1c1a5ea3b6c612db90da694782e2`. Health reports `live_model` true, `model_id` `eu.anthropic.claude-haiku-4-5-20251001-v1:0` and `strands-agents 1.53.0`. Inspect that source with `git show 489b9366b4dc1c1a5ea3b6c612db90da694782e2:<path>`.
+Checked on 2026-09-14 against `GET https://drusjukc9d4oc.cloudfront.net/healthz` and the workflow runs below: the web app and both Lambda functions run `a9909b60e1850c9ee76f34b20ea6ac013ed4aa66`. Health reports `live_model` true, `model_id` `eu.anthropic.claude-haiku-4-5-20251001-v1:0` and `strands-agents 1.53.0`. Inspect that source with `git show a9909b60e1850c9ee76f34b20ea6ac013ed4aa66:<path>`.
 
 | Gate | Evidence |
 |---|---|
-| Backend CI on `main`, source of the release artifact | [run 34829791206](https://github.com/upgradedev/hestia-aws/actions/runs/34829791206) |
+| Backend CI on `main`, source of the release artifact | [run 34835165217](https://github.com/upgradedev/hestia-aws/actions/runs/34835165217) |
 | Backend release | change set executed with rollback on; both functions report the commit and the same code hash |
-| Backend acceptance, 5 API cases | [run 34830739523](https://github.com/upgradedev/hestia-aws/actions/runs/34830739523) |
-| Frontend release | [run 34830741939](https://github.com/upgradedev/hestia-aws/actions/runs/34830741939) |
-| Paired acceptance, 5 API and 2 browser cases | [run 34831257412](https://github.com/upgradedev/hestia-aws/actions/runs/34831257412) |
+| Backend acceptance, 5 API cases | [run 34835477190](https://github.com/upgradedev/hestia-aws/actions/runs/34835477190) |
+| Frontend release | [run 34835479759](https://github.com/upgradedev/hestia-aws/actions/runs/34835479759) |
+| Paired acceptance, 5 API and 2 browser cases | [run 34839174124](https://github.com/upgradedev/hestia-aws/actions/runs/34839174124) |
 | Independent human UAT (user acceptance testing) | NOT_RUN |
 
 `main` can be ahead of the deployed revision; `/healthz` always names the deployed commit.
