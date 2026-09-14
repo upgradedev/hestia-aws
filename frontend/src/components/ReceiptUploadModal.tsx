@@ -30,7 +30,7 @@ export function ReceiptUploadModal({ isOpen, onClose, outflows, enabled, onRecei
         <div className="modal-head">
           <div>
             <h3 id="receipt-title" className="font-bold">Link a receipt</h3>
-            <p className="text-xs muted">Manual reference or document import, reviewed before saving</p>
+            <p className="text-xs muted">Manual reference or document import, reviewed before changes enter household records</p>
           </div>
           <button onClick={onClose} disabled={pending} aria-label="Close receipt options" className="btn btn-quiet btn-sm text-lg">&times;</button>
         </div>

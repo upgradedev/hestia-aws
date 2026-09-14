@@ -41,7 +41,7 @@ EU AI Act applicability, GDPR obligations and consumer-law remedies need a separ
 
 ## Data handling inventory
 
-The sample household is fictional. The product also invites visitors to add their own appliances, repairs and receipts, and no copy asks for fictional details, so a private copy or pasted text may contain real personal data. Nothing filters it.
+The sample household is fictional. The intake copy tells visitors to use only fictional, non-sensitive details because access expiry does not delete the stored workspace. This is a warning, not enforcement: nothing filters the input, so a visitor could still enter real personal data.
 
 | Surface | Behavior | Open question |
 |---|---|---|

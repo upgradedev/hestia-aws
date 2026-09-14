@@ -24,7 +24,7 @@ export function Landing({ preview, returning, expired, busy, error, onStart }: L
             <button data-testid="launch-cockpit" onClick={onStart} disabled={busy} className="btn btn-primary text-base px-6">
               {busy ? 'Opening your private copy…' : returning ? 'Continue your household case' : expired ? 'Start a new demo space' : 'Start with the sample household'} <span aria-hidden="true">→</span>
             </button>
-            <p className="text-sm faint max-w-xs">Opens your private copy of a fictional household for 30 minutes. Add your own appliances to it. Nothing is sent to anyone.</p>
+            <p className="text-sm faint max-w-xs">Access lasts 30 minutes; stored data is not automatically deleted. Use fictional, non-sensitive details. No notice or email is sent.</p>
           </div>
           {error && <p role="alert" className="note-alert">{error}</p>}
         </div>

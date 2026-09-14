@@ -147,10 +147,11 @@ def agent_extract(
         store.save_state(state)
         print(json.dumps({"event": "agent_extract_failed", "reason": outcome.reason,
                           "duration_ms": outcome.duration_ms, "reading_counted": not refunded}))
-        raise APIError(502, "The model could not read this text. Nothing was saved; "
-                            + ("this attempt was not counted, try again in a moment "
+        raise APIError(502, "The model could not read this text. No intake draft was "
+                            "created; an audit record and the text hash were retained. "
+                            + ("This attempt was not counted; try again in a moment "
                                "or enter the facts manually." if refunded else
-                               "enter the facts manually or try again later."))
+                               "Enter the facts manually or try again later."))
     draft = {
         "id": identity, "input_sha256": digest, "byte_count": len(text.encode("utf-8")),
         "mime_type": "text/plain", "source": "model_text_extraction", "route": route,

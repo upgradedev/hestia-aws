@@ -1,6 +1,6 @@
 # Architecture
 
-Hestia is a React app on Amazon CloudFront and an API on AWS Lambda. Two Strands agents on Amazon Bedrock read the household's records. Everything that touches money, law or the case file is deterministic Python behind an explicit human approval, and nothing is sent: Amazon SES is not connected.
+Hestia is a React app on Amazon CloudFront and an API on AWS Lambda. Two Strands agents on Amazon Bedrock read the household's records, including recorded amounts and warranty boundaries, but do not decide legal eligibility. Calculations, notices, approvals and case changes are deterministic Python, and no notice or email is sent because Amazon SES is not connected.
 
 Two drawings go with this page: the runtime AWS resources under [AWS resources](#aws-resources), and a household request from the first click to the recorded approval under [The household flow](#the-household-flow). The release path is drawn in [deployment.md](deployment.md), and the two agents in [strands-agents.md](strands-agents.md).
 
@@ -78,7 +78,7 @@ Both stacks are deployed in `eu-west-1`.
 | Private copy | `POST /api/demo/session` issues the capability and creates the copy | `src/hestia/app/access.py`, `src/hestia/adapters/storage.py:284-310` | 30 minutes and 40 actions; no recovery across devices |
 | Review agent | live on the writer when `HESTIA_LIVE_MODEL=bedrock`, which the stack sets; a tools-only fallback with a visible reason | `src/hestia/agents/household_agent.py`, `src/hestia/app/agent.py` | briefing quality is unmeasured |
 | Reading agent | live on the writer under the same setting; fails closed | `src/hestia/app/agent.py:97-170` | extraction accuracy is unmeasured |
-| Household registry and manual import | implemented; reviewed before saving | `src/hestia/domain/intake.py`, `src/hestia/app/intake.py` | facts are what the household typed or confirmed |
+| Household registry and manual import | implemented; drafts are stored for review, and only confirmed changes enter household records | `src/hestia/domain/intake.py`, `src/hestia/app/intake.py` | facts are what the household typed or confirmed |
 | Notice approval | recorded as a simulation | `src/hestia/app/claims.py` | never sent |
 | Subscription and utility requests, receipt links | recorded in the private copy | `src/hestia/app/api.py:155-238` | no provider is contacted |
 | Case timeline | implemented | `src/hestia/app/cases.py` | outcomes are attested, not verified |

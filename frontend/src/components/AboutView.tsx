@@ -34,7 +34,7 @@ export function AboutView({ token, onError }: AboutViewProps) {
       <section className="card p-5 sm:p-6 space-y-4" aria-labelledby="pipeline-title">
         <h2 id="pipeline-title" className="text-lg font-bold">One journey, five steps</h2>
         <ol className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 text-sm" data-testid="architecture-pipeline">
-          <li className="inset p-3 space-y-1"><p className="eyebrow">1 · Records</p><p className="font-semibold">Household facts</p><p className="muted text-xs">Your appliances, repairs, subscriptions and transactions in a private S3 workspace. Typed in, or proposed by the model from pasted text, and always reviewed before saving; no bank, mailbox or OCR feed.</p></li>
+          <li className="inset p-3 space-y-1"><p className="eyebrow">1 · Records</p><p className="font-semibold">Household facts</p><p className="muted text-xs">Appliances, repairs, subscriptions and transactions in an S3 demo workspace. Typed facts and model proposals are stored as staged drafts for review; only confirmed changes enter the household records. No bank, mailbox or OCR feed.</p></li>
           <li className="inset p-3 space-y-1"><p className="eyebrow">2 · Agent review</p><p className="font-semibold">Strands agent on Bedrock</p><p className="muted text-xs">A Strands Agents SDK agent calls four bounded tools and writes a briefing on Claude Haiku 4.5. Per-session and daily limits; unsupported statements are withheld.</p></li>
           <li className="inset p-3 space-y-1"><p className="eyebrow">3 · Exact notice</p><p className="font-semibold">Deterministic draft</p><p className="muted text-xs">Python prepares the letter from recorded facts; the server binds text, recipient, amount and revision. Eligibility: requires review.</p></li>
           <li className="inset p-3 space-y-1"><p className="eyebrow">4 · Your approval</p><p className="font-semibold">Single-use, exact</p><p className="muted text-xs">Approval consumes a one-time token bound to the exact digest. The result is recorded with a conditional write. It is not sent.</p></li>
@@ -47,7 +47,7 @@ export function AboutView({ token, onError }: AboutViewProps) {
           <p className="eyebrow">Inputs</p>
           <ul className="text-sm space-y-1.5">
             <li><span className="chip chip-sage">on</span> Manual entry and import with review</li>
-            <li><span className="chip chip-sage">on</span> Pasted text read by the model, reviewed before saving</li>
+            <li><span className="chip chip-sage">on</span> Pasted text sent to Bedrock; proposals stored as drafts, changes confirmed by you</li>
             <li><span className="chip">off</span> PSD2 bank feeds: not connected</li>
             <li><span className="chip">off</span> Mailbox / retailer sync: not connected</li>
             <li><span className="chip">off</span> Receipt OCR: not part of this demo</li>

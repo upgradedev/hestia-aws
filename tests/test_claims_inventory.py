@@ -1,9 +1,11 @@
 """HE10 static claims regression; CI-only, with an explicit source write-set.
 
-It verifies authored claims in the judge-facing files and the four UI copy files, not
-providers, law or deployment. Immutable measurement artifacts are pinned elsewhere.
+It verifies authored claims in the judge-facing files and UI copy, not providers, law
+or deployment. Historical measurement artifacts must label their limits in place.
 """
 
+import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -27,10 +29,15 @@ CLAIM_SURFACES = (
     "docs/builder-aws-article.md",
     "docs/video-script.md",
     "video/narration.json",
+    "video/youtube_meta.py",
     "frontend/src/components/AboutView.tsx",
     "frontend/src/components/Landing.tsx",
     "frontend/src/components/SentinelHome.tsx",
     "frontend/src/components/AgentBriefing.tsx",
+    "frontend/src/components/IntakePanel.tsx",
+    "frontend/src/components/ReceiptUploadModal.tsx",
+    "frontend/src/components/RegistryModal.tsx",
+    "frontend/src/components/TopBar.tsx",
 )
 MARKDOWN_SURFACES = tuple(path for path in CLAIM_SURFACES if path.endswith(".md"))
 UNSUPPORTED_CLAIMS = (
@@ -65,6 +72,11 @@ UNSUPPORTED_CLAIMS = (
     r"\b3-column\b",
     r"\bmediamarkt\b",
     r"\bmunich\b",
+    r"\btrial that converts on the 14th\b",
+    r"\bfree trial converts on the 14th\b",
+    r"\bnothing is saved until\b",
+    r"\bbefore anything is saved\b",
+    r"\bnothing is (?:ever )?sent(?: to anyone)?\b",
 )
 # Relative targets of markdown links and HTML src/href attributes.
 RELATIVE_LINK = re.compile(r"(?:\]\(|src=\"|href=\")(?!https?://|#|mailto:)([^)\"#\s]+)")
@@ -94,6 +106,8 @@ def test_owned_claim_surfaces_do_not_restore_unsupported_detail(relative_path: s
     "Latency remains under 50ms",
     "legally airtight demand letter",
     "Elena manages a home in Munich; the notice goes to MediaMarkt",
+    "A free trial converts on the 14th",
+    "Nothing is sent to anyone",
 ))
 def test_a_safe_banner_cannot_hide_a_false_detailed_claim(claim: str) -> None:
     # Deliberately bad copy proves this guard rejects contradictory detail.
@@ -135,10 +149,40 @@ def test_testbook_keeps_history_and_integration_evidence_explicit() -> None:
     assert "\n## Integration testbook\n" in text
     assert "| Requirement | Targeted regression evidence | Integration receipt |" in text
     assert "docs/measurement.json" in text and "docs/ablation.json" in text
-    assert "remain unchanged" in text and "not regenerated" in text
+    assert "original payloads" in text and "retained verbatim" in text
     assert "tests/test_claims_inventory.py" in text
     assert "frontend/tests/claims-inventory.spec.ts" in text
     assert "NOT_RUN" in text
+
+
+@pytest.mark.parametrize(("relative_path", "payload_sha256"), (
+    ("docs/measurement.json", "10e9202faf768100c64cf496cf2010773de7f7b7ec31cea9d13b27d8d20ede06"),
+    ("docs/ablation.json", "0b3bc0ec4734a0c6fa2e2c530891f19028df9a090203893e06bb7c2ae8076166"),
+))
+def test_historical_measurement_artifacts_warn_in_place(
+    relative_path: str, payload_sha256: str,
+) -> None:
+    artifact = json.loads((ROOT / relative_path).read_text(encoding="utf-8"))
+    assert artifact["artifact_status"] == "superseded_historical_synthetic_output"
+    warning = artifact["warning"].lower()
+    for boundary in ("not current release evidence", "legal entitlement", "money recovered"):
+        assert boundary in warning
+    payload = json.dumps(artifact["historical_output"], sort_keys=True,
+                         separators=(",", ":")).encode()
+    assert hashlib.sha256(payload).hexdigest() == payload_sha256
+
+
+def test_public_copy_keeps_data_handling_boundaries_visible() -> None:
+    for relative_path in (
+        "README.md", "frontend/src/components/Landing.tsx",
+        "frontend/src/components/TopBar.tsx",
+    ):
+        text = (ROOT / relative_path).read_text(encoding="utf-8").lower()
+        assert "not automatically deleted" in text, relative_path
+        assert "fictional" in text and "non-sensitive" in text, relative_path
+    registry = (ROOT / "frontend/src/components/RegistryModal.tsx").read_text(encoding="utf-8")
+    assert "sent to Hestia's model on Amazon Bedrock" in registry
+    assert "but not the raw text" in registry
 
 
 def test_readme_states_the_license_and_the_evidence_limits_and_links_the_detail() -> None:

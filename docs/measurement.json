@@ -1,16 +1,21 @@
 {
-  "schema": "hestia/measurement/v1",
-  "benchmark_date": "2026-09-11",
-  "headline_recovery_cents": 18500,
-  "warranty_covered": true,
-  "warranty_basis": "Repair on 2026-09-02 occurred within the active warranty period (expires 2026-11-15). Reimbursable under statutory conformity guarantee.",
-  "subscription_price_creep_monthly_cents": 400,
-  "trial_expiring_detected": true,
-  "trial_annual_exposure_cents": 41988,
-  "duplicate_services_detected": 1,
-  "missing_receipt_gaps_count": 1,
-  "missing_receipt_exposure_cents": 8500,
-  "utility_surge_spike_count": 1,
-  "total_economic_exposure_guarded_cents": 79188,
-  "all_invariants_held": true
+  "artifact_status": "superseded_historical_synthetic_output",
+  "warning": "The historical output below is retained verbatim for audit history. It is not current release evidence and does not establish legal entitlement, seller acceptance, money recovered, avoided spending or model quality.",
+  "current_evidence": "Use the synthetic measurement and verification-context artifacts generated together by .github/workflows/ci.yml.",
+  "historical_output": {
+    "schema": "hestia/measurement/v1",
+    "benchmark_date": "2026-09-11",
+    "headline_recovery_cents": 18500,
+    "warranty_covered": true,
+    "warranty_basis": "Repair on 2026-09-02 occurred within the active warranty period (expires 2026-11-15). Reimbursable under statutory conformity guarantee.",
+    "subscription_price_creep_monthly_cents": 400,
+    "trial_expiring_detected": true,
+    "trial_annual_exposure_cents": 41988,
+    "duplicate_services_detected": 1,
+    "missing_receipt_gaps_count": 1,
+    "missing_receipt_exposure_cents": 8500,
+    "utility_surge_spike_count": 1,
+    "total_economic_exposure_guarded_cents": 79188,
+    "all_invariants_held": true
+  }
 }

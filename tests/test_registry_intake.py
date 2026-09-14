@@ -1,6 +1,7 @@
 """Household registry: appliance and repair intake kinds, and model text extraction for review."""
 from __future__ import annotations
 
+import hashlib
 import json
 from types import SimpleNamespace
 
@@ -236,12 +237,16 @@ def test_extract_route_reports_model_failure_without_saving_records(session, mon
     monkeypatch.setenv("HESTIA_LIVE_MODEL", "bedrock")
     monkeypatch.setattr(agent_app, "run_text_extraction", fake_runner(REPLY, fail=True))
     code, data = call("/api/agent/extract", {"text": "Order 123"}, session)
-    assert code == 502 and "Nothing was saved" in data["message"]
+    assert code == 502 and "No intake draft was created" in data["message"]
+    assert "audit record and the text hash were retained" in data["message"]
     assert "not counted" in data["message"]
     code, state = call("/api/state", token=session)
     # The client-side failure never reached the model: the reading is handed back.
     assert state["intakes"] == {} and state["agent_extracts"] == 0
-    assert state["audit_events"][-1]["payload"]["reading_counted"] is False
+    payload = state["audit_events"][-1]["payload"]
+    assert payload["reading_counted"] is False
+    assert payload["input_sha256"] == hashlib.sha256(b"Order 123").hexdigest()
+    assert "Order 123" not in json.dumps(payload)
 
 
 def test_extract_route_keeps_the_charge_when_the_model_timed_out(session, monkeypatch):

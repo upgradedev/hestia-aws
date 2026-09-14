@@ -41,6 +41,12 @@ STALE_CLAIMS = (
     "3-column",
     "mediamarkt",
     "munich",
+    "trial that converts on the 14th",
+    "free trial converts on the 14th",
+    "nothing is saved until",
+    "before anything is saved",
+    "nothing is sent",
+    "nothing is ever sent",
 )
 
 EM_DASH = "\u2014"

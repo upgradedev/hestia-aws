@@ -47,9 +47,9 @@ def describe(chapters: str) -> str:
         "Hestia keeps a household's receipts, guarantees, subscriptions and repair cases "
         "together. A Strands agent on Amazon Bedrock reviews the records and points at the "
         "decisions waiting; the household reads the exact notice and approves it. In this demo "
-        "the approval is recorded and nothing is sent.",
+        "the approval is recorded and no notice or email is sent.",
         "",
-        "Live demo (no login, a private copy of a fictional household for 30 minutes): "
+        "Live demo (no login, 30 minutes of access to a stored fictional demo space): "
         "https://drusjukc9d4oc.cloudfront.net/",
         "Code (MIT license): https://github.com/upgradedev/hestia-aws",
         "",
