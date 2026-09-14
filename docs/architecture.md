@@ -17,7 +17,7 @@ Line references point at the source on `main`. The deployed revision and its evi
 
 ## The household flow
 
-![Household request flow: open a private copy, add records, let the reading agent propose records, ask the review agent for a briefing, review the exact notice, approve it (recorded, not sent) and follow the case file](assets/request-flow.svg)
+![Household request flow in seven numbered steps: open a private copy; add and confirm records, where a committed repair offers the notice; the reading agent proposes records for review; the review agent writes a briefing; review the exact notice; approve it, recorded and not sent; update the case file. Every step saves the private copy in Amazon S3](assets/request-flow.svg)
 
 ```text
 Start with the sample household   POST /api/demo/session          a 30-minute private copy in S3
@@ -51,7 +51,7 @@ This is the source topology, not a recorded trace. Approval sends no email, canc
 
 Both stacks are deployed in `eu-west-1`.
 
-![AWS resources of Hestia in eu-west-1: CloudFront and the private site bucket, the API Gateway HTTP API, the reader and writer Lambda functions, the state bucket, log groups, Amazon Bedrock and the signing key resolved at deploy time](assets/infrastructure.svg)
+![AWS resources of Hestia in eu-west-1: CloudFront with its function, headers policy and origin access control in front of the private site bucket; API Gateway in front of the reader and writer Lambda functions with their roles and log groups; the state bucket; Amazon Bedrock; and the HMAC key that CloudFormation resolves at deploy time](assets/infrastructure.svg)
 
 | Stack | Resource | Configuration |
 |---|---|---|

@@ -25,7 +25,7 @@ For Elena Georgiou, who runs Athens Apartment 4B, Hestia does five things:
 How the agents are limited:
 
 - 3 reviews and 3 text readings per private copy.
-- One shared budget of 200 model calls per day, kept in a conditional S3 counter.
+- One shared daily limit of 200 reviews and readings, kept in a conditional S3 counter. A review can make several model requests in its tool loop.
 - 700 output tokens and a 20-second timeout for each model call.
 - A pattern guard that withholds a briefing if it matches entitlement or deadline phrases such as "entitled to" or "statutory deadline", names a euro amount the tool outputs do not contain, runs over 3200 characters, or never mentions review.
 

@@ -1,154 +1,122 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif" font-size="14" role="img" aria-labelledby="t d">
-  <title id="t">Hestia on AWS: deployed resources</title>
-  <desc id="d">Deployment view of Hestia in eu-west-1: CloudFront and a private S3 bucket for the web app, an API Gateway HTTP API with reader and writer Lambda functions, S3 state, Amazon Bedrock, CloudWatch Logs, a Secrets Manager key resolved at deploy time, and the GitHub Actions and change set release path.</desc>
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4a3f35"/></marker>
-    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9a8f84"/></marker>
-  </defs>
-  <rect width="1400" height="900" fill="#f6f2ea"/>
-  <text x="40" y="44" font-size="22" font-weight="700" fill="#2b2420" text-anchor="start">Hestia on AWS: deployed resources</text>
-  <text x="40" y="68" font-size="14" fill="#5c534b" text-anchor="start">Deployment view in eu-west-1: two CloudFormation stacks and the release path. The request flow is drawn in request-flow.svg.</text>
-  <rect x="40" y="84" width="12" height="12" rx="3" fill="#6b4fbb"/>
-  <text x="58" y="94" font-size="12" fill="#5c534b" text-anchor="start">Edge and API</text>
-  <rect x="149.68" y="84" width="12" height="12" rx="3" fill="#b4520a"/>
-  <text x="167.68" y="94" font-size="12" fill="#5c534b" text-anchor="start">Compute</text>
-  <rect x="231.16" y="84" width="12" height="12" rx="3" fill="#3f6f55"/>
-  <text x="249.16" y="94" font-size="12" fill="#5c534b" text-anchor="start">Storage</text>
-  <rect x="312.64" y="84" width="12" height="12" rx="3" fill="#a33b2b"/>
-  <text x="330.64" y="94" font-size="12" fill="#5c534b" text-anchor="start">Identity and secrets</text>
-  <rect x="467.44" y="84" width="12" height="12" rx="3" fill="#2a7a78"/>
-  <text x="485.44" y="94" font-size="12" fill="#5c534b" text-anchor="start">Model</text>
-  <rect x="537.64" y="84" width="12" height="12" rx="3" fill="#5c534b"/>
-  <text x="555.64" y="94" font-size="12" fill="#5c534b" text-anchor="start">Delivery and operations</text>
-  <rect x="40" y="130" width="220" height="96" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="40" y="140" width="5" height="76" rx="2.5" fill="#4a3f35"/>
-  <text x="56" y="155" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Visitor&#x27;s browser</text>
-  <text x="56" y="176" font-size="12.5" fill="#5c534b" text-anchor="start">React 19 app over HTTPS</text>
-  <text x="56" y="193" font-size="12.5" fill="#5c534b" text-anchor="start">No account: a private copy</text>
-  <text x="56" y="210" font-size="12.5" fill="#5c534b" text-anchor="start">for 30 minutes</text>
-  <rect x="40" y="540" width="220" height="150" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="40" y="550" width="5" height="130" rx="2.5" fill="#5c534b"/>
-  <text x="56" y="565" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">GitHub Actions</text>
-  <text x="56" y="586" font-size="12.5" fill="#5c534b" text-anchor="start">ci.yml: tests, Lambda zip,</text>
-  <text x="56" y="603" font-size="12.5" fill="#5c534b" text-anchor="start">CloudFormation template</text>
-  <text x="56" y="620" font-size="12.5" fill="#5c534b" text-anchor="start">frontend-ci.yml: Playwright</text>
-  <text x="56" y="637" font-size="12.5" fill="#5c534b" text-anchor="start">frontend-deploy.yml: publish</text>
-  <text x="56" y="654" font-size="12.5" fill="#5c534b" text-anchor="start">production-acceptance.yml</text>
-  <rect x="40" y="730" width="220" height="96" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="40" y="740" width="5" height="76" rx="2.5" fill="#5c534b"/>
-  <text x="56" y="755" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Operator host</text>
-  <text x="56" y="776" font-size="12.5" fill="#5c534b" text-anchor="start">scripts/release_backend.py</text>
-  <text x="56" y="793" font-size="12.5" fill="#5c534b" text-anchor="start">prepare, execute, verify</text>
-  <rect x="280" y="110" width="330" height="410" rx="14" fill="#efe6d8" stroke="#d9c6ab" stroke-width="1.5"/>
-  <text x="296" y="132" font-size="12.5" font-weight="700" fill="#5c534b" text-anchor="start">Stack hestia-frontend</text>
-  <rect x="300" y="150" width="290" height="120" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="300" y="160" width="5" height="100" rx="2.5" fill="#6b4fbb"/>
-  <text x="316" y="175" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Amazon CloudFront</text>
-  <text x="316" y="196" font-size="12.5" fill="#5c534b" text-anchor="start">HTTP/2 and 3, price class 100</text>
-  <text x="316" y="213" font-size="12.5" fill="#5c534b" text-anchor="start">Function: app routes to index.html</text>
-  <text x="316" y="230" font-size="12.5" fill="#5c534b" text-anchor="start">Security headers on every path</text>
-  <text x="316" y="247" font-size="12.5" fill="#5c534b" text-anchor="start">/api/*, /healthz, /action/* to API</text>
-  <rect x="300" y="300" width="290" height="80" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="300" y="310" width="5" height="60" rx="2.5" fill="#3f6f55"/>
-  <text x="316" y="325" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Amazon S3 site bucket</text>
-  <text x="316" y="346" font-size="12.5" fill="#5c534b" text-anchor="start">Private, read through OAC</text>
-  <text x="316" y="363" font-size="12.5" fill="#5c534b" text-anchor="start">Retained if the stack is deleted</text>
-  <rect x="300" y="420" width="290" height="80" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="300" y="430" width="5" height="60" rx="2.5" fill="#a33b2b"/>
-  <text x="316" y="445" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">IAM release role</text>
-  <text x="316" y="466" font-size="12.5" fill="#5c534b" text-anchor="start">GitHub OIDC, main branch only</text>
-  <text x="316" y="483" font-size="12.5" fill="#5c534b" text-anchor="start">Put files, invalidate the cache</text>
-  <rect x="640" y="110" width="730" height="430" rx="14" fill="#efe6d8" stroke="#d9c6ab" stroke-width="1.5"/>
-  <text x="656" y="132" font-size="12.5" font-weight="700" fill="#5c534b" text-anchor="start">Stack hestia-afh-api</text>
-  <rect x="700" y="150" width="290" height="90" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="700" y="160" width="5" height="70" rx="2.5" fill="#6b4fbb"/>
-  <text x="716" y="175" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Amazon API Gateway</text>
-  <text x="716" y="196" font-size="12.5" fill="#5c534b" text-anchor="start">HTTP API, 2 requests/s, burst 4</text>
-  <text x="716" y="213" font-size="12.5" fill="#5c534b" text-anchor="start">$default route to the reader</text>
-  <text x="716" y="230" font-size="12.5" fill="#5c534b" text-anchor="start">22 POST routes to the writer</text>
-  <rect x="700" y="275" width="290" height="95" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="700" y="285" width="5" height="75" rx="2.5" fill="#b4520a"/>
-  <text x="716" y="300" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">AWS Lambda: reader</text>
-  <text x="716" y="321" font-size="12.5" fill="#5c534b" text-anchor="start">hestia-afh-reader, 512 MB</text>
-  <text x="716" y="338" font-size="12.5" fill="#5c534b" text-anchor="start">GET and OPTIONS only; role</text>
-  <text x="716" y="355" font-size="12.5" fill="#5c534b" text-anchor="start">denies writes, Bedrock, SES</text>
-  <rect x="700" y="405" width="290" height="115" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="700" y="415" width="5" height="95" rx="2.5" fill="#b4520a"/>
-  <text x="716" y="430" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">AWS Lambda: writer</text>
-  <text x="716" y="451" font-size="12.5" fill="#5c534b" text-anchor="start">hestia-afh-api, 1024 MB</text>
-  <text x="716" y="468" font-size="12.5" fill="#5c534b" text-anchor="start">Two Strands agents</text>
-  <text x="716" y="485" font-size="12.5" fill="#5c534b" text-anchor="start">Role: Bedrock on one profile;</text>
-  <text x="716" y="502" font-size="12.5" fill="#5c534b" text-anchor="start">denies SES and object deletes</text>
-  <rect x="1040" y="275" width="310" height="110" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="1040" y="285" width="5" height="90" rx="2.5" fill="#3f6f55"/>
-  <text x="1056" y="300" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Amazon S3 state bucket</text>
-  <text x="1056" y="321" font-size="12.5" fill="#5c534b" text-anchor="start">demo/workspaces/&lt;id&gt;/state.json</text>
-  <text x="1056" y="338" font-size="12.5" fill="#5c534b" text-anchor="start">create If-None-Match, update If-Match</text>
-  <text x="1056" y="355" font-size="12.5" fill="#5c534b" text-anchor="start">daily model counter under _usage/</text>
-  <text x="1056" y="372" font-size="12.5" fill="#5c534b" text-anchor="start">versioned, TLS only, retained</text>
-  <rect x="1040" y="425" width="310" height="70" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="1040" y="435" width="5" height="50" rx="2.5" fill="#5c534b"/>
-  <text x="1056" y="450" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Amazon CloudWatch Logs</text>
-  <text x="1056" y="471" font-size="12.5" fill="#5c534b" text-anchor="start">One log group per function, 14 days</text>
-  <rect x="700" y="580" width="290" height="96" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="700" y="590" width="5" height="76" rx="2.5" fill="#2a7a78"/>
-  <text x="716" y="605" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Amazon Bedrock</text>
-  <text x="716" y="626" font-size="12.5" fill="#5c534b" text-anchor="start">Claude Haiku 4.5, EU inference profile</text>
-  <text x="716" y="643" font-size="12.5" fill="#5c534b" text-anchor="start">700 output tokens per call</text>
-  <rect x="1040" y="580" width="310" height="96" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="1040" y="590" width="5" height="76" rx="2.5" fill="#a33b2b"/>
-  <text x="1056" y="605" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">AWS Secrets Manager</text>
-  <text x="1056" y="626" font-size="12.5" fill="#5c534b" text-anchor="start">HMAC key for session capabilities</text>
-  <text x="1056" y="643" font-size="12.5" fill="#5c534b" text-anchor="start">resolved into the functions&#x27; environment</text>
-  <text x="1056" y="660" font-size="12.5" fill="#5c534b" text-anchor="start">at deploy time</text>
-  <rect x="300" y="730" width="290" height="96" rx="10" fill="#ffffff" stroke="#4a3f35" stroke-width="1.5"/>
-  <rect x="300" y="740" width="5" height="76" rx="2.5" fill="#5c534b"/>
-  <text x="316" y="755" font-size="15" font-weight="700" fill="#2b2420" text-anchor="start">Deploy bucket, change set</text>
-  <text x="316" y="776" font-size="12.5" fill="#5c534b" text-anchor="start">releases/&lt;sha&gt;/hestia-api.zip</text>
-  <text x="316" y="793" font-size="12.5" fill="#5c534b" text-anchor="start">CloudFormation change set,</text>
-  <text x="316" y="810" font-size="12.5" fill="#5c534b" text-anchor="start">rollback on failure</text>
-  <rect x="1040" y="730" width="310" height="96" rx="10" fill="#fbf8f2" stroke="#9a8f84" stroke-width="1.5" stroke-dasharray="6 5"/>
-  <text x="1056" y="755" font-size="15" font-weight="700" fill="#5c534b" text-anchor="start">Not connected</text>
-  <text x="1056" y="776" font-size="12.5" fill="#5c534b" text-anchor="start">Amazon SES: IAM denies ses:*</text>
-  <text x="1056" y="793" font-size="12.5" fill="#5c534b" text-anchor="start">Bedrock AgentCore and Guardrails</text>
-  <text x="1056" y="810" font-size="12.5" fill="#5c534b" text-anchor="start">Bank, mailbox and retailer feeds</text>
-  <polyline points="260,178 300,178" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="260.1" y="155" width="39.8" height="17" rx="4" fill="#f6f2ea"/>
-  <text x="280" y="167" font-size="12" text-anchor="middle" fill="#2b2420">HTTPS</text>
-  <polyline points="445,270 445,300" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="451.0" y="278" width="65.2" height="17" rx="4" fill="#efe6d8"/>
-  <text x="455" y="290" font-size="12" text-anchor="start" fill="#2b2420">app files</text>
-  <polyline points="590,195 700,195" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="590.1" y="175" width="109.8" height="17" rx="4" fill="#efe6d8"/>
-  <text x="645" y="187" font-size="12" text-anchor="middle" fill="#2b2420">/api/*, /healthz</text>
-  <polyline points="845,240 845,275" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="851.0" y="250" width="27.1" height="17" rx="4" fill="#efe6d8"/>
-  <text x="855" y="262" font-size="12" text-anchor="start" fill="#2b2420">GET</text>
-  <polyline points="700,225 668,225 668,462 700,462" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="651.3" y="338" width="33.4" height="17" rx="4" fill="#efe6d8"/>
-  <text x="668" y="350" font-size="12" text-anchor="middle" fill="#2b2420">POST</text>
-  <polyline points="990,305 1040,305" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="998.3" y="285" width="33.4" height="17" rx="4" fill="#efe6d8"/>
-  <text x="1015" y="297" font-size="12" text-anchor="middle" fill="#2b2420">read</text>
-  <polyline points="990,440 1015,440 1015,355 1040,355" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="995.1" y="390" width="39.8" height="17" rx="4" fill="#efe6d8"/>
-  <text x="1015" y="402" font-size="12" text-anchor="middle" fill="#2b2420">write</text>
-  <polyline points="990,480 1040,480" fill="none" stroke="#9a8f84" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
-  <polyline points="845,520 845,580" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="851.0" y="548" width="78.0" height="17" rx="4" fill="#f6f2ea"/>
-  <text x="855" y="560" font-size="12" text-anchor="start" fill="#2b2420">InvokeModel</text>
-  <polyline points="1040,628 1012,628 1012,508 990,508" fill="none" stroke="#9a8f84" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-muted)"/>
-  <rect x="973.0" y="548" width="78.0" height="17" rx="4" fill="#f6f2ea"/>
-  <text x="1012" y="560" font-size="12" text-anchor="middle" fill="#2b2420">deploy time</text>
-  <polyline points="260,600 272,600 272,460 300,460" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="255.3" y="518" width="33.4" height="17" rx="4" fill="#f6f2ea"/>
-  <text x="272" y="530" font-size="12" text-anchor="middle" fill="#2b2420">OIDC</text>
-  <polyline points="260,778 300,778" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <polyline points="590,760 620,760 620,515 640,515" fill="none" stroke="#4a3f35" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="593.7" y="628" width="52.5" height="17" rx="4" fill="#f6f2ea"/>
-  <text x="620" y="640" font-size="12" text-anchor="middle" fill="#2b2420">updates</text>
-  <polyline points="150,540 150,226" fill="none" stroke="#9a8f84" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-muted)"/>
-  <rect x="47.4" y="373" width="205.2" height="17" rx="4" fill="#f6f2ea"/>
-  <text x="150" y="385" font-size="12" text-anchor="middle" fill="#2b2420">acceptance against the live URL</text>
-  <text x="40" y="872" font-size="12" fill="#5c534b" text-anchor="start">Sources: infra/frontend_stack.py, infra/hestia_api_stack.py, scripts/release_backend.py, .github/workflows. Account ids, ARNs and secret values are omitted.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1184" viewBox="0 0 1280 1184" role="img" aria-labelledby="title desc">
+<title id="title">Hestia AWS resources</title>
+<desc id="desc">AWS resources of Hestia in region eu-west-1. The hestia-frontend CloudFormation stack holds a CloudFront distribution with HTTP/2 and 3 and IPv6. A CloudFront Function rewrites app paths to /index.html, a response headers policy adds HSTS, a content security policy and frame DENY on every behavior, and origin access control signs S3 requests with SigV4 so the versioned, TLS-only S3 site bucket allows GetObject to this distribution only. CloudFront forwards /api, /api/*, /healthz and /action/* with caching disabled to the hestia-afh-api stack. There an API Gateway HTTP API, throttled at 2 requests per second with a burst of 4, sends the $default route to the Lambda reader (512 MB) and 22 POST routes to the Lambda writer (1024 MB), both with a 28 second timeout. Each function writes to its own CloudWatch log group, kept 14 days. The reader runs as a role that may get objects from the versioned, TLS-only S3 state bucket and denies writes and Bedrock; the writer runs as a role that may get and put them and denies SES and deletes. Outside the stacks, the writer invokes Claude Haiku 4.5 on Amazon Bedrock through an EU inference profile, and CloudFormation resolves the HMAC signing key from AWS Secrets Manager into the stack, for both functions, at deploy time; the functions never call Secrets Manager. Not connected: Amazon SES, which IAM denies, and bank or mailbox feeds.</desc>
+<defs><filter id="soft" x="-10%" y="-20%" width="120%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#7C4A1A" flood-opacity="0.10"/></filter></defs>
+<g font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<rect x="1" y="1" width="1278" height="1182" rx="24" fill="#FFFBF5" stroke="#EAD9C6" stroke-width="2"/>
+<rect x="24" y="96" width="1232" height="992" rx="16" fill="none" stroke="#5B6472" stroke-width="1.5" stroke-dasharray="8 6"/>
+<rect x="40" y="128" width="1200" height="288" rx="16" fill="#FBF1E6" stroke="#B4520A" stroke-width="1.5"/>
+<rect x="40" y="648" width="1200" height="424" rx="16" fill="#EEF2F7" stroke="#3B5B7A" stroke-width="1.5"/>
+<rect x="24" y="1104" width="1232" height="56" rx="16" fill="#FBEEE8" stroke="#9A3412" stroke-width="1.5" stroke-dasharray="8 6"/>
+<path d="M620,24 L620,158" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M620,168 L614,156 L626,156 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M480,208 L410,208" fill="none" stroke="#B4520A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M400,208 L412,202 L412,214 Z" fill="#B4520A" stroke="#B4520A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M760,208 L862,208" fill="none" stroke="#B4520A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M872,208 L860,214 L860,202 Z" fill="#B4520A" stroke="#B4520A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M516,248 L516,340 Q516,352 504,352 L410,352" fill="none" stroke="#B4520A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M400,352 L412,346 L412,358 Z" fill="#B4520A" stroke="#B4520A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M1048,248 L1048,302" fill="none" stroke="#3F6F55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1048,312 L1042,300 L1054,300 Z" fill="#3F6F55" stroke="#3F6F55" stroke-width="1" stroke-linejoin="round"/>
+<path d="M620,248 L620,678" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M620,688 L614,676 L626,676 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M160,552 L160,617" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 7"/><path d="M160,627 L154,615 L166,615 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M1108,824 L1108,562" fill="none" stroke="#2F7F86" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1108,552 L1114,564 L1102,564 Z" fill="#2F7F86" stroke="#2F7F86" stroke-width="1" stroke-linejoin="round"/>
+<path d="M480,728 L300,728 Q288,728 288,740 L288,814" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M288,824 L282,812 L294,812 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M760,728 L976,728 Q988,728 988,740 L988,814" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M988,824 L982,812 L994,812 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M400,864 L470,864" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M480,864 L468,870 L468,858 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M872,864 L770,864" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M760,864 L772,858 L772,870 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M228,904 L228,958" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M228,968 L222,956 L234,956 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M1048,904 L1048,958" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1048,968 L1042,956 L1054,956 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M400,1008 L470,1008" fill="none" stroke="#3F6F55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M480,1008 L468,1014 L468,1002 Z" fill="#3F6F55" stroke="#3F6F55" stroke-width="1" stroke-linejoin="round"/>
+<path d="M872,1008 L770,1008" fill="none" stroke="#3F6F55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M760,1008 L772,1002 L772,1014 Z" fill="#3F6F55" stroke="#3F6F55" stroke-width="1" stroke-linejoin="round"/>
+<text x="56" y="450.3" font-size="18" font-weight="600" fill="#5B6472" text-anchor="start">Outside the stacks</text>
+<rect x="56" y="168" width="344" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M96,184 C116.16,184 120,187.84 120,208 C120,228.16 116.16,232 96,232 C75.84,232 72,228.16 72,208 C72,187.84 75.84,184 96,184 Z" fill="#B4520A"/><g transform="translate(81.12 193.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 2.5L5.5 13.5h6l-1 8 8-11h-6z"/></g>
+<text x="136" y="202" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">CloudFront Function</text>
+<text x="136" y="230.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">App paths to /index.html</text>
+<rect x="480" y="168" width="280" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M520,184 C540.16,184 544,187.84 544,208 C544,228.16 540.16,232 520,232 C499.84,232 496,228.16 496,208 C496,187.84 499.84,184 520,184 Z" fill="#B4520A"/><g transform="translate(505.12 193.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="3.8" ry="9"/><path d="M3.5 9h17M3.5 15h17"/></g>
+<text x="560" y="202" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">CloudFront</text>
+<text x="560" y="230.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">HTTP/2 and 3, IPv6</text>
+<rect x="872" y="168" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M912,184 C932.16,184 936,187.84 936,208 C936,228.16 932.16,232 912,232 C891.84,232 888,228.16 888,208 C888,187.84 891.84,184 912,184 Z" fill="#B4520A"/><g transform="translate(897.12 193.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="11" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.2" r="1.5" fill="#FFFFFF" stroke="none"/><path d="M12 16v2.4"/></g>
+<text x="952" y="202" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Origin access control</text>
+<text x="952" y="230.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Signs S3 requests, SigV4</text>
+<rect x="56" y="312" width="344" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M96,328 C116.16,328 120,331.84 120,352 C120,372.16 116.16,376 96,376 C75.84,376 72,372.16 72,352 C72,331.84 75.84,328 96,328 Z" fill="#B4520A"/><g transform="translate(81.12 337.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l7.5 3v6c0 4.6-3.2 8.2-7.5 9.6-4.3-1.4-7.5-5-7.5-9.6v-6z"/><path d="M8.6 12.3l2.4 2.4 4.6-4.8"/></g>
+<text x="136" y="346" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Headers policy</text>
+<text x="136" y="374.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">HSTS, CSP, frame DENY</text>
+<rect x="872" y="312" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M912,328 C932.16,328 936,331.84 936,352 C936,372.16 932.16,376 912,376 C891.84,376 888,372.16 888,352 C888,331.84 891.84,328 912,328 Z" fill="#3F6F55"/><g transform="translate(897.12 337.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="2.8"/><path d="M4 6l2 12.5c.3 1.6 2.9 2.7 6 2.7s5.7-1.1 6-2.7L20 6"/></g>
+<text x="952" y="346" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">S3 site bucket</text>
+<text x="952" y="374.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Versioned, TLS only</text>
+<rect x="56" y="472" width="344" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M96,488 C116.16,488 120,491.84 120,512 C120,532.16 116.16,536 96,536 C75.84,536 72,532.16 72,512 C72,491.84 75.84,488 96,488 Z" fill="#3B5B7A"/><g transform="translate(81.12 497.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="12" r="4"/><path d="M11.5 12H21M18 12v3.2M15 12v2.4"/></g>
+<text x="136" y="506" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Secrets Manager</text>
+<text x="136" y="534.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">HMAC key, both functions</text>
+<rect x="872" y="472" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M912,488 C932.16,488 936,491.84 936,512 C936,532.16 932.16,536 912,536 C891.84,536 888,532.16 888,512 C888,491.84 891.84,488 912,488 Z" fill="#2F7F86"/><g transform="translate(897.12 497.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path d="M4 7.4l8 4.6 8-4.6M12 12v9.2"/></g>
+<text x="952" y="506" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Amazon Bedrock</text>
+<text x="952" y="534.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Claude Haiku 4.5, EU profile</text>
+<rect x="480" y="688" width="280" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M520,704 C540.16,704 544,707.84 544,728 C544,748.16 540.16,752 520,752 C499.84,752 496,748.16 496,728 C496,707.84 499.84,704 520,704 Z" fill="#3B5B7A"/><g transform="translate(505.12 713.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5l-5 7 5 7M17 5l5 7-5 7"/><circle cx="8.6" cy="12" r="1.35" fill="#FFFFFF" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="#FFFFFF" stroke="none"/><circle cx="15.4" cy="12" r="1.35" fill="#FFFFFF" stroke="none"/></g>
+<text x="560" y="722" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">API Gateway</text>
+<text x="560" y="750.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Throttle 2/s, burst 4</text>
+<rect x="56" y="824" width="344" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M96,840 C116.16,840 120,843.84 120,864 C120,884.16 116.16,888 96,888 C75.84,888 72,884.16 72,864 C72,843.84 75.84,840 96,840 Z" fill="#3B5B7A"/><g transform="translate(81.12 849.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 4.5H9l9.5 15H21"/><path d="M12.3 10.2L6 19.5"/></g>
+<text x="136" y="858" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Lambda reader</text>
+<text x="136" y="886.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">512 MB, 28 s timeout</text>
+<rect x="480" y="824" width="280" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M520,840 C540.16,840 544,843.84 544,864 C544,884.16 540.16,888 520,888 C499.84,888 496,884.16 496,864 C496,843.84 499.84,840 520,840 Z" fill="#3B5B7A"/><g transform="translate(505.12 849.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="3"/><circle cx="7.3" cy="8.5" r="1.2" fill="#FFFFFF" stroke="none"/><circle cx="7.3" cy="12" r="1.2" fill="#FFFFFF" stroke="none"/><circle cx="7.3" cy="15.5" r="1.2" fill="#FFFFFF" stroke="none"/><path d="M10.5 8.5h6.5M10.5 12h6.5M10.5 15.5h4"/></g>
+<text x="560" y="858" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Log groups</text>
+<text x="560" y="886.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">One each, 14 days</text>
+<rect x="872" y="824" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M912,840 C932.16,840 936,843.84 936,864 C936,884.16 932.16,888 912,888 C891.84,888 888,884.16 888,864 C888,843.84 891.84,840 912,840 Z" fill="#3B5B7A"/><g transform="translate(897.12 849.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 4.5H9l9.5 15H21"/><path d="M12.3 10.2L6 19.5"/></g>
+<text x="952" y="858" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Lambda writer</text>
+<text x="952" y="886.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">1024 MB, 28 s timeout</text>
+<rect x="56" y="968" width="344" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M96,984 C116.16,984 120,987.84 120,1008 C120,1028.16 116.16,1032 96,1032 C75.84,1032 72,1028.16 72,1008 C72,987.84 75.84,984 96,984 Z" fill="#3B5B7A"/><g transform="translate(81.12 993.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l7.5 3v6c0 4.6-3.2 8.2-7.5 9.6-4.3-1.4-7.5-5-7.5-9.6v-6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 16.2c.8-2.1 6.4-2.1 7.2 0"/></g>
+<text x="136" y="1002" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Reader role</text>
+<text x="136" y="1030.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Denies writes and Bedrock</text>
+<rect x="480" y="968" width="280" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M520,984 C540.16,984 544,987.84 544,1008 C544,1028.16 540.16,1032 520,1032 C499.84,1032 496,1028.16 496,1008 C496,987.84 499.84,984 520,984 Z" fill="#3F6F55"/><g transform="translate(505.12 993.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="2.8"/><path d="M4 6l2 12.5c.3 1.6 2.9 2.7 6 2.7s5.7-1.1 6-2.7L20 6"/></g>
+<text x="560" y="1002" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">S3 state bucket</text>
+<text x="560" y="1030.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Versioned, TLS only</text>
+<rect x="872" y="968" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M912,984 C932.16,984 936,987.84 936,1008 C936,1028.16 932.16,1032 912,1032 C891.84,1032 888,1028.16 888,1008 C888,987.84 891.84,984 912,984 Z" fill="#3B5B7A"/><g transform="translate(897.12 993.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l7.5 3v6c0 4.6-3.2 8.2-7.5 9.6-4.3-1.4-7.5-5-7.5-9.6v-6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 16.2c.8-2.1 6.4-2.1 7.2 0"/></g>
+<text x="952" y="1002" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Writer role</text>
+<text x="952" y="1030.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Denies SES and deletes</text>
+<text x="48" y="1138.3" font-size="18" font-weight="600" fill="#9A3412" text-anchor="start">Not connected</text>
+<path d="M234.63,1116 C248.07,1116 250.63,1118.56 250.63,1132 C250.63,1145.44 248.07,1148 234.63,1148 C221.19,1148 218.63,1145.44 218.63,1132 C218.63,1118.56 221.19,1116 234.63,1116 Z" fill="#9A3412"/><g transform="translate(224.71 1122.08) scale(0.83)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M3.2 6.5l8.8 6.5 8.8-6.5"/><path d="M4 21L20 3" stroke="#9A3412" stroke-width="5"/><path d="M4 21L20 3"/></g>
+<text x="262.63" y="1139.7" font-size="22" font-weight="600" fill="#1F2937" text-anchor="start">Amazon SES</text>
+<text x="414.4" y="1139.7" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">IAM denies ses:*</text>
+<path d="M620.29,1116 C633.73,1116 636.29,1118.56 636.29,1132 C636.29,1145.44 633.73,1148 620.29,1148 C606.85,1148 604.29,1145.44 604.29,1132 C604.29,1118.56 606.85,1116 620.29,1116 Z" fill="#9A3412"/><g transform="translate(610.37 1122.08) scale(0.83)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v5M15 3v5M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0z"/><path d="M12 17v4.5"/><path d="M4 21L20 3" stroke="#9A3412" stroke-width="5"/><path d="M4 21L20 3"/></g>
+<text x="648.29" y="1139.7" font-size="22" font-weight="600" fill="#1F2937" text-anchor="start">Bank, mailbox feeds</text>
+<text x="879.68" y="1139.7" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">No automatic import</text>
+<rect x="1070" y="81" width="162" height="30" rx="15.0" fill="#FFFBF5" stroke="#5B6472" stroke-width="1.5"/>
+<text x="1151" y="102.3" font-size="18" font-weight="600" fill="#1F2937" text-anchor="middle">AWS eu-west-1</text>
+<rect x="56" y="113" width="215" height="30" rx="15.0" fill="#FFFBF5" stroke="#B4520A" stroke-width="1.5"/>
+<text x="163.5" y="134.3" font-size="18" font-weight="600" fill="#B4520A" text-anchor="middle">hestia-frontend stack</text>
+<rect x="56" y="633" width="201" height="30" rx="15.0" fill="#FFFBF5" stroke="#3B5B7A" stroke-width="1.5"/>
+<text x="156.5" y="654.3" font-size="18" font-weight="600" fill="#3B5B7A" text-anchor="middle">hestia-afh-api stack</text>
+<rect x="514" y="41" width="212" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="620" y="62.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">HTTPS from browsers</text>
+<rect x="442" y="285" width="148" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="516" y="306.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">every behavior</text>
+<rect x="921.5" y="259" width="253" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="1048" y="280.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">GetObject, this distribution</text>
+<rect x="434.5" y="577" width="371" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="620" y="598.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">/api, /api/*, /healthz, /action/*, uncached</text>
+<rect x="98.5" y="577" width="123" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="160" y="598.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">deploy time</text>
+<rect x="1048" y="577" width="120" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="1108" y="598.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">model calls</text>
+<rect x="312.5" y="713" width="143" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="384" y="734.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">$default route</text>
+<rect x="794" y="713" width="160" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="874" y="734.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">22 POST routes</text>
+<rect x="185" y="915" width="86" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="228" y="936.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">runs as</text>
+<rect x="1005" y="915" width="86" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="1048" y="936.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">runs as</text>
+<rect x="408" y="993" width="52" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="434" y="1014.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">get</text>
+<rect x="775" y="993" width="90" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="820" y="1014.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">get, put</text>
+</g>
 </svg>

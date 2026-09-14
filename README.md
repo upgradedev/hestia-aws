@@ -1,6 +1,6 @@
 # Hestia
 
-![Hestia: records the household adds, an agent review that points at decisions, and a notice the household approves](docs/assets/banner.svg)
+![Hestia keeps the receipts, guarantees and repair cases of a household together: records you add, an agent review that points at decisions waiting, and a notice you approve that is recorded, not sent](docs/assets/banner.svg)
 
 [![Backend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/upgradedev/hestia-aws/actions/workflows/ci.yml)
 [![Frontend CI](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/upgradedev/hestia-aws/actions/workflows/frontend-ci.yml)
@@ -39,7 +39,7 @@ The agents read; the household decides.
 - **Review agent.** A Strands agent with four read-only tools writes a short briefing. A guard withholds any briefing that claims an entitlement or names an amount no tool returned. Without the model, the same tools run on their own and the page says why.
 - **Reading agent.** A second Strands agent, with no tools, turns pasted receipt or order text into proposed records. The household confirms them in the same form as a manual entry.
 - **Plain code where it matters.** The notice, the single-use approval and every case step are deterministic Python. The approval is recorded as a simulation, and email sending is not connected.
-- **Bounded.** 3 reviews and 3 readings per private copy, 200 model calls a day in total, 700 output tokens and a 20-second timeout.
+- **Bounded.** 3 reviews and 3 readings per private copy, 200 reviews and readings a day across all visitors, 700 output tokens and a 20-second timeout.
 
 Built with React 19 and Vite, Amazon CloudFront, Amazon API Gateway, AWS Lambda on Python 3.11, Amazon S3, Amazon Bedrock with Claude Haiku 4.5, Strands Agents, AWS CloudFormation and GitHub Actions. Details: [how the agents work](docs/strands-agents.md) and [the full architecture](docs/architecture.md).
 

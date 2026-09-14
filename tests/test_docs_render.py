@@ -8,7 +8,9 @@ whose smallest text is still at least 11 px after GitHub scales the image into i
 
 from __future__ import annotations
 
+import importlib.util
 import re
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -246,3 +248,24 @@ def test_diagram_text_is_legible_on_github_and_follows_the_prose_rules(name: str
     assert "—" not in words and "–" not in words, name
     banned = [word for word in BANNED_WORDS if re.search(rf"\b{word}\b", words, re.I)]
     assert not banned, (name, banned)
+
+
+def test_diagrams_match_their_generators(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each committed diagram equals what tools/diagrams builds, so no SVG is edited by hand."""
+    generators = ROOT / "tools" / "diagrams"
+    monkeypatch.syspath_prepend(str(generators))
+    modules, bytecode = set(sys.modules), sys.dont_write_bytecode
+    spec = importlib.util.spec_from_file_location("hestia_diagram_build", generators / "build.py")
+    build = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(build)
+        stale = []
+        for module, file_name in build.DIAGRAMS.values():
+            committed = (ASSETS / file_name).read_text(encoding="utf-8")
+            if importlib.import_module(module).build() != committed:
+                stale.append(file_name)
+        assert not stale, f"run python tools/diagrams/build.py and commit the result: {stale}"
+    finally:
+        for name in set(sys.modules) - modules:
+            del sys.modules[name]
+        sys.dont_write_bytecode = bytecode

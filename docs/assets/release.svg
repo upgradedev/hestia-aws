@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="952" viewBox="0 0 1200 952" role="img" aria-labelledby="title desc">
+<title id="title">Hestia release path</title>
+<desc id="desc">Two release lanes that meet at the live site. Backend lane: on GitHub Actions, ci.yml builds and tests the backend and keeps the Lambda zip, the rendered template and SHA256SUMS. On the operator host, scripts/release_backend.py runs prepare, execute and verify: it takes that artifact from a successful main run, uploads the zip once to the S3 deploy bucket under one key per commit, and prints a CloudFormation change set on the hestia-afh-api stack for review. The execute step prepares and prints a new change set and executes it with automatic rollback on; both Lambda functions take their code from the deploy bucket and carry the commit. Web app lane: on GitHub Actions, the release job of frontend-deploy.yml runs only when started by hand on main. It builds the app, assumes the IAM release role through GitHub OIDC, a role that trusts only the main branch, puts the files into the S3 site bucket of the hestia-frontend stack, invalidates the CloudFront cache and runs a smoke test. The hestia-afh-api stack serves the API and the hestia-frontend stack the web app of the live site, whose /healthz names the deployed commit. On GitHub Actions, production-acceptance.yml is started by hand on main after a release, an order the workflow does not enforce, and runs one phase per run, backend or frontend, against the live site. Not connected: no workflow holds AWS credentials for the API stack, and frontend-deploy.yml does not deploy the API.</desc>
+<defs><filter id="soft" x="-10%" y="-20%" width="120%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#7C4A1A" flood-opacity="0.10"/></filter></defs>
+<g font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<rect x="1" y="1" width="1198" height="950" rx="24" fill="#FFFBF5" stroke="#EAD9C6" stroke-width="2"/>
+<rect x="24" y="32" width="1152" height="128" rx="16" fill="none" stroke="#5B6472" stroke-width="1.5" stroke-dasharray="8 6"/>
+<rect x="24" y="232" width="384" height="128" rx="16" fill="none" stroke="#5B6472" stroke-width="1.5" stroke-dasharray="8 6"/>
+<rect x="24" y="424" width="1152" height="416" rx="16" fill="none" stroke="#5B6472" stroke-width="1.5" stroke-dasharray="8 6"/>
+<rect x="24" y="872" width="1152" height="56" rx="16" fill="#FBEEE8" stroke="#9A3412" stroke-width="1.5" stroke-dasharray="8 6"/>
+<path d="M216,144 L216,254" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M216,264 L210,252 L222,252 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M216,344 L216,446" fill="none" stroke="#3F6F55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M216,456 L210,444 L222,444 Z" fill="#3F6F55" stroke="#3F6F55" stroke-width="1" stroke-linejoin="round"/>
+<path d="M384,304 L460,304 Q472,304 472,316 L472,446" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M472,456 L466,444 L478,444 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M216,536 L216,606" fill="none" stroke="#3F6F55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M216,616 L210,604 L222,604 Z" fill="#3F6F55" stroke="#3F6F55" stroke-width="1" stroke-linejoin="round"/>
+<path d="M472,536 L472,644 Q472,656 460,656 L394,656" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M384,656 L396,650 L396,662 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M976,144 L976,446" fill="none" stroke="#B4520A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M976,456 L970,444 L982,444 Z" fill="#B4520A" stroke="#B4520A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M976,536 L976,606" fill="none" stroke="#B4520A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M976,616 L970,604 L982,604 Z" fill="#B4520A" stroke="#B4520A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M216,696 L216,772 Q216,784 228,784 L406,784" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M416,784 L404,790 L404,778 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M976,696 L976,772 Q976,784 964,784 L778,784" fill="none" stroke="#B4520A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M768,784 L780,778 L780,790 Z" fill="#B4520A" stroke="#B4520A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M728,144 L728,734" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M728,744 L722,732 L734,732 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<rect x="48" y="64" width="336" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M88,80 C108.16,80 112,83.84 112,104 C112,124.16 108.16,128 88,128 C67.84,128 64,124.16 64,104 C64,83.84 67.84,80 88,80 Z" fill="#3B5B7A"/><g transform="translate(73.12 89.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.3l5.6 3.7-5.6 3.7z" fill="#FFFFFF"/></g>
+<text x="128" y="98" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Backend CI</text>
+<text x="128" y="126.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">ci.yml builds and tests</text>
+<rect x="416" y="64" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M456,80 C476.16,80 480,83.84 480,104 C480,124.16 476.16,128 456,128 C435.84,128 432,124.16 432,104 C432,83.84 435.84,80 456,80 Z" fill="#3B5B7A"/><g transform="translate(441.12 89.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l4.8 4.7L19.5 6.8" stroke-width="2.6"/></g>
+<text x="496" y="98" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Acceptance</text>
+<text x="496" y="126.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">production-acceptance.yml</text>
+<rect x="800" y="64" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M840,80 C860.16,80 864,83.84 864,104 C864,124.16 860.16,128 840,128 C819.84,128 816,124.16 816,104 C816,83.84 819.84,80 840,80 Z" fill="#B4520A"/><g transform="translate(825.12 89.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.3l5.6 3.7-5.6 3.7z" fill="#FFFFFF"/></g>
+<text x="880" y="98" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">frontend-deploy.yml</text>
+<text x="880" y="126.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Manual release, smoke test</text>
+<rect x="48" y="264" width="336" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M88,280 C108.16,280 112,283.84 112,304 C112,324.16 108.16,328 88,328 C67.84,328 64,324.16 64,304 C64,283.84 67.84,280 88,280 Z" fill="#3B5B7A"/><g transform="translate(73.12 289.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="M6.5 9.5l3.2 2.7-3.2 2.7M12 15.5h5.5"/></g>
+<text x="128" y="298" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">release_backend.py</text>
+<text x="128" y="326.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">prepare, execute, verify</text>
+<rect x="48" y="456" width="336" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M88,472 C108.16,472 112,475.84 112,496 C112,516.16 108.16,520 88,520 C67.84,520 64,516.16 64,496 C64,475.84 67.84,472 88,472 Z" fill="#3F6F55"/><g transform="translate(73.12 481.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="2.8"/><path d="M4 6l2 12.5c.3 1.6 2.9 2.7 6 2.7s5.7-1.1 6-2.7L20 6"/></g>
+<text x="128" y="490" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">S3 deploy bucket</text>
+<text x="128" y="518.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">One zip per commit</text>
+<rect x="416" y="456" width="272" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M456,472 C476.16,472 480,475.84 480,496 C480,516.16 476.16,520 456,520 C435.84,520 432,516.16 432,496 C432,475.84 435.84,472 456,472 Z" fill="#3B5B7A"/><g transform="translate(441.12 481.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 4.6-9 4.6-9-4.6z"/><path d="M3 12.1l9 4.6 9-4.6"/><path d="M3 16.6l9 4.6 9-4.6" stroke-dasharray="2.6 2.4"/></g>
+<text x="496" y="490" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Change set</text>
+<text x="496" y="518.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Printed for review</text>
+<rect x="800" y="456" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M840,472 C860.16,472 864,475.84 864,496 C864,516.16 860.16,520 840,520 C819.84,520 816,516.16 816,496 C816,475.84 819.84,472 840,472 Z" fill="#B4520A"/><g transform="translate(825.12 481.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l7.5 3v6c0 4.6-3.2 8.2-7.5 9.6-4.3-1.4-7.5-5-7.5-9.6v-6z"/><circle cx="12" cy="10" r="2.3"/><path d="M8.4 16.2c.8-2.1 6.4-2.1 7.2 0"/></g>
+<text x="880" y="490" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">IAM release role</text>
+<text x="880" y="518.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Trusts main branch only</text>
+<rect x="48" y="616" width="336" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M88,632 C108.16,632 112,635.84 112,656 C112,676.16 108.16,680 88,680 C67.84,680 64,676.16 64,656 C64,635.84 67.84,632 88,632 Z" fill="#3B5B7A"/><g transform="translate(73.12 641.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 4.5H9l9.5 15H21"/><path d="M12.3 10.2L6 19.5"/></g>
+<text x="128" y="650" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">hestia-afh-api stack</text>
+<text x="128" y="678.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Carries the commit SHA</text>
+<rect x="800" y="616" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M840,632 C860.16,632 864,635.84 864,656 C864,676.16 860.16,680 840,680 C819.84,680 816,676.16 816,656 C816,635.84 819.84,632 840,632 Z" fill="#B4520A"/><g transform="translate(825.12 641.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="3.8" ry="9"/><path d="M3.5 9h17M3.5 15h17"/></g>
+<text x="880" y="650" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">hestia-frontend stack</text>
+<text x="880" y="678.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">S3 site bucket, CloudFront</text>
+<rect x="416" y="744" width="352" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M456,760 C476.16,760 480,763.84 480,784 C480,804.16 476.16,808 456,808 C435.84,808 432,804.16 432,784 C432,763.84 435.84,760 456,760 Z" fill="#B4520A"/><g transform="translate(441.12 769.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="17" rx="3"/><path d="M2.5 8h19"/><path d="M8 17.5v-4.2l4-3.1 4 3.1v4.2z"/></g>
+<text x="496" y="778" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Live site</text>
+<text x="496" y="806.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">/healthz names the commit</text>
+<text x="48" y="906.3" font-size="18" font-weight="600" fill="#9A3412" text-anchor="start">Not connected</text>
+<path d="M234.63,884 C248.07,884 250.63,886.56 250.63,900 C250.63,913.44 248.07,916 234.63,916 C221.19,916 218.63,913.44 218.63,900 C218.63,886.56 221.19,884 234.63,884 Z" fill="#9A3412"/><g transform="translate(224.71 890.08) scale(0.83)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5h10.5a4 4 0 0 0 .6-8 6 6 0 0 0-11.6 1.3A3.4 3.4 0 0 0 7 18.5z"/><path d="M4 21L20 3" stroke="#9A3412" stroke-width="5"/><path d="M4 21L20 3"/></g>
+<text x="262.63" y="907.7" font-size="22" font-weight="600" fill="#1F2937" text-anchor="start">GitHub to API stack</text>
+<text x="488.68" y="907.7" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">No AWS credentials</text>
+<path d="M723.98,884 C737.42,884 739.98,886.56 739.98,900 C739.98,913.44 737.42,916 723.98,916 C710.54,916 707.98,913.44 707.98,900 C707.98,886.56 710.54,884 723.98,884 Z" fill="#9A3412"/><g transform="translate(714.06 890.08) scale(0.83)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.5v5h16v-5"/><path d="M12 15.5V3.5M7.5 8l4.5-4.5L16.5 8"/><path d="M4 21L20 3" stroke="#9A3412" stroke-width="5"/><path d="M4 21L20 3"/></g>
+<text x="751.98" y="907.7" font-size="22" font-weight="600" fill="#1F2937" text-anchor="start">frontend-deploy.yml</text>
+<text x="984.26" y="907.7" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">No API deploy</text>
+<rect x="48" y="17" width="161" height="30" rx="15.0" fill="#FFFBF5" stroke="#5B6472" stroke-width="1.5"/>
+<text x="128.5" y="38.3" font-size="18" font-weight="600" fill="#1F2937" text-anchor="middle">GitHub Actions</text>
+<rect x="48" y="217" width="148" height="30" rx="15.0" fill="#FFFBF5" stroke="#5B6472" stroke-width="1.5"/>
+<text x="122" y="238.3" font-size="18" font-weight="600" fill="#1F2937" text-anchor="middle">Operator host</text>
+<rect x="990" y="409" width="162" height="30" rx="15.0" fill="#FFFBF5" stroke="#5B6472" stroke-width="1.5"/>
+<text x="1071" y="430.3" font-size="18" font-weight="600" fill="#1F2937" text-anchor="middle">AWS eu-west-1</text>
+<rect x="82" y="173" width="268" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="216" y="194.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">zip, template, SHA256SUMS</text>
+<rect x="132" y="377" width="168" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="216" y="398.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">uploads zip once</text>
+<rect x="367.5" y="377" width="209" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="472" y="398.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">prepare, then execute</text>
+<rect x="146" y="561" width="140" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="216" y="582.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">Lambda code</text>
+<rect x="360" y="561" width="224" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="472" y="582.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">applied with rollback on</text>
+<rect x="908" y="289" width="136" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="976" y="310.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">GitHub OIDC</text>
+<rect x="857" y="561" width="238" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="976" y="582.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">put files, invalidate cache</text>
+<rect x="283" y="769" width="54" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="310" y="790.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">API</text>
+<rect x="830" y="769" width="96" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="878" y="790.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">web app</text>
+<rect x="572.5" y="289" width="311" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="728" y="310.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">backend or frontend, after release</text>
+</g>
+</svg>

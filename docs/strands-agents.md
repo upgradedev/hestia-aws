@@ -89,7 +89,7 @@ A failed reading carries the reason `model_timeout`, `model_error:<ExceptionClas
 |---|---|---|
 | Reviews per private copy | 3, counted before the call (`state.agent_calls`) | `src/hestia/app/agent.py:28-31, 58-76` |
 | Text readings per private copy | 3 (`state.agent_extracts`) | `src/hestia/app/agent.py:123-136` |
-| Shared daily budget | 200 model calls per UTC day, both agents together | `src/hestia/adapters/storage.py:422-474` |
+| Shared daily budget | 200 reviews and readings per UTC day, both agents together; one review can make several model requests in its tool loop | `src/hestia/adapters/storage.py:422-474` |
 | Output tokens | 700 per call | `infra/hestia_api_stack.py:111-117` |
 | Model call timeout | 20 seconds; the Lambda and API Gateway limits are 28 seconds | `household_agent.py:32`, `infra/hestia_api_stack.py:103, 136` |
 | Pasted text | 6000 characters | `src/hestia/app/agent.py:104-106` |

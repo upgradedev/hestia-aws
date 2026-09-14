@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1096" viewBox="0 0 1280 1096" role="img" aria-labelledby="title desc">
+<title id="title">Hestia Strands agents</title>
+<desc id="desc">Two agents built with the Strands Agents SDK call Claude Haiku 4.5 on Amazon Bedrock through an EU inference profile, within a shared daily limit of 200 reviews and readings per UTC day. Left, POST /api/agent/review: the Strands review agent runs at temperature 0.2 with streaming off, 700 output tokens and a 20 second timeout, and makes model requests in a tool loop over four read-only tools: review_repair_evidence, audit_subscriptions, check_receipts_and_utilities and read_case_timeline. Its briefing passes a local pattern guard that withholds it on refund, owed or deadline claims, a EUR amount no tool returned, more than 3200 characters, no mention of review or an empty reply, while the tool trace and usage are kept. The briefing or the withheld reasons, the tool trace and any fallback reason are saved in the state.json of the private copy, which keeps the last five, and the route answers HTTP 200 in either mode. Without the model the tools-only fallback runs every tool and shows its reason: model_not_configured, session_cap, daily_cap, budget_unconfirmed, model_timeout or model_error. Each private copy allows 3 reviews, counted before the model call and kept through a sample reset. Right, POST /api/agent/extract: the Strands reading agent has no tools, runs at temperature 0.0 with 700 output tokens and a 20 second timeout, and makes one call with streaming off; it accepts 1 to 6000 characters and 3 readings per private copy. From the JSON reply it keeps at most 20 appliance, transaction or subscription records with known keys and stages them as one intake draft for the household, which corrects them and commits with confirmed: true; a private copy holds up to 8 intake drafts of any status, and the pasted text is not stored. If a reading fails the route answers HTTP 502 and stages nothing; a model_error hands the reading back, a timeout or an unreadable reply stays counted, and the daily unit is never returned.</desc>
+<defs><filter id="soft" x="-10%" y="-20%" width="120%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#7C4A1A" flood-opacity="0.10"/></filter></defs>
+<g font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<rect x="1" y="1" width="1278" height="1094" rx="24" fill="#FFFBF5" stroke="#EAD9C6" stroke-width="2"/>
+<rect x="24" y="200" width="768" height="872" rx="16" fill="#EEF2F7" stroke="#3B5B7A" stroke-width="1.5"/>
+<rect x="816" y="200" width="440" height="872" rx="16" fill="#EEF2F7" stroke="#3B5B7A" stroke-width="1.5"/>
+<path d="M656,248 L656,114" fill="none" stroke="#2F7F86" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M656,104 L662,116 L650,116 Z" fill="#2F7F86" stroke="#2F7F86" stroke-width="1" stroke-linejoin="round"/>
+<path d="M944,248 L944,114" fill="none" stroke="#2F7F86" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M944,104 L950,116 L938,116 Z" fill="#2F7F86" stroke="#2F7F86" stroke-width="1" stroke-linejoin="round"/>
+<path d="M432,352 L394,352" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M384,352 L396,346 L396,358 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M216,528 L216,466" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 7"/><path d="M216,456 L222,468 L210,468 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M600,456 L600,518" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M600,528 L594,516 L606,516 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<path d="M600,768 L600,830" fill="none" stroke="#3F6F55" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M600,840 L594,828 L606,828 Z" fill="#3F6F55" stroke="#3F6F55" stroke-width="1" stroke-linejoin="round"/>
+<path d="M1036,456 L1036,518" fill="none" stroke="#3B5B7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1036,528 L1030,516 L1042,516 Z" fill="#3B5B7A" stroke="#3B5B7A" stroke-width="1" stroke-linejoin="round"/>
+<rect x="48" y="24" width="416" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M88,40 C108.16,40 112,43.84 112,64 C112,84.16 108.16,88 88,88 C67.84,88 64,84.16 64,64 C64,43.84 67.84,40 88,40 Z" fill="#3B5B7A"/><g transform="translate(73.12 49.12) scale(1.2400)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="8" cy="14.5" r="1.2" fill="#FFFFFF" stroke="none"/><circle cx="12" cy="14.5" r="1.2" fill="#FFFFFF" stroke="none"/><circle cx="16" cy="14.5" r="1.2" fill="#FFFFFF" stroke="none"/></g>
+<text x="128" y="58" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Shared daily limit: 200</text>
+<text x="128" y="86.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Reviews and readings per UTC day</text>
+<rect x="584" y="24" width="432" height="80" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M624,40 C644.16,40 648,43.84 648,64 C648,84.16 644.16,88 624,88 C603.84,88 600,84.16 600,64 C600,43.84 603.84,40 624,40 Z" fill="#2F7F86"/><g transform="translate(609.12 49.12) scale(1.24)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path d="M4 7.4l8 4.6 8-4.6M12 12v9.2"/></g>
+<text x="664" y="58" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Amazon Bedrock</text>
+<text x="664" y="86.04" font-size="19" font-weight="400" fill="#5B6472" text-anchor="start">Claude Haiku 4.5, EU profile</text>
+<rect x="48" y="248" width="336" height="208" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M84,260 C100.8,260 104,263.2 104,280 C104,296.8 100.8,300 84,300 C67.2,300 64,296.8 64,280 C64,263.2 67.2,260 84,260 Z" fill="#3B5B7A"/><g transform="translate(71.6 267.6) scale(1.03)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.8 3.6a5 5 0 0 0-4.6 6.9L3.8 16.9a2.2 2.2 0 0 0 3.1 3.1l6.4-6.4a5 5 0 0 0 6.9-4.6l-3 3-2.9-.6-.6-2.9z"/></g>
+<text x="116" y="288.4" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Four read-only tools</text>
+<circle cx="74" cy="323.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="330.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">review_repair_evidence</text>
+<circle cx="74" cy="354.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="361.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">audit_subscriptions</text>
+<circle cx="74" cy="385.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="392.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">check_receipts_and_utilities</text>
+<circle cx="74" cy="416.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="423.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">read_case_timeline</text>
+<rect x="432" y="248" width="336" height="208" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M468,260 C484.8,260 488,263.2 488,280 C488,296.8 484.8,300 468,300 C451.2,300 448,296.8 448,280 C448,263.2 451.2,260 468,260 Z" fill="#2F7F86"/><g transform="translate(455.6 267.6) scale(1.03)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3.5"/><path d="M12 8V4.8"/><circle cx="12" cy="3.6" r="1.2"/><circle cx="9" cy="13.5" r="1.1" fill="#FFFFFF"/><circle cx="15" cy="13.5" r="1.1" fill="#FFFFFF"/><path d="M9.5 17h5"/></g>
+<text x="500" y="288.4" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Strands review agent</text>
+<circle cx="458" cy="323.5" r="3.5" fill="#2F7F86"/>
+<text x="472" y="330.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Temperature 0.2, streaming off</text>
+<circle cx="458" cy="354.5" r="3.5" fill="#2F7F86"/>
+<text x="472" y="361.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">700 output tokens</text>
+<circle cx="458" cy="385.5" r="3.5" fill="#2F7F86"/>
+<text x="472" y="392.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">20 s timeout</text>
+<circle cx="458" cy="416.5" r="3.5" fill="#2F7F86"/>
+<text x="472" y="423.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Short briefing, three headings</text>
+<rect x="840" y="248" width="392" height="208" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M876,260 C892.8,260 896,263.2 896,280 C896,296.8 892.8,300 876,300 C859.2,300 856,296.8 856,280 C856,263.2 859.2,260 876,260 Z" fill="#2F7F86"/><g transform="translate(863.6 267.6) scale(1.03)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3.5"/><path d="M12 8V4.8"/><circle cx="12" cy="3.6" r="1.2"/><circle cx="9" cy="13.5" r="1.1" fill="#FFFFFF"/><circle cx="15" cy="13.5" r="1.1" fill="#FFFFFF"/><path d="M9.5 17h5"/></g>
+<text x="908" y="288.4" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Strands reading agent</text>
+<circle cx="866" cy="323.5" r="3.5" fill="#2F7F86"/>
+<text x="880" y="330.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">No tools, temperature 0.0</text>
+<circle cx="866" cy="354.5" r="3.5" fill="#2F7F86"/>
+<text x="880" y="361.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">700 output tokens, 20 s timeout</text>
+<circle cx="866" cy="385.5" r="3.5" fill="#2F7F86"/>
+<text x="880" y="392.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">1 to 6000 characters of text</text>
+<circle cx="866" cy="416.5" r="3.5" fill="#2F7F86"/>
+<text x="880" y="423.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">3 readings per private copy</text>
+<rect x="48" y="528" width="336" height="240" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M84,540 C100.8,540 104,543.2 104,560 C104,576.8 100.8,580 84,580 C67.2,580 64,576.8 64,560 C64,543.2 67.2,540 84,540 Z" fill="#3B5B7A"/><g transform="translate(71.60 547.60) scale(1.0333)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 4.5L4.5 9.5l5 5"/><path d="M4.5 9.5h9.5a5.5 5.5 0 0 1 0 11H10"/></g>
+<text x="116" y="568.4" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Tools-only fallback</text>
+<circle cx="74" cy="603.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="610.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">model_not_configured</text>
+<circle cx="74" cy="634.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="641.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">session_cap, daily_cap</text>
+<circle cx="74" cy="665.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="672.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">budget_unconfirmed</text>
+<circle cx="74" cy="696.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="703.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">model_timeout, model_error</text>
+<circle cx="74" cy="727.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="734.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Reason shown, no narrative</text>
+<rect x="432" y="528" width="336" height="240" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M468,540 C484.8,540 488,543.2 488,560 C488,576.8 484.8,580 468,580 C451.2,580 448,576.8 448,560 C448,543.2 451.2,540 468,540 Z" fill="#3B5B7A"/><g transform="translate(455.6 547.6) scale(1.03)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l7.5 3v6c0 4.6-3.2 8.2-7.5 9.6-4.3-1.4-7.5-5-7.5-9.6v-6z"/><path d="M8.6 12.3l2.4 2.4 4.6-4.8"/></g>
+<text x="500" y="568.4" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Local pattern guard</text>
+<circle cx="458" cy="603.5" r="3.5" fill="#3B5B7A"/>
+<text x="472" y="610.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Refund, owed, deadline claims</text>
+<circle cx="458" cy="634.5" r="3.5" fill="#3B5B7A"/>
+<text x="472" y="641.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">EUR amounts no tool returned</text>
+<circle cx="458" cy="665.5" r="3.5" fill="#3B5B7A"/>
+<text x="472" y="672.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Over 3200 characters or empty</text>
+<circle cx="458" cy="696.5" r="3.5" fill="#3B5B7A"/>
+<text x="472" y="703.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Never mentions review</text>
+<circle cx="458" cy="727.5" r="3.5" fill="#3B5B7A"/>
+<text x="472" y="734.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Trace and usage still kept</text>
+<rect x="840" y="528" width="392" height="240" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M876,540 C892.8,540 896,543.2 896,560 C896,576.8 892.8,580 876,580 C859.2,580 856,576.8 856,560 C856,543.2 859.2,540 876,540 Z" fill="#B4520A"/><g transform="translate(863.6 547.6) scale(1.03)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 2.5h9l4.5 4.5v14.5H5.5z"/><path d="M14.5 2.5V7H19"/><path d="M8.5 11.5h7M8.5 15h7M8.5 18.5h4"/></g>
+<text x="908" y="568.4" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Staged for the household</text>
+<circle cx="866" cy="603.5" r="3.5" fill="#B4520A"/>
+<text x="880" y="610.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">appliance, transaction, subscription</text>
+<circle cx="866" cy="634.5" r="3.5" fill="#B4520A"/>
+<text x="880" y="641.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">At most 20, known keys only</text>
+<circle cx="866" cy="665.5" r="3.5" fill="#B4520A"/>
+<text x="880" y="672.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">8 drafts per copy, any status</text>
+<circle cx="866" cy="696.5" r="3.5" fill="#B4520A"/>
+<text x="880" y="703.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Pasted text is not stored</text>
+<circle cx="866" cy="727.5" r="3.5" fill="#B4520A"/>
+<text x="880" y="734.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Commit needs confirmed: true</text>
+<rect x="48" y="840" width="336" height="208" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M84,852 C100.8,852 104,855.2 104,872 C104,888.8 100.8,892 84,892 C67.2,892 64,888.8 64,872 C64,855.2 67.2,852 84,852 Z" fill="#3B5B7A"/><g transform="translate(71.60 859.60) scale(1.0333)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16.5a8.5 8.5 0 0 1 17 0"/><path d="M12 16.5l4.2-5.2"/><circle cx="12" cy="16.5" r="1.6" fill="#FFFFFF" stroke="none"/><path d="M3.5 20.5h17"/></g>
+<text x="116" y="880.4" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Per-copy limit</text>
+<circle cx="74" cy="915.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="922.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">3 reviews per private copy</text>
+<circle cx="74" cy="946.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="953.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Counted before the model call</text>
+<circle cx="74" cy="977.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="984.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Pre-call fallbacks use none</text>
+<circle cx="74" cy="1008.5" r="3.5" fill="#3B5B7A"/>
+<text x="88" y="1015.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Kept through a sample reset</text>
+<rect x="432" y="840" width="336" height="208" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M468,852 C484.8,852 488,855.2 488,872 C488,888.8 484.8,892 468,892 C451.2,892 448,888.8 448,872 C448,855.2 451.2,852 468,852 Z" fill="#3F6F55"/><g transform="translate(455.6 859.6) scale(1.03)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="2.8"/><path d="M4 6l2 12.5c.3 1.6 2.9 2.7 6 2.7s5.7-1.1 6-2.7L20 6"/></g>
+<text x="500" y="880.4" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">Saved in state.json</text>
+<circle cx="458" cy="915.5" r="3.5" fill="#3F6F55"/>
+<text x="472" y="922.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Briefing or withheld reasons</text>
+<circle cx="458" cy="946.5" r="3.5" fill="#3F6F55"/>
+<text x="472" y="953.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Tool trace and fallback reason</text>
+<circle cx="458" cy="977.5" r="3.5" fill="#3F6F55"/>
+<text x="472" y="984.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Last five briefings kept</text>
+<circle cx="458" cy="1008.5" r="3.5" fill="#3F6F55"/>
+<text x="472" y="1015.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">HTTP 200 in either mode</text>
+<rect x="840" y="840" width="392" height="208" rx="16" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5" filter="url(#soft)"/>
+<path d="M876,852 C892.8,852 896,855.2 896,872 C896,888.8 892.8,892 876,892 C859.2,892 856,888.8 856,872 C856,855.2 859.2,852 876,852 Z" fill="#9A3412"/><g transform="translate(863.60 859.60) scale(1.0333)" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l9.5 17H2.5z"/><path d="M12 9.5v5"/><circle cx="12" cy="17.4" r="1.2" fill="#FFFFFF" stroke="none"/></g>
+<text x="908" y="880.4" font-size="24" font-weight="600" fill="#1F2937" text-anchor="start">If a reading fails</text>
+<circle cx="866" cy="915.5" r="3.5" fill="#9A3412"/>
+<text x="880" y="922.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">HTTP 502, nothing staged</text>
+<circle cx="866" cy="946.5" r="3.5" fill="#9A3412"/>
+<text x="880" y="953.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">model_error: reading handed back</text>
+<circle cx="866" cy="977.5" r="3.5" fill="#9A3412"/>
+<text x="880" y="984.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Timeout, bad reply: still counted</text>
+<circle cx="866" cy="1008.5" r="3.5" fill="#9A3412"/>
+<text x="880" y="1015.15" font-size="19" font-weight="400" fill="#1F2937" text-anchor="start">Daily unit never returned</text>
+<rect x="48" y="185" width="238" height="30" rx="15.0" fill="#FFFBF5" stroke="#3B5B7A" stroke-width="1.5"/>
+<text x="167" y="206.3" font-size="18" font-weight="600" fill="#3B5B7A" text-anchor="middle">POST /api/agent/review</text>
+<rect x="990" y="185" width="242" height="30" rx="15.0" fill="#FFFBF5" stroke="#3B5B7A" stroke-width="1.5"/>
+<text x="1111" y="206.3" font-size="18" font-weight="600" fill="#3B5B7A" text-anchor="middle">POST /api/agent/extract</text>
+<rect x="520.5" y="129" width="271" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="656" y="150.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">model requests in a tool loop</text>
+<rect x="838" y="129" width="212" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="944" y="150.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">one call, streaming off</text>
+<rect x="96.5" y="483" width="239" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="216" y="504.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">runs every tool, no model</text>
+<rect x="556" y="471" width="88" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="600" y="492.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">briefing</text>
+<rect x="511" y="783" width="178" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="600" y="804.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">shown or withheld</text>
+<rect x="975.5" y="471" width="121" height="30" rx="15.0" fill="#FFFFFF" stroke="#EAD9C6" stroke-width="1.5"/>
+<text x="1036" y="492.3" font-size="18" font-weight="500" fill="#1F2937" text-anchor="middle">JSON reply</text>
+</g>
+</svg>
