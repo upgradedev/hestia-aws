@@ -13,7 +13,7 @@ Line references point at the source on `main`. [deployment.md](deployment.md) re
 
 ## The review agent
 
-**Construction** (`src/hestia/agents/household_agent.py:474-485`). Each review builds one agent and asks it once to use every tool and write the briefing:
+**Construction** (`src/hestia/agents/household_agent.py:475-486`). Each review builds one agent and asks it once to use every tool and write the briefing:
 
 ```python
 model = BedrockModel(
@@ -28,7 +28,7 @@ return Agent(
 
 The defaults are `eu.anthropic.claude-haiku-4-5-20251001-v1:0`, `eu-west-1` and 700 output tokens (`household_agent.py:27-33`). On the route they come from `HESTIA_BEDROCK_MODEL_ID`, `HESTIA_BEDROCK_REGION` and `HESTIA_AGENT_MAX_TOKENS` (`src/hestia/app/agent.py:34-47`), and the stack sets the same values (`infra/hestia_api_stack.py:111-117`). A model id is only configured when `HESTIA_LIVE_MODEL` is `bedrock`.
 
-**Tools** (`household_agent.py:155-280`). Four closures over the loaded private copy and the review date, wrapped with `strands.tool`, so the schema the model reads comes from the signature and the docstring:
+**Tools** (`household_agent.py:156-281`). Four closures over the loaded private copy and the review date, wrapped with `strands.tool`, so the schema the model reads comes from the signature and the docstring:
 
 | Tool | Reads | Returns |
 |---|---|---|
@@ -39,11 +39,11 @@ The defaults are `eu.anthropic.claude-haiku-4-5-20251001-v1:0`, `eu-west-1` and 
 
 Each tool output is clipped to 1600 characters.
 
-**Prompt** (`household_agent.py:34-51`). The system prompt tells the agent to use the tools instead of guessing, never to state or imply entitlement to a refund, repair or amount, never to invent deadlines, statutory periods or attachments, to use only amounts and dates from tool outputs, and not to draft the notice. It asks for fewer than 180 words under exactly three headings: What I checked, Decisions waiting for you, Suggested next step. The review prompt names the recorded appliance ids and the review date. The word ceiling is an instruction; the code enforces a 3200-character limit.
+**Prompt** (`household_agent.py:34-52`). The system prompt tells the agent to use the tools instead of guessing, never to state or imply entitlement to a refund, repair or amount, never to invent deadlines, statutory periods or attachments, to use only amounts and dates from tool outputs, and not to draft the notice. It asks for fewer than 180 words under exactly three headings: What I checked, Decisions waiting for you, Suggested next step. The review prompt names the recorded appliance ids and the review date. The word ceiling is an instruction; the code enforces a 3200-character limit.
 
-**Trace and usage** (`household_agent.py:326-345, 451-462`). Tool calls are paired from the `toolUse` and `toolResult` blocks in `agent.messages`, and token usage comes from `result.metrics.accumulated_usage`. Both are stored with the briefing; the private copy keeps its last five briefings.
+**Trace and usage** (`household_agent.py:327-346, 452-463`). Tool calls are paired from the `toolUse` and `toolResult` blocks in `agent.messages`, and token usage comes from `result.metrics.accumulated_usage`. Both are stored with the briefing; the private copy keeps its last five briefings.
 
-**Guard** (`household_agent.py:31, 81-102, 283-305, 511-518`). A local pattern check withholds the whole briefing when it:
+**Guard** (`household_agent.py:31, 82-103, 284-306, 512-519`). A local pattern check withholds the whole briefing when it:
 
 - matches a banned pattern: entitlement, refund or reimbursement promises, "owed" or "due", deadline wording, or a recovered EUR amount;
 - names a EUR amount that matches no number in the outputs of the tools it called (dates are ignored, and whole numbers are also read as cents);
@@ -51,13 +51,13 @@ Each tool output is clipped to 1600 characters.
 
 The tool trace and usage are still returned. The guard is not Amazon Bedrock Guardrails, and a wording its patterns miss would pass.
 
-**Timeout and fallback** (`household_agent.py:308-323, 487-509`). The agent runs in a worker thread joined for 20 seconds. A timeout returns the deterministic tools-only outcome with reason `model_timeout`, and an exception returns it with `model_error:<ExceptionClass>`. The worker thread is not stopped and the attempt stays counted. Before any call, the route also falls back with `model_not_configured`, `session_cap`, `budget_unconfirmed` or `daily_cap` (`src/hestia/app/agent.py:50-94`). Tools-only mode writes no narrative: the page shows the reason and the output of every tool call, and the route answers HTTP 200 either way. `review_repair_evidence` runs once for each appliance with a recorded repair, and the other three tools run once each.
+**Timeout and fallback** (`household_agent.py:309-324, 488-510`). The agent runs in a worker thread joined for 20 seconds. A timeout returns the deterministic tools-only outcome with reason `model_timeout`, and an exception returns it with `model_error:<ExceptionClass>`. The worker thread is not stopped and the attempt stays counted. Before any call, the route also falls back with `model_not_configured`, `session_cap`, `budget_unconfirmed` or `daily_cap` (`src/hestia/app/agent.py:50-94`). Tools-only mode writes no narrative: the page shows the reason and the output of every tool call, and the route answers HTTP 200 either way. `review_repair_evidence` runs once for each appliance with a recorded repair, and the other three tools run once each.
 
 ## The reading agent
 
-**Construction** (`household_agent.py:400-448`). A second `Agent` with `tools=[]`, `EXTRACT_PROMPT` and `BedrockModel(..., temperature=0.0, streaming=False)`. The user message is the document type hint followed by the pasted text.
+**Construction** (`household_agent.py:401-449`). A second `Agent` with `tools=[]`, `EXTRACT_PROMPT` and `BedrockModel(..., temperature=0.0, streaming=False)`. The user message is the document type hint followed by the pasted text.
 
-**Prompt and shape** (`household_agent.py:53-79, 360-397`). The prompt asks for `{"records": [...]}` and nothing else, a field only when the text states it, no guessed date, price, email or model number, integer cents and at most 20 records. The reply is read from the first `{` to the last `}`, then `normalise_extracted` keeps at most 20 records, only the kinds below, only their keys and only plain values:
+**Prompt and shape** (`household_agent.py:54-80, 361-398`). The prompt asks for `{"records": [...]}` and nothing else, a field only when the text states it, no guessed date, price, email or model number, integer cents and at most 20 records. The reply is read from the first `{` to the last `}`, then `normalise_extracted` keeps at most 20 records, only the kinds below, only their keys and only plain values:
 
 | Kind | Allowed keys |
 |---|---|

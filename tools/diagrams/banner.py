@@ -2,7 +2,7 @@
 
 Facts: README.md:3, 13, 26, 51; frontend/src/components/Landing.tsx:20;
 docs/devpost-submission.md:19; src/hestia/app/intake.py:69-81; src/hestia/app/agent.py:50-94;
-src/hestia/agents/household_agent.py:34-51, 268-273; src/hestia/app/claims.py:197-199;
+src/hestia/agents/household_agent.py:34-53, 270-275; src/hestia/app/claims.py:197-199;
 frontend/src/components/FormalNoticeModal.tsx:137; frontend/src/components/TopBar.tsx:24.
 """
 from __future__ import annotations

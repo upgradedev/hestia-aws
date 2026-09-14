@@ -1,6 +1,6 @@
 """docs/strands-agents.md: the review agent and the reading agent, their bounds and limits.
 
-Facts: src/hestia/agents/household_agent.py:27-33, 81-102, 114-128, 155-280, 283-323,
+Facts: src/hestia/agents/household_agent.py:27-33, 82-103, 115-129, 156-281, 284-324,
 360-448, 474-518; src/hestia/app/agent.py:28-31, 58-94, 102-168; src/hestia/app/api.py:62-63,
 144-153, 331-334; src/hestia/app/intake.py:69-70; src/hestia/adapters/storage.py:422-474;
 infra/hestia_api_stack.py:16-18, 111-117. Two labels follow the fact sheet rather than the

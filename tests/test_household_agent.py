@@ -326,6 +326,6 @@ def test_sample_trial_is_a_decision_on_the_day_a_copy_opens():
 def test_system_prompt_puts_the_recorded_repair_first_and_bans_dashes():
     prompt = ha.SYSTEM_PROMPT
     assert "at most three bullets" in prompt
-    assert "when a tool reports a recorded repair with no approved notice yet" in prompt
-    assert "the first bullet is to review that repair's exact notice in Hestia" in prompt
+    assert "if review_repair_evidence returns a recorded repair cost and no saved case" in prompt
+    assert "the first bullet is to review the exact notice for that repair in Hestia" in prompt
     assert "do not use dashes as punctuation" in prompt
