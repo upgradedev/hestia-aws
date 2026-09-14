@@ -88,7 +88,7 @@ Tests and CI are described in [docs/testing.md](docs/testing.md), and releasing 
 | [Assurance](docs/assurance.md) | open gaps, the legal boundary, data handling and provenance |
 | [Devpost text](docs/devpost-submission.md) | the submission text and the judge walkthrough |
 | [Builder article](docs/builder-aws-article.md) | a draft article on the design |
-| [Video script](docs/video-script.md) | the demo video beats and production notes |
+| [Video script](docs/video-script.md) | the demo video scenes and production notes |
 
 ## License
 

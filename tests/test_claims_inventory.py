@@ -181,17 +181,19 @@ def test_about_view_states_disconnected_providers_and_the_live_model_boundary() 
     assert "Independent human UAT" in text and "NOT_RUN" in text
 
 
-def test_narration_keeps_the_seven_beats_the_capture_journey_expects() -> None:
+def test_narration_keeps_the_fifteen_scenes_of_the_published_video() -> None:
     import json
 
     spec = json.loads((ROOT / "video/narration.json").read_text(encoding="utf-8"))
-    assert spec["schemaVersion"] == "hestia.submission-video/v1"
+    assert spec["schemaVersion"] == "hestia.submission-video/v2"
     assert [segment["id"] for segment in spec["segments"]] == [
-        "hook", "surface", "trigger", "live", "sponsor", "evidence", "close",
+        "intro", "elena", "moment", "pile", "solution", "aws", "agents", "open",
+        "home", "paste", "review", "notice", "case", "about", "close",
     ]
     for segment in spec["segments"]:
         for field in ("captionText", "speechText"):
             assert 20 <= len(segment[field]) <= 800
             assert "—" not in segment[field]
     closing = spec["segments"][-1]["captionText"]
-    assert "drusjukc9d4oc.cloudfront.net" in closing
+    assert "open source" in closing
+    assert "live demo" in closing

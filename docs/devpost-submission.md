@@ -44,7 +44,7 @@ Reading pasted text has no deterministic equivalent, so it fails closed. A missi
 - GitHub Actions: lint, a prose check over `README.md`, `docs/*.md` and the video narration (`tools/prose_gate.py`), pytest with a coverage threshold, Lambda packaging with pinned SDKs and the rendered CloudFormation template; Playwright journeys against the real Lambda handler behind a loopback HTTP server; a manually dispatched frontend release through GitHub OIDC, gated on the live backend health; production acceptance against the live URL.
 - Backend release: CI packages the Lambda zip and renders the template as an artifact. `scripts/release_backend.py`, run by the owner, downloads that artifact from a successful `main` run, checks `SHA256SUMS`, uploads it once, prepares a CloudFormation change set, refuses one that removes or replaces resources, executes it only with `--execute`, and then checks `/healthz` for the released commit. Runbook: [deployment.md](https://github.com/upgradedev/hestia-aws/blob/main/docs/deployment.md).
 - Deterministic notice: `draft_statutory_claim_letter` in `src/hestia/agents/tools.py` writes the review request from recorded facts and cites Directive (EU) 2019/771 as general reference only.
-- Reused from the author's earlier projects: the CloudFront and S3 hosting template (`infra/frontend_stack.py`) and the video production tooling. Everything else was written for Hestia.
+- Reused from the author's earlier projects: the CloudFront and S3 hosting template (`infra/frontend_stack.py`). Everything else was written for Hestia, including the video tooling in `video/`.
 
 ## Challenges we ran into
 
