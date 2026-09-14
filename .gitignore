@@ -19,3 +19,4 @@ frontend/tsconfig.tsbuildinfo
 *.mp4
 capture/
 narration/
+video/work/

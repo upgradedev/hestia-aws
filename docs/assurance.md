@@ -58,4 +58,4 @@ Source paths: `frontend/src/useDemoSession.ts`, `frontend/src/components/Registr
 
 ## Provenance
 
-The CloudFront and S3 hosting template (`infra/frontend_stack.py`) and the video production tooling (`video/`, `web/video/`, `scripts/verify_video_sync.py`) are reused from the author's earlier projects. Everything else in this repository was written for Hestia. The business rules follow the text of Directive (EU) 2019/771 and general household bookkeeping practice, and no customer or private data was used.
+The CloudFront and S3 hosting template (`infra/frontend_stack.py`) is reused from the author's earlier projects, as are `scripts/verify_video_sync.py` and `web/video/capture-production.mjs`, earlier video scripts that nothing in this repository runs. The video tooling in `video/` was written for this video, and everything else in this repository was written for Hestia. The business rules follow the text of Directive (EU) 2019/771 and general household bookkeeping practice, and no customer or private data was used.

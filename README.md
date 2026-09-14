@@ -12,7 +12,7 @@
 
 Hestia is an everyday agent for the paperwork a household never keeps together: receipts, guarantees, subscriptions and repair bills. A Strands agent on Amazon Bedrock reads the household's records and points at the decisions waiting. The household reads the exact notice and approves it, and nothing is ever sent.
 
-**[Open the live demo](https://drusjukc9d4oc.cloudfront.net/)** · [Judge walkthrough](docs/devpost-submission.md#testing-instructions-for-judges) · [Architecture](docs/architecture.md) · [Strands Agents](docs/strands-agents.md)
+**[Open the live demo](https://drusjukc9d4oc.cloudfront.net/)** · [Watch the demo video](https://youtu.be/k6SHxtytY80) · [Judge walkthrough](docs/devpost-submission.md#testing-instructions-for-judges) · [Architecture](docs/architecture.md) · [Strands Agents](docs/strands-agents.md)
 
 Built for the AWS Agents for Humans hackathon, Everyday Agents track.
 
@@ -88,7 +88,7 @@ Tests and CI are described in [docs/testing.md](docs/testing.md), and releasing 
 | [Assurance](docs/assurance.md) | open gaps, the legal boundary, data handling and provenance |
 | [Devpost text](docs/devpost-submission.md) | the submission text and the judge walkthrough |
 | [Builder article](docs/builder-aws-article.md) | a draft article on the design |
-| [Video script](docs/video-script.md) | the demo video beats and production notes |
+| [Video script](docs/video-script.md) | the demo video scenes and production notes |
 
 ## License
 

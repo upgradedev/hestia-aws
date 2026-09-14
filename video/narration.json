@@ -1,57 +1,110 @@
 {
-  "_comment": "Seven beats in the order the capture journey expects (web/video/capture-production.mjs). captionText is what a judge reads on screen and carries the exact figures. speechText is the same sentence spelled for a text to speech engine, so AWS becomes A W S and EU becomes E U. Run video/generate-narration.py once and read the total it prints before planning around any length: it refuses outside 90 to 174 seconds and tells you the measured figure. Record only after GET /healthz on the live URL reports live_model true and the released commit.",
-  "schemaVersion": "hestia.submission-video/v1",
-  "provider": "elevenlabs",
-  "elevenLabs": {
+  "_comment": "Fifteen scenes in the order of the published video. speechText is what the voice says (acronyms spelled for the voice); captionText is the same sentence as written text. The pipeline in video/ reads this file; see docs/video-script.md.",
+  "schemaVersion": "hestia.submission-video/v2",
+  "videoUrl": "https://youtu.be/k6SHxtytY80",
+  "capturedRevision": "f8694a0e2e95df688e46e53c9a3e2e9da090e401",
+  "voice": {
+    "provider": "elevenlabs",
     "voiceId": "pNInz6obpgDQGcFmaJgB",
     "modelId": "eleven_multilingual_v2",
-    "outputFormat": "mp3_44100_128"
+    "settings": {
+      "stability": 0.5,
+      "similarity_boost": 0.8,
+      "use_speaker_boost": true
+    }
   },
-  "languageCode": "en-GB",
-  "voice": "en-GB-Neural2-B",
-  "speakingRate": 0.98,
+  "tailSeconds": 0.6,
+  "pasteEmail": "From: orders@helios-home.example.gr\nSubject: Order HH-40217 confirmed\n\nHello Elena,\n\nThank you for your order at Helios Home Appliances.\n\nOrder HH-40217, placed 12 September 2026\n1 x De'Longhi Magnifica S ECAM22.110.B coffee machine: 329.00 EUR\nGuarantee: 24 months\nDelivered to: Athens Apartment 4B\n\nQuestions? Reply to this email or write to support@helios-home.example.gr.",
   "segments": [
     {
-      "id": "hook",
-      "_beat": "The problem, in the words of the person who has it. The landing page is on screen: the H1 and the sample repair card.",
-      "captionText": "Elena Georgiou's washing machine failed 22 months after purchase, and the repair cost 185 EUR. The receipt, the repair invoice and the seller's address live in three places, and nobody keeps the case together. Hestia starts from that receipt and asks Elena to approve the exact notice; nothing is sent.",
-      "speechText": "Elena Georgiou's washing machine failed twenty-two months after purchase, and the repair cost one hundred and eighty-five euros. The receipt, the repair invoice and the seller's address live in three places, and nobody keeps the case together. Hestia starts from that receipt and asks Elena to approve the exact notice; nothing is sent."
+      "id": "intro",
+      "kind": "slide",
+      "captionText": "This is Hestia, an everyday agent for the paperwork a household never keeps together. It points at the decisions, and the household makes them.",
+      "speechText": "This is Hestia, an everyday agent for the paperwork a household never keeps together. It points at the decisions, and the household makes them."
     },
     {
-      "id": "surface",
-      "_beat": "One click on the landing button creates the demo space; Home opens at the top with the Start here block and the review card.",
-      "captionText": "One click on the landing page opens a private demo space with a fictional Athens household: no account, no login, a 30-minute limit. Home starts with three ways to add your own records, then shows what needs a decision this week: the recorded repair, a trial ending, a price change from 9.99 to 13.99 EUR, and a receipt missing for 85.50 EUR.",
-      "speechText": "One click on the landing page opens a private demo space with a fictional Athens household: no account, no login, a thirty-minute limit. Home starts with three ways to add your own records, then shows what needs a decision this week: the recorded repair, a trial ending, a price change from nine ninety-nine to thirteen ninety-nine euros, and a receipt missing for eighty-five euros fifty."
+      "id": "elena",
+      "kind": "slide",
+      "captionText": "Meet Elena, in Athens. Her receipts sit in her inbox, her guarantees in a drawer, and her subscriptions renew quietly.",
+      "speechText": "Meet Elena, in Athens. Her receipts sit in her inbox, her guarantees in a drawer, and her subscriptions renew quietly."
     },
     {
-      "id": "trigger",
-      "_beat": "The Strands agent runs. The briefing, the mode chips and the opened tool trace are on screen.",
-      "captionText": "Ask Hestia to review this household, and a Strands agent on Amazon Bedrock reads the records through four tools: repair evidence, subscriptions, receipts and utilities, and the case timeline. It writes a short briefing that points at decisions; a guard withholds the whole briefing if it claims an entitlement or states an amount the tools did not return. The tool trace stays visible.",
-      "speechText": "Ask Hestia to review this household, and a Strands agent on Amazon Bedrock reads the records through four tools: repair evidence, subscriptions, receipts and utilities, and the case timeline. It writes a short briefing that points at decisions; a guard withholds the whole briefing if it claims an entitlement or states an amount the tools did not return. The tool trace stays visible."
+      "id": "moment",
+      "kind": "slide",
+      "captionText": "Then her washing machine breaks, 22 months in, and the repair costs 185 euros. EU rules give at least two years of legal guarantee for faulty goods, but using it needs the receipt, the invoice and the seller's details together.",
+      "speechText": "Then her washing machine breaks, twenty-two months in, and the repair costs one hundred and eighty-five euros. E U rules give at least two years of legal guarantee for faulty goods, but using it needs the receipt, the invoice and the seller's details together."
     },
     {
-      "id": "live",
-      "_beat": "The flagship claim on the anonymous live path: the exact notice is reviewed and approved, recorded and not sent.",
-      "captionText": "Then Hestia stops. The notice to Acropolis Appliance Store is prepared on the server from the recorded facts: recipient, subject, the 185 EUR repair cost and the exact text. Elena reads it and approves it with a single-use token bound to that exact draft. The approval is recorded as a simulation. No email is sent.",
-      "speechText": "Then Hestia stops. The notice to Acropolis Appliance Store is prepared on the server from the recorded facts: recipient, subject, the one hundred and eighty-five euro repair cost and the exact text. Elena reads it and approves it with a single-use token bound to that exact draft. The approval is recorded as a simulation. No email is sent."
+      "id": "pile",
+      "kind": "slide",
+      "captionText": "Add a trial about to turn paid, a price that crept up and a missing receipt: small amounts, real deadlines, and nobody keeping watch.",
+      "speechText": "Add a trial about to turn paid, a price that crept up and a missing receipt: small amounts, real deadlines, and nobody keeping watch."
     },
     {
-      "id": "sponsor",
-      "_beat": "The saved case timeline is on screen while the narration names what is load-bearing on AWS.",
-      "captionText": "The saved case now carries the draft, the approval and the next step; every reply, deadline or outcome Elena records later stays on that timeline. Remove AWS and the product stops: the Strands Agents SDK runs Claude Haiku 4.5 through Amazon Bedrock inside Lambda, and Amazon S3 conditional writes keep every case revision consistent.",
-      "speechText": "The saved case now carries the draft, the approval and the next step; every reply, deadline or outcome Elena records later stays on that timeline. Remove A W S and the product stops: the Strands Agents S D K runs Claude Haiku four point five through Amazon Bedrock inside Lambda, and Amazon S three conditional writes keep every case revision consistent."
+      "id": "solution",
+      "kind": "slide",
+      "captionText": "Elena adds records by hand or from a pasted email. A Strands agent on Amazon Bedrock points at what needs a decision. Elena approves the exact notice herself; it is recorded, never sent.",
+      "speechText": "Elena adds records by hand or from a pasted email. A Strands agent on Amazon Bedrock points at what needs a decision. Elena approves the exact notice herself; it is recorded, never sent."
     },
     {
-      "id": "evidence",
-      "_beat": "The About page with the mode list and the read-only console showing the live health check.",
-      "captionText": "Every claim is checkable without asking us. The About page lists what runs and what does not: bank feeds, mailbox sync, receipt OCR, Guardrails, AgentCore and email sending are not connected. Its read-only console returns the live health check with the model limits: 3 reviews and 3 text readings per demo space, 200 a day shared by both. Independent human testing is reported as not run.",
-      "speechText": "Every claim is checkable without asking us. The About page lists what runs and what does not: bank feeds, mailbox sync, receipt O C R, Guardrails, AgentCore and email sending are not connected. Its read-only console returns the live health check with the model limits: three reviews and three text readings per demo space, two hundred a day shared by both. Independent human testing is reported as not run."
+      "id": "aws",
+      "kind": "slide",
+      "captionText": "On AWS, CloudFront serves the app, and API Gateway routes its calls. A read-only Lambda answers reads, and a writer Lambda runs two Strands agents with Claude Haiku on Amazon Bedrock, and saves each private copy to Amazon S3.",
+      "speechText": "On A W S, CloudFront serves the app, and A P I Gateway routes its calls. A read-only Lambda answers reads, and a writer Lambda runs two Strands agents with Claude Haiku on Amazon Bedrock, and saves each private copy to Amazon S3."
+    },
+    {
+      "id": "agents",
+      "kind": "slide",
+      "captionText": "The review agent only reads, through four tools, and a guard withholds any briefing with entitlement wording or a euro amount no tool returned. The reading agent has no tools: it proposes records from pasted text, and nothing is added until Elena confirms.",
+      "speechText": "The review agent only reads, through four tools, and a guard withholds any briefing with entitlement wording or a euro amount no tool returned. The reading agent has no tools: it proposes records from pasted text, and nothing is added until Elena confirms."
+    },
+    {
+      "id": "open",
+      "kind": "demo",
+      "captionText": "This is the live app. One click opens a private copy of Elena's household, with no account, for 30 minutes.",
+      "speechText": "This is the live app. One click opens a private copy of Elena's household, with no account, for thirty minutes."
+    },
+    {
+      "id": "home",
+      "kind": "demo",
+      "captionText": "Home starts with three ways to add records. Below them are five decisions waiting, from the washing machine repair and a trial ending in three days, to a price rise and a missing receipt.",
+      "speechText": "Home starts with three ways to add records. Below them are five decisions waiting, from the washing machine repair and a trial ending in three days, to a price rise and a missing receipt."
+    },
+    {
+      "id": "paste",
+      "kind": "demo",
+      "captionText": "Elena pastes the order email for a new coffee machine. The reading agent proposes the product, the seller, the date and the price. She checks them, and confirms before anything is added.",
+      "speechText": "Elena pastes the order email for a new coffee machine. The reading agent proposes the product, the seller, the date and the price. She checks them, and confirms before anything is added."
+    },
+    {
+      "id": "review",
+      "kind": "demo",
+      "captionText": "Then she asks Hestia to review the household. The Strands agent calls its four tools, and Claude Haiku on Bedrock writes a short briefing that points at the decisions. The chips show the live model, the tokens and the reviews left, and the tool trace shows every call and what it returned.",
+      "speechText": "Then she asks Hestia to review the household. The Strands agent calls its four tools, and Claude Haiku on Bedrock writes a short briefing that points at the decisions. The chips show the live model, the tokens and the reviews left, and the tool trace shows every call and what it returned."
+    },
+    {
+      "id": "notice",
+      "kind": "demo",
+      "captionText": "The repair matters most. Hestia prepares the exact notice from the recorded facts: the seller, the subject and the repair cost. Elena reads it and approves it with a single-use token bound to that exact text. The approval is recorded, and no email is sent.",
+      "speechText": "The repair matters most. Hestia prepares the exact notice from the recorded facts: the seller, the subject and the repair cost. Elena reads it and approves it with a single-use token bound to that exact text. The approval is recorded, and no email is sent."
+    },
+    {
+      "id": "case",
+      "kind": "demo",
+      "captionText": "The case file keeps the story in one place: the approved notice and the next step, then every reply, deadline and outcome she records.",
+      "speechText": "The case file keeps the story in one place: the approved notice and the next step, then every reply, deadline and outcome she records."
+    },
+    {
+      "id": "about",
+      "kind": "demo",
+      "captionText": "And the About page shows what runs, and what is not connected yet, such as bank feeds and email sending.",
+      "speechText": "And the About page shows what runs, and what is not connected yet, such as bank feeds and email sending."
     },
     {
       "id": "close",
-      "_beat": "The republishable sentence, one mechanism and one consequence, over the landing page and the URL.",
-      "captionText": "Hestia reads a household's receipts, subscriptions and repair records with Strands agents on Amazon Bedrock, and the household approves the exact text of every notice; the approval is recorded and nothing is sent. Open source under the MIT license, running on AWS, no login. Try it now at drusjukc9d4oc.cloudfront.net.",
-      "speechText": "Hestia reads a household's receipts, subscriptions and repair records with Strands agents on Amazon Bedrock, and the household approves the exact text of every notice; the approval is recorded and nothing is sent. Open source under the M I T license, running on A W S, no login. Try it now at drusjukc9d4oc dot cloudfront dot net."
+      "kind": "slide",
+      "captionText": "Hestia turns scattered household paperwork into decisions a person can act on. Two Strands agents read and point, the household decides, and every step stays in one case file. It is open source, and the live demo needs no login. The links are in the description.",
+      "speechText": "Hestia turns scattered household paperwork into decisions a person can act on. Two Strands agents read and point, the household decides, and every step stays in one case file. It is open source, and the live demo needs no login. The links are in the description."
     }
   ]
 }
