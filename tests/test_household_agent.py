@@ -72,13 +72,13 @@ def test_workspace_tools_read_recorded_facts_without_entitlement():
     assert set(tools) == {"review_repair_evidence", "audit_subscriptions",
                           "check_receipts_and_utilities", "read_case_timeline"}
     repair = tools["review_repair_evidence"]("app-001")
-    assert "REVIEW REQUIRED" in repair and "Kotsovolos" in repair
+    assert "REVIEW REQUIRED" in repair and "Acropolis Appliance Store" in repair
     assert "No saved case yet" in repair and "REIMBURSABLE" not in repair
     assert "No appliance with id" in tools["review_repair_evidence"]("app-999")
     subs = tools["audit_subscriptions"]()
     assert "[TRIAL ALERT]" in subs and "[PRICE HIKE]" in subs and "[DUPLICATE]" in subs
     receipts = tools["check_receipts_and_utilities"]()
-    assert "[MISSING RECEIPT]" in receipts and "Leroy Merlin" in receipts
+    assert "[MISSING RECEIPT]" in receipts and "Piraeus DIY Supplies" in receipts
     assert "[UTILITY SPIKE]" in receipts
     assert "No case has been saved yet" in tools["read_case_timeline"]()
 
@@ -321,3 +321,11 @@ def test_daily_counter_treats_access_denied_on_missing_key_as_absent_and_creates
 def test_sample_trial_is_a_decision_on_the_day_a_copy_opens():
     output = ha.tool_functions(fresh_demo_state(TODAY), TODAY)["audit_subscriptions"]()
     assert "Fitness Stream Pro" in output and "expires in 3 days" in output
+
+
+def test_system_prompt_puts_the_recorded_repair_first_and_bans_dashes():
+    prompt = ha.SYSTEM_PROMPT
+    assert "at most three bullets" in prompt
+    assert "when a tool reports a recorded repair with no approved notice yet" in prompt
+    assert "the first bullet is to review that repair's exact notice in Hestia" in prompt
+    assert "do not use dashes as punctuation" in prompt

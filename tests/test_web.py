@@ -434,11 +434,11 @@ def test_cancel_utility_and_manual_receipt_are_scoped_and_truthful(sandbox):
     replay = call("/api/action/cancel", body, token)[1]
     assert replay["replayed"] is True and replay["state"] == saved
     assert call("/api/action/cancel", {"service_name": "unknown"}, token)[0] == 404
-    utility = {"provider": "PPC Electricity", "excess_cents": 5800}
+    utility = {"provider": "City Electricity Supply", "excess_cents": 5800}
     assert call("/api/action/utility_dispute", utility, token)[0] == 200
     assert call("/api/action/utility_dispute", utility, token)[1]["replayed"] is True
     assert call("/api/action/utility_dispute", {**utility, "excess_cents": -1}, token)[0] == 400
-    receipt = {"merchant": "Leroy Merlin DIY", "amount_cents": 8550, "receipt_id": "SYNTHETIC"}
+    receipt = {"merchant": "Piraeus DIY Supplies", "amount_cents": 8550, "receipt_id": "SYNTHETIC"}
     code, linked = call("/api/action/receipt", receipt, token)
     assert code == 200 and linked["result"]["matched"] is True
     assert call("/api/action/receipt", receipt, token)[1]["replayed"] is True

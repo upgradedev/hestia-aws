@@ -159,7 +159,7 @@ test('editing an appliance keeps its identity and a second repair is refused whi
   await expect(dialog(page)).toContainText('Correct the details of Sony Bravia 55 OLED TV');
   const form = page.getByTestId('intake-simple-form');
   await expect(form.getByLabel('Appliance ID', { exact: true })).toHaveValue('app-002');
-  await expect(form.getByLabel('Seller email (for the notice)', { exact: true })).toHaveValue('warranty@sonycenter.example.gr');
+  await expect(form.getByLabel('Seller email (for the notice)', { exact: true })).toHaveValue('warranty@plaka-tv-audio.example.gr');
   await form.locator('summary', { hasText: 'Links' }).click();
   await form.getByLabel('Quick start link', { exact: true }).fill('not a link');
   await page.getByTestId('intake-review').click();

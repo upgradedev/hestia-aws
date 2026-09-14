@@ -211,7 +211,7 @@ test('deployed intake: manual receipt facts are staged, reviewed exactly, commit
   await health(request);
   const call = caller(request);
   const session = await call('/api/demo/session', 201, undefined, {});
-  const receipt = { kind: 'receipt', transaction_id: 'out-001', merchant: 'Leroy Merlin DIY', amount_cents: 8550, date: '2026-09-04', receipt_id: 'ACCEPTANCE-RECEIPT-001' };
+  const receipt = { kind: 'receipt', transaction_id: 'out-001', merchant: 'Piraeus DIY Supplies', amount_cents: 8550, date: '2026-09-04', receipt_id: 'ACCEPTANCE-RECEIPT-001' };
   expect(session.state.outflows.find((o: { id: string }) => o.id === 'out-001')).toMatchObject({ has_receipt: false, amount_cents: 8550 });
   await call('/api/receipt/scan', 401, undefined, { operation: 'stage', records: [receipt] });
   const staged = await call('/api/receipt/scan', 200, session.token, { operation: 'stage', records: [receipt] });

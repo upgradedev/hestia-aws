@@ -20,7 +20,7 @@ from tests.test_web import call, scoped_store, session
 
 sandbox = test_web.sandbox
 ROUTE = "/api/ingest/sync"
-RECEIPT = {"kind": "receipt", "transaction_id": "out-001", "merchant": "Leroy Merlin DIY",
+RECEIPT = {"kind": "receipt", "transaction_id": "out-001", "merchant": "Piraeus DIY Supplies",
            "amount_cents": 8550, "date": "2026-09-04", "receipt_id": "REAL-INPUT-REF"}
 TRANSACTION = {"kind": "transaction", "transaction_id": "import-tx", "merchant": "My shop",
                "amount_cents": 5000, "date": "2026-09-12", "category": "Home"}

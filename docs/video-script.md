@@ -28,7 +28,7 @@ Caption: Ask Hestia to review this household, and a Strands agent on Amazon Bedr
 
 Screen: click **Review the exact notice** (`data-testid="review-claim"`) and wait for the server notice (`data-testid="server-notice"`) with the claimant, the seller and the seller's email address, the subject and the recorded repair cost. Click **Approve this notice (recorded, not sent)** (`data-testid="approve-claim"`) and wait for "Simulated approval recorded. No email sent and no reimbursement recorded." (`data-testid="claim-result"`).
 
-Caption: Then Hestia stops. The notice to Kotsovolos Megastore is prepared on the server from the recorded facts: recipient, subject, the 185 EUR repair cost and the exact text. Elena reads it and approves it with a single-use token bound to that exact draft. The approval is recorded as a simulation. No email is sent.
+Caption: Then Hestia stops. The notice to Acropolis Appliance Store is prepared on the server from the recorded facts: recipient, subject, the 185 EUR repair cost and the exact text. Elena reads it and approves it with a single-use token bound to that exact draft. The approval is recorded as a simulation. No email is sent.
 
 ### 5. sponsor (about 23 s): the saved case, and what AWS carries
 

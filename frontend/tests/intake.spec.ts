@@ -5,7 +5,7 @@ import type { BackendState, IntakeDraft, IntakeRecord } from '../src/api';
 const backend = 'http://127.0.0.1:8000';
 const route = '/api/receipt/scan';
 type NavTab = 'Home' | 'Case file' | 'Records' | 'About' | 'Add records';
-const receipt: IntakeRecord = { kind: 'receipt', transaction_id: 'out-001', merchant: 'Leroy Merlin DIY', amount_cents: 8550, date: '2026-09-04', receipt_id: 'DOCUMENT-REF' };
+const receipt: IntakeRecord = { kind: 'receipt', transaction_id: 'out-001', merchant: 'Piraeus DIY Supplies', amount_cents: 8550, date: '2026-09-04', receipt_id: 'DOCUMENT-REF' };
 const headers = (token: string) => ({ Authorization: `Bearer ${token}` });
 const nav = (page: Page, name: NavTab) =>
   page.getByRole('navigation', { name: 'Household navigation' }).getByRole('button', { name, exact: true });
