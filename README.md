@@ -87,7 +87,7 @@ Tests and CI are described in [docs/testing.md](docs/testing.md), and releasing 
 | [Deployment](docs/deployment.md) | the release runbook and the evidence for the deployed revision |
 | [Assurance](docs/assurance.md) | open gaps, the legal boundary, data handling and provenance |
 | [Devpost text](docs/devpost-submission.md) | the submission text and the judge walkthrough |
-| [Builder article](docs/builder-aws-article.md) | a draft article on the design |
+| [Builder article](docs/builder-aws-article.md) | the published builder.aws.com article text |
 | [Video script](docs/video-script.md) | the demo video scenes and production notes |
 
 ## License
