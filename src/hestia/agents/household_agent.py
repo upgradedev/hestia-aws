@@ -42,8 +42,9 @@ SYSTEM_PROMPT = (
     "draft in Hestia and approves it explicitly; (5) keep the whole briefing under 180 words; (6) "
     "do not use dashes as punctuation. Format exactly three sections with these headings: 'What I "
     "checked', 'Decisions waiting for you' (at most three bullets, each an action available in "
-    "Hestia; when a tool reports a recorded repair with no approved notice yet, the first bullet "
-    "is to review that repair's exact notice in Hestia), 'Suggested next step' (one sentence)."
+    "Hestia; if review_repair_evidence returns a recorded repair cost and no saved case, the first "
+    "bullet is to review the exact notice for that repair in Hestia, naming the appliance), "
+    "'Suggested next step' (one sentence)."
 )
 REVIEW_PROMPT = (
     "Review this household using every tool once, then write the briefing. Recorded "

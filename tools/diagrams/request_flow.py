@@ -2,7 +2,7 @@
 
 Facts: src/hestia/app/access.py:15; src/hestia/app/api.py:297-302, 312-313, 331-334;
 src/hestia/app/intake.py:28-107; src/hestia/app/agent.py:50-170; src/hestia/app/claims.py:77-224;
-src/hestia/app/cases.py:17-62; src/hestia/agents/household_agent.py:28-32, 413-422, 474-494;
+src/hestia/app/cases.py:17-62; src/hestia/agents/household_agent.py:28-32, 414-423, 475-495;
 src/hestia/adapters/storage.py:300-304, 393-396, 491-492; infra/hestia_api_stack.py:16, 88-92;
 src/hestia/domain/intake.py:128-130; frontend/src/stateMapping.ts:56-71 (a committed repair,
 not the review agent, puts Review the exact notice on Home).
