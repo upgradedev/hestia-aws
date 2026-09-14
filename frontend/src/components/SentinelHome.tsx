@@ -32,7 +32,7 @@ function CaseSummary({ c, onOpenCase }: { c: HouseholdCase | undefined; onOpenCa
         <button className="btn btn-secondary btn-sm" onClick={onOpenCase} data-testid="home-open-case">Open the case file</button>
       </> : <>
         <h3 id="case-summary-title" className="font-bold text-lg leading-snug">No case file yet</h3>
-        <p className="note">Report a repair, or review the exact notice for the sample repair and approve it. The case file starts there.</p>
+        <p className="note">Report a repair or use the sample repair under Decisions waiting for you, then click Review the exact notice. Reviewing the notice opens the case file.</p>
       </>}
     </section>
   );

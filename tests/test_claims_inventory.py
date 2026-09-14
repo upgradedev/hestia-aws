@@ -132,7 +132,7 @@ def test_docs_keep_evidence_limits_and_link_the_release_evidence(relative_path: 
 
 def test_testbook_keeps_history_and_integration_evidence_explicit() -> None:
     text = (ROOT / TESTBOOK_DOC).read_text(encoding="utf-8")
-    assert '<a id="integration-testbook"></a>' in text
+    assert "\n## Integration testbook\n" in text
     assert "| Requirement | Targeted regression evidence | Integration receipt |" in text
     assert "docs/measurement.json" in text and "docs/ablation.json" in text
     assert "remain unchanged" in text and "not regenerated" in text

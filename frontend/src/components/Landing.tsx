@@ -85,7 +85,7 @@ export function Landing({ preview, returning, expired, busy, error, onStart }: L
       </section>
 
       <section className="card-muted p-5 text-sm muted flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-        <p><strong className="text-[var(--ink)]">What runs for real:</strong> AWS Lambda, Amazon S3, and a Strands agent on Amazon Bedrock (Claude Haiku 4.5) for the weekly review and for reading pasted text, with a small per-copy limit.</p>
+        <p><strong className="text-[var(--ink)]">What runs for real:</strong> AWS Lambda, Amazon S3, and two Strands agents on Amazon Bedrock (Claude Haiku 4.5). One reviews the household when you ask, and one reads pasted text. Each has a small per-copy limit.</p>
         <p><strong className="text-[var(--ink)]">What does not:</strong> email, bank or mailbox feeds, receipt OCR, and any money movement. Approvals are recorded simulations.</p>
       </section>
     </div>

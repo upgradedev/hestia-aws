@@ -7,6 +7,8 @@ Hestia runs two agents built with the Strands Agents SDK on Amazon Bedrock. Both
 | Review agent | `POST /api/agent/review` | four read-only tools over one private copy | a short briefing under three headings | stored with the private copy and shown beside the tool trace |
 | Reading agent | `POST /api/agent/extract` | none | a JSON object of proposed records | staged as a draft that the household corrects, confirms and commits |
 
+![The two Strands agents: the review agent reads through four tools behind a guard and a tools-only fallback, the reading agent has no tools and only proposes records, and both call Claude Haiku 4.5 on Amazon Bedrock within per-copy and daily limits](assets/agents.svg)
+
 Line references point at the source on `main`. [deployment.md](deployment.md) records which revision is live.
 
 ## The review agent
@@ -49,7 +51,7 @@ Each tool output is clipped to 1600 characters.
 
 The tool trace and usage are still returned. The guard is not Amazon Bedrock Guardrails, and a wording its patterns miss would pass.
 
-**Timeout and fallback** (`household_agent.py:308-323, 487-509`). The agent runs in a worker thread joined for 20 seconds. A timeout returns the deterministic tools-only outcome with reason `model_timeout`, and an exception returns it with `model_error:<ExceptionClass>`. The worker thread is not stopped and the attempt stays counted. Before any call, the route also falls back with `model_not_configured`, `session_cap`, `budget_unconfirmed` or `daily_cap` (`src/hestia/app/agent.py:50-94`). Tools-only mode writes no narrative: the page shows the reason and the four tool outputs, and the route answers HTTP 200 either way.
+**Timeout and fallback** (`household_agent.py:308-323, 487-509`). The agent runs in a worker thread joined for 20 seconds. A timeout returns the deterministic tools-only outcome with reason `model_timeout`, and an exception returns it with `model_error:<ExceptionClass>`. The worker thread is not stopped and the attempt stays counted. Before any call, the route also falls back with `model_not_configured`, `session_cap`, `budget_unconfirmed` or `daily_cap` (`src/hestia/app/agent.py:50-94`). Tools-only mode writes no narrative: the page shows the reason and the output of every tool call, and the route answers HTTP 200 either way. `review_repair_evidence` runs once for each appliance with a recorded repair, and the other three tools run once each.
 
 ## The reading agent
 
@@ -73,7 +75,7 @@ A failed reading carries the reason `model_timeout`, `model_error:<ExceptionClas
 | 200 with `replayed: true` | this private copy already read the same text; no model call and no reading used |
 | 400 | missing or empty text, more than 6000 characters, control characters, an unknown hint or an extra field |
 | 401 | no valid session capability |
-| 429 | 3 readings already used in this private copy, 8 staged drafts, or the 40-action limit |
+| 429 | 3 readings already used in this private copy, 8 intake drafts in any status (committed ones count), or the 40-action limit |
 | 502 | the model timed out, failed or returned an unreadable reply |
 | 503 | no model configured, or the shared daily budget is spent or cannot be confirmed |
 

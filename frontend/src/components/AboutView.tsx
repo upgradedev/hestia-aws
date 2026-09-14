@@ -77,7 +77,8 @@ export function AboutView({ token, onError }: AboutViewProps) {
             <li><span className="chip chip-sage">on</span> Reader denies writes; scoped writer</li>
             <li><span className="chip chip-sage">on</span> Exact approval and conditional writes</li>
             <li><span className="chip">off</span> SES: disabled; approvals are recorded only</li>
-            <li><span className="chip">off</span> Saved case timeline; not WORM</li>
+            <li><span className="chip chip-sage">on</span> Saved case timeline with actor and time</li>
+            <li><span className="chip">off</span> Write-once (WORM) storage: not configured</li>
           </ul>
         </div>
       </section>
@@ -102,7 +103,7 @@ export function AboutView({ token, onError }: AboutViewProps) {
       </section>
 
       <section className="card-muted p-5 text-sm muted space-y-2">
-        <p><strong className="text-[var(--ink)]">Source and evidence.</strong> The README lists every mode with its file path and the CI receipts behind it. Independent human UAT is a separate gate and is reported honestly as NOT_RUN until it happens.</p>
+        <p><strong className="text-[var(--ink)]">Source and evidence.</strong> In the repository, docs/architecture.md lists every mode with its source file, and docs/deployment.md lists the CI and acceptance runs for the deployed revision. Independent human UAT is a separate gate and is reported as NOT_RUN until it happens.</p>
         <p>Legal references are general information about Directive (EU) 2019/771; jurisdiction-specific applicability requires separate review. Nothing here is legal advice.</p>
       </section>
     </div>

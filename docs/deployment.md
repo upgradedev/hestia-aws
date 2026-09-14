@@ -1,19 +1,21 @@
 # Deployment and release evidence
 
-Hestia runs on AWS as two CloudFormation stacks: `hestia-frontend` serves the web app and `hestia-afh-api` serves the API. The resources are drawn in [assets/infrastructure.svg](assets/infrastructure.svg) and described in [architecture.md](architecture.md). How each check works is in [testing.md](testing.md).
+Hestia runs on AWS as two CloudFormation stacks: `hestia-frontend` serves the web app and `hestia-afh-api` serves the API. The resources are drawn and described in [architecture.md](architecture.md), and how each check works is in [testing.md](testing.md). The drawing below follows a change from CI to the live site.
+
+![Release path of Hestia: CI builds and tests; the backend ships from an operator host through a CloudFormation change set; the web app ships through GitHub OIDC to S3 and CloudFront; production acceptance runs against the live URL](assets/release.svg)
 
 ## Deployed revision
 
-[PRIMARY: `GET https://drusjukc9d4oc.cloudfront.net/healthz` and the workflow runs below, 2026-09-13] The web app and both Lambda functions run `2b8a531148b8bd923bdede5c2fb9f198e7095e69`. Health reports `live_model` true, `model_id` `eu.anthropic.claude-haiku-4-5-20251001-v1:0` and `strands-agents 1.53.0`. Inspect that source with `git show 2b8a531148b8bd923bdede5c2fb9f198e7095e69:<path>`.
+Checked on 2026-09-13 against `GET https://drusjukc9d4oc.cloudfront.net/healthz` and the workflow runs below: the web app and both Lambda functions run `2b8a531148b8bd923bdede5c2fb9f198e7095e69`. Health reports `live_model` true, `model_id` `eu.anthropic.claude-haiku-4-5-20251001-v1:0` and `strands-agents 1.53.0`. Inspect that source with `git show 2b8a531148b8bd923bdede5c2fb9f198e7095e69:<path>`.
 
 | Gate | Evidence |
 |---|---|
-| Backend CI on `main`, source of the release artifact | https://github.com/upgradedev/hestia-aws/actions/runs/34761222475 |
+| Backend CI on `main`, source of the release artifact | [run 34761222475](https://github.com/upgradedev/hestia-aws/actions/runs/34761222475) |
 | Backend release | change set executed with rollback on; both functions report the commit and the same code hash |
-| Backend acceptance, 5 API cases | https://github.com/upgradedev/hestia-aws/actions/runs/34763597242 |
-| Frontend release | https://github.com/upgradedev/hestia-aws/actions/runs/34763790307 |
-| Paired acceptance, 5 API and 2 browser cases | https://github.com/upgradedev/hestia-aws/actions/runs/34764068225 |
-| Independent human UAT | NOT_RUN |
+| Backend acceptance, 5 API cases | [run 34763597242](https://github.com/upgradedev/hestia-aws/actions/runs/34763597242) |
+| Frontend release | [run 34763790307](https://github.com/upgradedev/hestia-aws/actions/runs/34763790307) |
+| Paired acceptance, 5 API and 2 browser cases | [run 34764068225](https://github.com/upgradedev/hestia-aws/actions/runs/34764068225) |
+| Independent human UAT (user acceptance testing) | NOT_RUN |
 
 `main` can be ahead of the deployed revision; `/healthz` always names the deployed commit. Since 2b8a531, `main` adds the reading hand-back on a model error ([pull request 8](https://github.com/upgradedev/hestia-aws/pull/8)) and documentation.
 
@@ -31,7 +33,7 @@ The backend is released from an operator host with `scripts/release_backend.py`.
    ```
 
    It downloads the artifact only from a successful `main` run for that exact SHA, verifies the checksums, uploads the zip once to `releases/<sha>/hestia-api.zip` in the deploy bucket, reads it back and compares it, and prepares a CloudFormation change set without executing it.
-3. Read the change set, then execute it. CloudFormation rolls the stack back if the update fails.
+3. Read the change set, then run the execute step. It downloads and checks the same artifact again and prepares a new change set from it. It prints that change set, refuses it if it removes or replaces a resource, executes it without pausing, and then runs the verify step. CloudFormation rolls the stack back if the update fails.
 
    ```bash
    python scripts/release_backend.py --sha <40-hex sha> --run-id <main CI run id> --execute execute
@@ -59,8 +61,21 @@ The backend is released from an operator host with `scripts/release_backend.py`.
 
 | Phase | Cases |
 |---|---|
-| `backend` | 5 API cases: exact approval, replay, isolation, agent review and closed legacy routes; protected case updates through an attested outcome; manual intake; a subscription request replay; the household registry with a live text reading |
-| `frontend` | the same 5, plus 2 browser cases: the exact notice and agent review with history after reload, and a cold start through a saved next step with a return on a phone-sized screen |
+| `backend` | the 5 API cases below |
+| `frontend` | the same 5 API cases and the 2 browser cases below |
+
+API cases:
+
+1. Exact approval, replay, isolation, agent review and closed legacy routes.
+2. Protected case updates through an attested outcome.
+3. Manual intake.
+4. A subscription request replay.
+5. The household registry with a live text reading.
+
+Browser cases, frontend phase only:
+
+1. The exact notice and agent review with history after reload.
+2. A cold start through a saved next step, with a return on a phone-sized screen.
 
 The workflow does not enforce the order. Run the backend phase after a backend release and the frontend phase after the web app release.
 
