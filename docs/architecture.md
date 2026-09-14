@@ -2,12 +2,7 @@
 
 Hestia is a React app on Amazon CloudFront and an API on AWS Lambda. Two Strands agents on Amazon Bedrock read the household's records. Everything that touches money, law or the case file is deterministic Python behind an explicit human approval, and nothing is sent: Amazon SES is not connected.
 
-There are two drawings:
-
-- [assets/infrastructure.svg](assets/infrastructure.svg) shows the AWS resources in the two CloudFormation stacks and the release path.
-- [assets/request-flow.svg](assets/request-flow.svg) follows a request from the browser to the approval gate, and shows where it stops.
-
-![AWS resources of Hestia](assets/infrastructure.svg)
+Two drawings go with this page: the runtime AWS resources under [AWS resources](#aws-resources), and a household request from the first click to the recorded approval under [The household flow](#the-household-flow). The release path is drawn in [deployment.md](deployment.md), and the two agents in [strands-agents.md](strands-agents.md).
 
 Line references point at the source on `main`. The deployed revision and its evidence are in [deployment.md](deployment.md).
 
@@ -20,9 +15,9 @@ Line references point at the source on `main`. The deployed revision and its evi
 5. The writer reads and writes one `state.json` per private copy with conditional requests; the reader only reads it (`src/hestia/adapters/storage.py:247-404`).
 6. The writer calls Amazon Bedrock through the two Strands agents, described in [strands-agents.md](strands-agents.md).
 
-![Request flow of Hestia](assets/request-flow.svg)
-
 ## The household flow
+
+![Household request flow in seven numbered steps: open a private copy; add and confirm records, where a committed repair offers the notice; the reading agent proposes records for review; the review agent writes a briefing; review the exact notice; approve it, recorded and not sent; update the case file. Every step saves the private copy in Amazon S3](assets/request-flow.svg)
 
 ```text
 Start with the sample household   POST /api/demo/session          a 30-minute private copy in S3
@@ -55,6 +50,8 @@ This is the source topology, not a recorded trace. Approval sends no email, canc
 ## AWS resources
 
 Both stacks are deployed in `eu-west-1`.
+
+![AWS resources of Hestia in eu-west-1: CloudFront with its function, headers policy and origin access control in front of the private site bucket; API Gateway in front of the reader and writer Lambda functions with their roles and log groups; the state bucket; Amazon Bedrock; and the HMAC key that CloudFormation resolves at deploy time](assets/infrastructure.svg)
 
 | Stack | Resource | Configuration |
 |---|---|---|
@@ -97,7 +94,7 @@ Both stacks are deployed in `eu-west-1`.
 - **The reader cannot write or call the model.** Its role denies `s3:PutObject`, deletes, `ses:*` and `bedrock:*`, and its handler refuses anything but GET and OPTIONS.
 - **The agents cannot change records.** Neither has a write tool. The routes store the briefing and the staged draft, and household records change only through a reviewed commit with `confirmed: true`.
 - **The notice is not model text.** `draft_statutory_claim_letter` builds it from recorded facts, and the approval binds its exact digest.
-- **`/healthz` describes configuration.** The reader answers it from the writer's environment, so `live_model` true does not prove a model call.
+- **`/healthz` describes configuration.** The reader answers it from its own copy of the writer's environment variables, so `live_model` true does not prove a model call.
 
 ## Data and retention
 
@@ -107,4 +104,4 @@ Both stacks are deployed in `eu-west-1`.
 
 ## Verification boundary
 
-Repository source, CI synthetic runs, live read-only checks, production acceptance and human attestation are separate levels of evidence. CI never calls Bedrock: `tests/test_household_agent.py` and `tests/test_registry_intake.py` cover both model routes with fakes. The production acceptance run calls the deployed model ([deployment.md](deployment.md)). Latency, cost, briefing quality and extraction accuracy cannot be read from this architecture, and those figures are unmeasured. CI measures branch coverage against an 85% gate, and the figure comes from the run ([testing.md](testing.md)). Independent human UAT is NOT_RUN. The test map is in [testing.md](testing.md).
+Repository source, CI synthetic runs, live read-only checks, production acceptance and human attestation are separate levels of evidence. CI never calls Bedrock: `tests/test_household_agent.py` and `tests/test_registry_intake.py` cover both model routes with fakes. The production acceptance run calls the deployed model ([deployment.md](deployment.md)). Latency, cost, briefing quality and extraction accuracy cannot be read from this architecture, and those figures are unmeasured. CI measures branch coverage against an 85% gate, and the figure comes from the run ([testing.md](testing.md)). Independent human UAT (user acceptance testing) is NOT_RUN. The test map is in [testing.md](testing.md).

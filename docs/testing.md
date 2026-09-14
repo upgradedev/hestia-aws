@@ -71,11 +71,11 @@ Browser, under `frontend/tests/` (Playwright, Chromium):
 
 Some browser cases serve responses from route fixtures because the CI harness has no model: the snapshot tests, the live-model briefings, the model proposal and a few fabricated bodies in `p0-session.spec.ts`. They test presentation, not backend writes. Intake and case journeys use the CI API and persisted isolated state.
 
-<a id="integration-testbook"></a>
-
 ## Integration testbook
 
-Each requirement maps to its regression evidence. CI runs these as part of the full suites. Automated checks do not complete deployed acceptance, legal review or independent human UAT (NOT_RUN).
+Each requirement maps to its regression evidence. CI runs these as part of the full suites. Automated checks do not complete deployed acceptance, legal review or independent human UAT (user acceptance testing), which is NOT_RUN.
+
+HE numbers are requirement ids. The same ids appear in test module docstrings, file comments and some browser test titles, for example HE14 in `tests/test_household_agent.py` and HE8 in `frontend/tests/display-facts.spec.ts`. Not every id has a row here, and HE10 has two rows.
 
 | Requirement | Targeted regression evidence | Integration receipt |
 |---|---|---|
@@ -90,7 +90,7 @@ Each requirement maps to its regression evidence. CI runs these as part of the f
 | HE18 household registry | `tests/test_registry_intake.py` appliance and repair tests; `frontend/tests/registry.spec.ts`; the acceptance case "deployed registry" | An appliance with links reaches the notice flow after a reported repair; a second repair is refused while one is open; reset keeps it |
 | HE19 reading pasted text | `tests/test_registry_intake.py` reading tests; `frontend/tests/registry.spec.ts` paste journeys | Fails closed without a model, past the cap and on a model failure; identical text replays; nothing is saved before commit |
 | Release guards | `tests/test_release_guard.py`; `infra/test_frontend_hosting.py` | Change-set-only backend packaging, backend health gate, smoke probe order and anonymous denial |
-| Preserved P0 authority and deployment contract | `frontend/tests/p0-session.spec.ts`, Python authority and storage tests, `frontend/acceptance/p0-live.spec.ts` | Negative gates and exact-content acceptance calibration; calibration is not an AWS deployment receipt |
+| Session, approval and deployment contract | `frontend/tests/p0-session.spec.ts`, Python authority and storage tests, `frontend/acceptance/p0-live.spec.ts` | Negative gates and exact-content acceptance calibration; calibration is not an AWS deployment receipt |
 
 ## Synthetic measurements
 

@@ -43,7 +43,7 @@ export function TopBar({ householdName, activeTab, onSelectTab, sessionStatus, e
               <p className="font-bold">What you are looking at</p>
               <p className="muted">A private copy of a fictional Athens household, valid for 30 minutes. Add your own appliances and repairs to it; the sample facts are synthetic.</p>
               <p className="muted">Approvals are recorded, never sent. No email, no bank or mailbox connection, no photo scanning, and no money moves.</p>
-              <p className="muted">Hestia's review and text reading use a Strands agent on Amazon Bedrock with a small per-copy limit.</p>
+              <p className="muted">Hestia's review and text reading use two Strands agents on Amazon Bedrock, each with a small per-copy limit.</p>
             </div>
           </details>
           <button data-testid="reset-demo" disabled={resetDisabled} onClick={onReset} title="Reset the sample facts; your appliances, case files and approval history are kept" className="btn btn-quiet btn-sm">Reset sample</button>

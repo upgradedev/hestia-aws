@@ -8,7 +8,7 @@ const MODE_LABELS = [
   'Mailbox / retailer sync: not connected', 'Bedrock inference: Claude Haiku 4.5, bounded',
   'Managed Guardrails: not connected', 'AgentCore runtime: not connected',
   'Reader denies writes; scoped writer', 'SES: disabled; approvals are recorded only',
-  'Saved case timeline; not WORM',
+  'Saved case timeline with actor and time', 'Write-once (WORM) storage: not configured',
 ];
 
 async function openAbout(page: Page) {
